@@ -63,10 +63,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
                 const Text(
                   'Đăng nhập để tiếp tục sử dụng D30 AI.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 50),
                 // Login Form Card
@@ -93,7 +90,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         controller: _userController,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.mail_outline, color: Colors.white70),
+                          prefixIcon: const Icon(
+                            Icons.mail_outline,
+                            color: Colors.white70,
+                          ),
                           hintText: 'Nhập tên của bạn...',
                           hintStyle: const TextStyle(color: Colors.white38),
                           filled: true,
@@ -118,7 +118,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         obscureText: true,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+                          prefixIcon: const Icon(
+                            Icons.lock_outline,
+                            color: Colors.white70,
+                          ),
                           hintText: '........',
                           hintStyle: const TextStyle(color: Colors.white38),
                           filled: true,
@@ -140,12 +143,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           borderRadius: BorderRadius.circular(15),
                         ),
+                        //====Chuyển sang HomeScreen khi đăng nhập thành công ====//
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => HomeScreen(userName: _userController.text),
+                                builder: (context) =>
+                                    HomeScreen(userName: _userController.text),
                               ),
                             );
                           },
@@ -189,7 +194,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterScreen(),
+                          ),
                         );
                       },
                       child: const Text(
