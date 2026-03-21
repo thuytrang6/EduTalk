@@ -150,8 +150,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
 
-  final List<Widget> pages = [
-    const HomePage(),
+  late final List<Widget> pages = [
+    HomePage(onChangeTab: _changeTab),
     const ThaoLuanScreen(),
     const DuLieuScreen(),
     const LichSuScreen(),

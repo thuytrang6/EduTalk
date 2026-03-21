@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:ui_login_out/screens/DuLieu.dart';
 import 'package:ui_login_out/screens/LichSu.dart';
 import 'package:ui_login_out/screens/ThaoLuan.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+  final ValueChanged<int>? onChangeTab;
+  const HomePage({super.key, this.onChangeTab});
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +24,7 @@ class HomePage extends StatelessWidget {
                     Clip.none, // cho phép phần tử con vượt ra ngoài Stack
                 children: [
                   Container(
-                    height: 500,
+                    height: 550,
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: const BoxDecoration(
@@ -77,12 +79,7 @@ class HomePage extends StatelessWidget {
                             iconColor: const Color(0xff2563eb),
                             iconBackground: const Color(0xffeff6ff),
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const LichSuScreen(),
-                                ),
-                              );
+                              onChangeTab?.call(3);
                             },
                           ),
                         ),
@@ -96,12 +93,7 @@ class HomePage extends StatelessWidget {
                             iconColor: const Color(0xff059669),
                             iconBackground: const Color(0xffd1fae5),
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ThaoLuanScreen(),
-                                ),
-                              );
+                              onChangeTab?.call(1);
                             },
                           ),
                         ),
@@ -522,7 +514,7 @@ class HomePage extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () {
-                // xử lý bắt đầu tư vấn ở đây
+                onChangeTab?.call(2);
               },
               child: Container(
                 width: double.infinity,
