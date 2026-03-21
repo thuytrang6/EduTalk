@@ -155,7 +155,10 @@ class _HomeScreenState extends State<HomeScreen> {
     const ThaoLuanScreen(),
     const DuLieuScreen(),
     const LichSuScreen(),
-    const ProfileScreen(),
+    ProfileScreen(
+      username: widget.userName,
+      onChangeTab: _changeTab,
+    ),
   ];
 
   void _changeTab(int index) {
