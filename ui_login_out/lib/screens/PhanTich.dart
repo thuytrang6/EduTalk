@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:ui_login_out/screens/KetQua.dart';
+import 'KetQua.dart';
 
 class PhanTichScreen extends StatefulWidget {
   final VoidCallback onBack;
+  final VoidCallback onShowKetQua;
 
-  const PhanTichScreen({super.key, required this.onBack});
+  const PhanTichScreen({
+    super.key,
+    required this.onBack,
+    required this.onShowKetQua,
+  });
 
   @override
   State<PhanTichScreen> createState() => _PhanTichScreenState();
@@ -157,6 +164,8 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
                         ),
                         child: ElevatedButton(
                           onPressed: () {
+                            widget.onShowKetQua();
+
                             // TODO: xử lý phân tích AI
                           },
                           style: ElevatedButton.styleFrom(
