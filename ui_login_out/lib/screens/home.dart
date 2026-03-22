@@ -5,6 +5,7 @@ import 'ThaoLuan.dart';
 import 'LichSu.dart';
 import 'home_page.dart';
 import 'Profile.dart';
+import 'KetQua.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;
@@ -18,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
   bool isShowingPhanTich = false;
+  bool isShowingKetQua = false;
 
   late final List<Widget> pages = [
     HomePage(onChangeTab: _changeTab),
@@ -40,6 +42,23 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       currentIndex = 2;
       isShowingPhanTich = true;
+      isShowingKetQua = false;
+    });
+  }
+
+  void openKetQua() {
+    setState(() {
+      currentIndex = 2;
+      isShowingPhanTich = false;
+      isShowingKetQua = true;
+    });
+  }
+
+  void closeKetQua() {
+    setState(() {
+      currentIndex = 2;
+      isShowingKetQua = false;
+      isShowingPhanTich = true;
     });
   }
 
@@ -47,6 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       currentIndex = 2;
       isShowingPhanTich = false;
+      isShowingKetQua = false;
     });
   }
 
@@ -59,7 +79,25 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           IndexedStack(index: currentIndex, children: pages),
           if (isShowingPhanTich)
-            Positioned.fill(child: PhanTichScreen(onBack: closeOverlayPage)),
+            Positioned.fill(
+              child: PhanTichScreen(
+                onBack: closeOverlayPage,
+                onShowKetQua: openKetQua,
+              ),
+            ),
+          if (isShowingKetQua)
+            Positioned.fill(
+              child: KetQuaScreen(
+                onBack: closeKetQua,
+                onRestart: () {
+                  setState(() {
+                    currentIndex = 2;
+                    isShowingKetQua = false;
+                    isShowingPhanTich = true;
+                  });
+                },
+              ),
+            ),
         ],
       ),
       floatingActionButton: AnimatedScale(
