@@ -38,9 +38,7 @@ class PremiumScreen extends StatelessWidget {
                   _buildComparisonCard(),
                   const SizedBox(height: 20),
                   _buildPricingPlans(),
-                  const SizedBox(height: 20),
-                  _buildGuaranteeCard(),
-                  const SizedBox(height: 120),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
@@ -123,12 +121,12 @@ class PremiumScreen extends StatelessWidget {
   }
 
   Widget _navItem(
-      BuildContext context,
-      IconData icon,
-      String label,
-      bool active,
-      int index,
-      ) {
+    BuildContext context,
+    IconData icon,
+    String label,
+    bool active,
+    int index,
+  ) {
     return InkWell(
       onTap: () {
         if (!active) {
@@ -170,11 +168,7 @@ class PremiumScreen extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFF8F00),
-            Color(0xFFFF5D00),
-            Color(0xFFE6007E),
-          ],
+          colors: [Color(0xFFFF8F00), Color(0xFFFF5D00), Color(0xFFE6007E)],
         ),
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
       ),
@@ -207,7 +201,7 @@ class PremiumScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Text(
-            "Trải nghiệm đầy đủ sức mạnh của D30 AI",
+            "Trải nghiệm đầy đủ tính năng của EduTalk",
             style: TextStyle(
               color: Colors.white70,
               fontSize: 15,
@@ -330,7 +324,7 @@ class PremiumScreen extends StatelessWidget {
         _buildPlanCard(
           title: "Gói Tháng",
           subtitle: "Linh hoạt, thử nghiệm",
-          price: "99.000",
+          price: "29.000",
           unit: "đ/tháng",
           details: "Tự động gia hạn hàng tháng",
           color: const Color(0xFF2563EB),
@@ -342,22 +336,22 @@ class PremiumScreen extends StatelessWidget {
         _buildPlanCard(
           title: "Gói Năm",
           subtitle: "Tiết kiệm 40% - Tốt nhất",
-          price: "699.000",
+          price: "216.000",
           unit: "đ/năm",
-          details: "Chỉ ~58.000đ/tháng",
+          details: "Chỉ ~18.000đ/tháng",
           color: const Color(0xFFFF8000),
           icon: Icons.shield_rounded,
           buttonIcon: Icons.workspace_premium_rounded,
           buttonText: "Mua gói Năm",
           isBestValue: true,
-          oldPrice: "1.188.000đ",
-          savings: "Tiết kiệm 489.000đ",
+          oldPrice: "348.000đ",
+          savings: "Tiết kiệm 132.000đ",
         ),
         const SizedBox(height: 16),
         _buildPlanCard(
           title: "Gói Trọn Đời",
           subtitle: "Một lần thanh toán, sử dụng mãi mãi",
-          price: "1.999.000",
+          price: "499.000",
           unit: "đ",
           details: "Thanh toán một lần, không cần gia hạn",
           color: const Color(0xFF8B5CF6),
@@ -583,48 +577,6 @@ class PremiumScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildGuaranteeCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFDCFCE7).withOpacity(0.5),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.shield_rounded, color: Color(0xFF16A34A), size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  "Đảm bảo hoàn tiền 100%",
-                  style: TextStyle(
-                    color: Color(0xFF166534),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  "Nếu không hài lòng trong 7 ngày đầu tiên, chúng tôi sẽ hoàn lại toàn bộ tiền của bạn.",
-                  style: TextStyle(
-                    color: Color(0xFF15803D),
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ComparisonItem extends StatelessWidget {
@@ -640,10 +592,12 @@ class _ComparisonItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color color =
-    isPositive ? const Color(0xFF16A34A) : const Color(0xFFEF4444);
-    final IconData icon =
-    isPositive ? Icons.check_rounded : Icons.close_rounded;
+    final Color color = isPositive
+        ? const Color(0xFF16A34A)
+        : const Color(0xFFEF4444);
+    final IconData icon = isPositive
+        ? Icons.check_rounded
+        : Icons.close_rounded;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),

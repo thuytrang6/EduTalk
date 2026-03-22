@@ -3,6 +3,7 @@ import 'package:ui_login_out/screens/DuLieu.dart';
 import 'package:ui_login_out/screens/LichSu.dart';
 import 'package:ui_login_out/screens/ThaoLuan.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
+import 'Premium_screen.dart';
 
 class HomePage extends StatelessWidget {
   final ValueChanged<int>? onChangeTab;
@@ -461,7 +462,12 @@ class HomePage extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () {
-                //  xử lý nâng cấp ở đây
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PremiumScreen(),
+                  ),
+                );
               },
               child: Row(
                 mainAxisSize: MainAxisSize.min,
