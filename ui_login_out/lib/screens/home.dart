@@ -6,7 +6,7 @@ import 'LichSu.dart';
 import 'home_page.dart';
 import 'Profile.dart';
 import 'KetQua.dart';
-
+import 'ThongKeTs.dart';
 class HomeScreen extends StatefulWidget {
   final String userName;
 
@@ -27,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
     DuLieuScreen(onChangeTab: _changeTab, onOPenPhanTich: openPhanTich),
     const LichSuScreen(),
     ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
+
   ];
 
   void _changeTab(int index) {

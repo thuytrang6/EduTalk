@@ -4,7 +4,7 @@ import 'package:ui_login_out/screens/LichSu.dart';
 import 'package:ui_login_out/screens/ThaoLuan.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
 import 'Premium_screen.dart';
-
+import 'ThongKeTs.dart';
 class HomePage extends StatelessWidget {
   final ValueChanged<int>? onChangeTab;
   const HomePage({super.key, this.onChangeTab});
@@ -166,12 +166,12 @@ class HomePage extends StatelessWidget {
             title: "Dữ liệu & Báo cáo",
             subtitle: "Thống kê tuyển sinh",
             onTap: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => const DuLieuBaoCaoScreen(),
-              //   ),
-              // );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ThongKeTs(onTabChange: onChangeTab),
+                ),
+              );
             },
           ),
 
@@ -308,7 +308,12 @@ class HomePage extends StatelessWidget {
               ),
               GestureDetector(
                 onTap: () {
-                  // xử lý xem tất cả ở đây
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ThongKeTs(onTabChange: onChangeTab),
+                    ),
+                  );
                 },
                 child: Text(
                   "Xem dữ liệu",
