@@ -17,12 +17,7 @@ class _SettingScreenState extends State<SettingScreen> {
       backgroundColor: const Color(0xfff6f7fb),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        child: Stack(
-          children: [
-            _buildHeader(),
-            _buildMainContent(),
-          ],
-        ),
+        child: Stack(children: [_buildHeader(), _buildMainContent()]),
       ),
     );
   }
@@ -35,15 +30,9 @@ class _SettingScreenState extends State<SettingScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xff1e3a8a),
-            Color(0xff312e81),
-            Color(0xff0f766e),
-          ],
+          colors: [Color(0xff1e3a8a), Color(0xff312e81), Color(0xff0f766e)],
         ),
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(40),
-        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
       ),
       child: SafeArea(
         child: Padding(
@@ -53,7 +42,11 @@ class _SettingScreenState extends State<SettingScreen> {
             children: [
               const SizedBox(height: 10),
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
               Row(
@@ -64,7 +57,11 @@ class _SettingScreenState extends State<SettingScreen> {
                       color: Colors.white.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.settings, color: Color(0xff4DD0E1), size: 30),
+                    child: const Icon(
+                      Icons.settings,
+                      color: Color(0xff4DD0E1),
+                      size: 30,
+                    ),
                   ),
                   const SizedBox(width: 15),
                   const Column(
@@ -197,7 +194,7 @@ class _SettingScreenState extends State<SettingScreen> {
         ),
         const SizedBox(height: 30),
         const Text(
-          "D30 AI Tư vấn tuyển sinh",
+          "AI Tư vấn tuyển sinh",
           style: TextStyle(color: Colors.grey, fontSize: 13),
         ),
         const Text(
@@ -238,8 +235,7 @@ class _SettingScreenState extends State<SettingScreen> {
                 ),
               ),
             ),
-          if (title != null)
-            const Divider(height: 1, color: Color(0xfff1f5f9)),
+          if (title != null) const Divider(height: 1, color: Color(0xfff1f5f9)),
           ...items.asMap().entries.map((entry) {
             int idx = entry.key;
             Widget item = entry.value;
@@ -278,8 +274,17 @@ class _SettingScreenState extends State<SettingScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -323,7 +328,10 @@ class _SettingScreenState extends State<SettingScreen> {
                       color: titleColor ?? const Color(0xff1e293b),
                     ),
                   ),
-                  Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -337,10 +345,7 @@ class _SettingScreenState extends State<SettingScreen> {
   Widget _buildIcon(IconData icon, Color color, Color bgColor) {
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
       child: Icon(icon, color: color, size: 22),
     );
   }

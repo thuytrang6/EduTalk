@@ -1,142 +1,11 @@
-// import 'package:flutter/material.dart';
-// import 'DuLieu.dart';
-// import 'ThaoLuan.dart';
-// import 'LichSu.dart';
-// import 'menu_drawer.dart';
-// import 'home_page.dart';
-// import 'Profile.dart';
-
-// class HomeScreen extends StatefulWidget {
-//   final String userName;
-
-//   const HomeScreen({super.key, required this.userName});
-
-//   @override
-//   State<HomeScreen> createState() => _HomeScreenState();
-// }
-
-// class _HomeScreenState extends State<HomeScreen> {
-//   int currentIndex = 0;
-
-//   final List<Widget> pages = [
-//     const HomePage(),
-//     const ThaoLuanScreen(),
-//     const DuLieuScreen(),
-//     const LichSuScreen(),
-//     const ProfileScreen(),
-//   ];
-//   void _changeTab(int index) {
-//     setState(() {
-//       currentIndex = index;
-//     });
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       extendBody: true,
-//       backgroundColor: const Color(0xfff5f6fa),
-//       body: IndexedStack(index: currentIndex, children: pages),
-
-//       floatingActionButton: Container(
-//         height: 74,
-//         width: 74,
-//         decoration: BoxDecoration(
-//           shape: BoxShape.circle,
-//           color: Colors.white,
-//           boxShadow: [
-//             BoxShadow(
-//               color: Colors.blue.withOpacity(0.25),
-//               blurRadius: 16,
-//               spreadRadius: 2,
-//               offset: const Offset(0, 6),
-//             ),
-//           ],
-//         ),
-//         child: FloatingActionButton(
-//           elevation: 0,
-//           backgroundColor: const Color(0xff1da1f2),
-//           shape: const CircleBorder(),
-//           onPressed: () => _changeTab(2),
-//           child: const Icon(Icons.psychology, color: Colors.white, size: 32),
-//         ),
-//       ),
-
-//       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
-//       bottomNavigationBar: Container(
-//         decoration: const BoxDecoration(
-//           boxShadow: [
-//             BoxShadow(
-//               color: Colors.black12,
-//               blurRadius: 12,
-//               offset: Offset(0, -2),
-//             ),
-//           ],
-//         ),
-//         child: BottomAppBar(
-//           shape: const CircularNotchedRectangle(),
-//           notchMargin: 10,
-//           elevation: 0,
-//           color: Colors.white,
-//           child: SizedBox(
-//             height: 72,
-//             child: Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceAround,
-//               children: [
-//                 _navItem(Icons.home_outlined, "Trang chủ", 0),
-//                 _navItem(Icons.forum_outlined, "Thảo luận", 1),
-
-//                 const SizedBox(width: 54),
-
-//                 _navItem(Icons.history, "Lịch sử", 3),
-//                 _navItem(Icons.person_outline, "Cá nhân", 4),
-//               ],
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-
-//   Widget _navItem(IconData icon, String label, int index) {
-//     final bool active = currentIndex == index;
-
-//     return InkWell(
-//       borderRadius: BorderRadius.circular(16),
-//       onTap: () => _changeTab(index),
-//       child: SizedBox(
-//         width: 64,
-//         child: Column(
-//           mainAxisAlignment: MainAxisAlignment.center,
-//           children: [
-//             Icon(
-//               icon,
-//               size: 27,
-//               color: active ? const Color(0xff2563eb) : Colors.grey,
-//             ),
-//             const SizedBox(height: 4),
-//             Text(
-//               label,
-//               textAlign: TextAlign.center,
-//               style: TextStyle(
-//                 fontSize: 12,
-//                 fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-//                 color: active ? const Color(0xff2563eb) : Colors.grey,
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
 import 'package:flutter/material.dart';
+import 'package:ui_login_out/screens/PhanTich.dart';
 import 'DuLieu.dart';
 import 'ThaoLuan.dart';
 import 'LichSu.dart';
 import 'home_page.dart';
 import 'Profile.dart';
+import 'KetQua.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;
@@ -149,22 +18,55 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
+  bool isShowingPhanTich = false;
+  bool isShowingKetQua = false;
 
   late final List<Widget> pages = [
     HomePage(onChangeTab: _changeTab),
     const ThaoLuanScreen(),
-    const DuLieuScreen(),
+    DuLieuScreen(onChangeTab: _changeTab, onOPenPhanTich: openPhanTich),
     const LichSuScreen(),
-    ProfileScreen(
-      username: widget.userName,
-      onChangeTab: _changeTab,
-    ),
+    ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
   ];
 
   void _changeTab(int index) {
-    if (currentIndex == index) return;
+    if (currentIndex == index && !isShowingPhanTich) return;
+
     setState(() {
       currentIndex = index;
+      isShowingPhanTich = false;
+    });
+  }
+
+  void openPhanTich() {
+    setState(() {
+      currentIndex = 2;
+      isShowingPhanTich = true;
+      isShowingKetQua = false;
+    });
+  }
+
+  void openKetQua() {
+    setState(() {
+      currentIndex = 2;
+      isShowingPhanTich = false;
+      isShowingKetQua = true;
+    });
+  }
+
+  void closeKetQua() {
+    setState(() {
+      currentIndex = 2;
+      isShowingKetQua = false;
+      isShowingPhanTich = true;
+    });
+  }
+
+  void closeOverlayPage() {
+    setState(() {
+      currentIndex = 2;
+      isShowingPhanTich = false;
+      isShowingKetQua = false;
     });
   }
 
@@ -173,14 +75,36 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       extendBody: true,
       backgroundColor: const Color(0xfff5f6fa),
-      body: IndexedStack(index: currentIndex, children: pages),
-
+      body: Stack(
+        children: [
+          IndexedStack(index: currentIndex, children: pages),
+          if (isShowingPhanTich)
+            Positioned.fill(
+              child: PhanTichScreen(
+                onBack: closeOverlayPage,
+                onShowKetQua: openKetQua,
+              ),
+            ),
+          if (isShowingKetQua)
+            Positioned.fill(
+              child: KetQuaScreen(
+                onBack: closeKetQua,
+                onRestart: () {
+                  setState(() {
+                    currentIndex = 2;
+                    isShowingKetQua = false;
+                    isShowingPhanTich = true;
+                  });
+                },
+              ),
+            ),
+        ],
+      ),
       floatingActionButton: AnimatedScale(
         scale: currentIndex == 2 ? 1.08 : 1.0,
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutBack,
         child: Container(
-          // nút giữa
           height: 65,
           width: 65,
           decoration: BoxDecoration(
@@ -194,18 +118,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xff2563eb).withOpacity(0.22),
+                color: Color(0xff2563eb).withOpacity(0.22),
                 blurRadius: 18,
                 spreadRadius: 2,
-                offset: const Offset(0, 6),
+                offset: Offset(0, 6),
               ),
             ],
           ),
           child: FloatingActionButton(
             elevation: 0,
-            backgroundColor: Colors.transparent, // 👈 QUAN TRỌNG
-            //shadowColor: Colors.transparent,
-            // backgroundColor: const Color(0xff2563eb),
+            backgroundColor: Colors.transparent,
             shape: const CircleBorder(),
             onPressed: () => _changeTab(2),
             child: const Icon(
@@ -216,16 +138,13 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-
       bottomNavigationBar: Container(
         width: double.infinity,
         height: 72,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
-
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
               color: Colors.black12,
               blurRadius: 14,
@@ -238,9 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _navItem(Icons.home_rounded, "Trang chủ", 0),
             _navItem(Icons.chat_bubble_rounded, "Thảo luận", 1),
-
             const SizedBox(width: 50),
-
             _navItem(Icons.history_rounded, "Lịch sử", 3),
             _navItem(Icons.person_rounded, "Cá nhân", 4),
           ],

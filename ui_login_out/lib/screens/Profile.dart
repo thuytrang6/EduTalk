@@ -6,11 +6,7 @@ class ProfileScreen extends StatefulWidget {
   final String username;
   final ValueChanged<int>? onChangeTab;
 
-  const ProfileScreen({
-    super.key,
-    this.username = "Bạn",
-    this.onChangeTab,
-  });
+  const ProfileScreen({super.key, this.username = "Name", this.onChangeTab});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -65,16 +61,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xff1e3a8a),
-            Color(0xff1e3a8a),
-            Color(0xff0f766e),
-          ],
+          colors: [Color(0xff1e3a8a), Color(0xff1e3a8a), Color(0xff0f766e)],
           stops: [0.0, 0.7, 1.0],
         ),
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(40),
-        ),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
       ),
     );
   }
@@ -183,19 +173,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: Colors.white,
           ),
         ),
-        const Text(
-          "Thành viên D30",
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 15,
-            letterSpacing: 0.3,
-          ),
-        ),
       ],
     );
   }
 
-  Widget _buildPremiumCard()  {
+  Widget _buildPremiumCard() {
     const Color cardBg = Color(0xFFFFF9EE);
     const Color cardBorder = Color(0xFFFFE08A);
     const Color navyTitle = Color(0xFF14213D);
@@ -211,10 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: cardBorder.withOpacity(0.65),
-          width: 1.4,
-        ),
+        border: Border.all(color: cardBorder.withOpacity(0.65), width: 1.4),
         boxShadow: [
           BoxShadow(
             color: premiumOrangeDark.withOpacity(0.10),
@@ -349,11 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               gradient: const LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
-                colors: [
-                  premiumOrangeLight,
-                  premiumOrange,
-                  premiumOrangeDark,
-                ],
+                colors: [premiumOrangeLight, premiumOrange, premiumOrangeDark],
               ),
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
@@ -365,13 +340,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
             child: ElevatedButton.icon(
-              onPressed: () async  {
+              onPressed: () async {
                 final targetTab = await Navigator.push<int>(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PremiumScreen(
-                      onTabChange: widget.onChangeTab,
-                    ),
+                    builder: (context) =>
+                        PremiumScreen(onTabChange: widget.onChangeTab),
                   ),
                 );
 
@@ -475,11 +449,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTextField(
-      String label,
-      String placeholder,
-      IconData icon,
-      TextEditingController controller,
-      ) {
+    String label,
+    String placeholder,
+    IconData icon,
+    TextEditingController controller,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -504,11 +478,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             decoration: InputDecoration(
               hintText: placeholder,
               hintStyle: const TextStyle(color: Color(0xff94a3b8)),
-              prefixIcon: Icon(
-                icon,
-                size: 22,
-                color: const Color(0xff94a3b8),
-              ),
+              prefixIcon: Icon(icon, size: 22, color: const Color(0xff94a3b8)),
               filled: true,
               fillColor: const Color(0xfff8fafc),
               contentPadding: const EdgeInsets.symmetric(
