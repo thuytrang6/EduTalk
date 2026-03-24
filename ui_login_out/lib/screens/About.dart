@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class AboutPage extends StatelessWidget {
-  const AboutPage({super.key});
+  final VoidCallback? onBack;
+  const AboutPage({super.key, this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +38,8 @@ class AboutPage extends StatelessWidget {
                           'Tích hợp dữ liệu của 119 tổ hợp xét tuyển và hơn 150 trường Đại học, giúp hệ thống đưa ra gợi ý ngành học sát hơn với thực tế tuyển sinh.',
                     ),
                     SizedBox(height: 12),
+                    _MemberCard(),
+                    SizedBox(height: 12),
                     _FooterCard(),
                   ],
                 ),
@@ -59,10 +62,7 @@ class _Header extends StatelessWidget {
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            Color(0xFF1D4ED8),
-            Color(0xFF3730A3),
-          ],
+          colors: [Color(0xFF1D4ED8), Color(0xFF3730A3)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -126,7 +126,7 @@ class _Header extends StatelessWidget {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Phát triển bởi Công ty Giải pháp Công nghệ 3NoTech',
+                  'Phát triển bởi nhóm Triều Đại nhà Nguyễn',
                   style: TextStyle(
                     fontSize: 14,
                     height: 1.5,
@@ -238,11 +238,7 @@ class _InfoCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _LeadingIcon(
-            icon: icon,
-            bgColor: iconBg,
-            iconColor: iconColor,
-          ),
+          _LeadingIcon(icon: icon, bgColor: iconBg, iconColor: iconColor),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -274,6 +270,112 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
+class _MemberCard extends StatelessWidget {
+  const _MemberCard();
+
+  Widget _memberItem(String name, String phone, String mssv) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE6F4EA),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.person, color: Color(0xFF16A34A)),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Colors.black,
+                ),
+              ),
+              Text(
+                phone,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+              Text(
+                mssv,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.group, color: Colors.deepPurple),
+              SizedBox(width: 8),
+              Text(
+                "Thành viên EduTalk",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          _memberItem(
+            "Nguyễn Xuân Định",
+            "SĐT: 0965740147",
+            "MSSV: 2001230178",
+          ),
+          _memberItem(
+            "Hồ Ngọc Phương Nhi",
+            "SĐT: 0981257030",
+            "MSSV: 2001230617",
+          ),
+          _memberItem("Nguyễn Anh Quân", "SĐT: 0385274441", "MSSV: 2001230717"),
+          _memberItem(
+            "Nguyễn Thị Thùy Trang",
+            "SĐT: 0327607461",
+            "MSSV: 2001230969",
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _FooterCard extends StatelessWidget {
   const _FooterCard();
 
@@ -290,16 +392,13 @@ class _FooterCard extends StatelessWidget {
       child: const Row(
         children: [
           Expanded(
-            child: _MetaItem(
-              label: 'Phiên bản',
-              value: '1.0.0',
-            ),
+            child: _MetaItem(label: 'Phiên bản', value: '1.0.0'),
           ),
           SizedBox(width: 12),
           Expanded(
             child: _MetaItem(
               label: 'Phát triển bởi',
-              value: '3NoTech',
+              value: 'Triều Đại nhà Nguyễn',
             ),
           ),
         ],
@@ -312,10 +411,7 @@ class _MetaItem extends StatelessWidget {
   final String label;
   final String value;
 
-  const _MetaItem({
-    required this.label,
-    required this.value,
-  });
+  const _MetaItem({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -364,11 +460,7 @@ class _LeadingIcon extends StatelessWidget {
         color: bgColor,
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Icon(
-        icon,
-        size: 22,
-        color: iconColor,
-      ),
+      child: Icon(icon, size: 22, color: iconColor),
     );
   }
 }
