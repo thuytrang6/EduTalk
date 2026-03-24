@@ -62,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Đăng nhập để tiếp tục sử dụng D30 AI.',
+                  'Đăng nhập để tiếp tục sử dụng EduTalk.',
                   style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 50),

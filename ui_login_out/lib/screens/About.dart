@@ -11,7 +11,7 @@ class AboutPage extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const _Header(),
+            _Header(onBack: onBack),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.only(bottom: 24),
@@ -53,7 +53,8 @@ class AboutPage extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  final VoidCallback? onBack;
+  const _Header({this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +78,7 @@ class _Header extends StatelessWidget {
             left: 8,
             top: 8,
             child: IconButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: onBack,
               icon: const Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: Colors.white,

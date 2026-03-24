@@ -71,16 +71,28 @@ class ThongKeTs extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 1,
+                ),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.analytics_rounded, size: 13, color: Color(0xFF7DD3FA)),
+                  Icon(
+                    Icons.analytics_rounded,
+                    size: 13,
+                    color: Color(0xFF7DD3FA),
+                  ),
                   SizedBox(width: 6),
                   Text(
                     'HỆ THỐNG PHÂN TÍCH',
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF7DD3FA), letterSpacing: 1.1),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF7DD3FA),
+                      letterSpacing: 1.1,
+                    ),
                   ),
                 ],
               ),
@@ -100,9 +112,12 @@ class ThongKeTs extends StatelessWidget {
             Text(
               'Phân tích chuyên sâu từ Random Forest\nvới 200 cây quyết định',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, height: 1.6, color: Colors.white.withOpacity(0.68)),
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.6,
+                color: Colors.white.withOpacity(0.68),
+              ),
             ),
-
           ],
         ),
       ),
@@ -112,9 +127,22 @@ class ThongKeTs extends StatelessWidget {
   Widget _buildHeaderStat(String value, String label) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 10.5, color: Colors.white.withOpacity(0.6))),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10.5,
+            color: Colors.white.withOpacity(0.6),
+          ),
+        ),
       ],
     );
   }
@@ -134,10 +162,34 @@ class ThongKeTs extends StatelessWidget {
         crossAxisSpacing: 10,
         childAspectRatio: 1.3,
         children: const [
-          _MetricItem(icon: Icons.gps_fixed_rounded, iconColor: Color(0xFF3B82F6), gradientColor: Color(0xFFEFF6FF), label: 'ACCURACY', value: '94.5%'),
-          _MetricItem(icon: Icons.bolt_rounded, iconColor: Color(0xFFA855F7), gradientColor: Color(0xFFFAF5FF), label: 'PRECISION', value: '92.1%'),
-          _MetricItem(icon: Icons.shield_rounded, iconColor: Color(0xFF14B8A6), gradientColor: Color(0xFFF0FDFA), label: 'RECALL', value: '93.8%'),
-          _MetricItem(icon: Icons.balance_rounded, iconColor: Color(0xFFF97316), gradientColor: Color(0xFFFFF7ED), label: 'F1-SCORE', value: '92.9%'),
+          _MetricItem(
+            icon: Icons.gps_fixed_rounded,
+            iconColor: Color(0xFF3B82F6),
+            gradientColor: Color(0xFFEFF6FF),
+            label: 'ACCURACY',
+            value: '94.5%',
+          ),
+          _MetricItem(
+            icon: Icons.bolt_rounded,
+            iconColor: Color(0xFFA855F7),
+            gradientColor: Color(0xFFFAF5FF),
+            label: 'PRECISION',
+            value: '92.1%',
+          ),
+          _MetricItem(
+            icon: Icons.shield_rounded,
+            iconColor: Color(0xFF14B8A6),
+            gradientColor: Color(0xFFF0FDFA),
+            label: 'RECALL',
+            value: '93.8%',
+          ),
+          _MetricItem(
+            icon: Icons.balance_rounded,
+            iconColor: Color(0xFFF97316),
+            gradientColor: Color(0xFFFFF7ED),
+            label: 'F1-SCORE',
+            value: '92.9%',
+          ),
         ],
       ),
     );
@@ -166,7 +218,14 @@ class ThongKeTs extends StatelessWidget {
               children: [
                 SizedBox(
                   width: 68,
-                  child: Text(item.$1, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF4B5563))),
+                  child: Text(
+                    item.$1,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF4B5563),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -189,7 +248,11 @@ class ThongKeTs extends StatelessWidget {
                             ),
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
-                              BoxShadow(color: item.$3.withOpacity(0.35), blurRadius: 6, offset: const Offset(0, 2)),
+                              BoxShadow(
+                                color: item.$3.withOpacity(0.35),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
                             ],
                           ),
                         ),
@@ -202,7 +265,11 @@ class ThongKeTs extends StatelessWidget {
                   width: 36,
                   child: Text(
                     '${(item.$2 * 100).toInt()}%',
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: item.$3),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
+                      color: item.$3,
+                    ),
                     textAlign: TextAlign.right,
                   ),
                 ),
@@ -217,10 +284,38 @@ class ThongKeTs extends StatelessWidget {
   // ───────────────────────── TOP SCORE CARD ─────────────────────────
   Widget _buildTopScoreCard() {
     final schools = [
-      ('ĐH Bách Khoa HN', 'Khoa học máy tính', '29.42', const Color(0xFFFEF3C7), const Color(0xFFD97706), Icons.looks_one_rounded),
-      ('ĐH Ngoại Thương', 'Kinh tế đối ngoại', '28.5', const Color(0xFFF1F5F9), const Color(0xFF64748B), Icons.looks_two_rounded),
-      ('ĐH Y Hà Nội', 'Y khoa', '28.15', const Color(0xFFFFF7ED), const Color(0xFFEA7C1A), Icons.looks_3_rounded),
-      ('ĐH Công Nghệ', 'CNTT', '27.85', const Color(0xFFF0FDF4), const Color(0xFF16A34A), Icons.looks_4_rounded),
+      (
+        'ĐH Bách Khoa HN',
+        'Khoa học máy tính',
+        '29.42',
+        const Color(0xFFFEF3C7),
+        const Color(0xFFD97706),
+        Icons.looks_one_rounded,
+      ),
+      (
+        'ĐH Ngoại Thương',
+        'Kinh tế đối ngoại',
+        '28.5',
+        const Color(0xFFF1F5F9),
+        const Color(0xFF64748B),
+        Icons.looks_two_rounded,
+      ),
+      (
+        'ĐH Y Hà Nội',
+        'Y khoa',
+        '28.15',
+        const Color(0xFFFFF7ED),
+        const Color(0xFFEA7C1A),
+        Icons.looks_3_rounded,
+      ),
+      (
+        'ĐH Công Nghệ',
+        'CNTT',
+        '27.85',
+        const Color(0xFFF0FDF4),
+        const Color(0xFF16A34A),
+        Icons.looks_4_rounded,
+      ),
     ];
 
     return _sectionCard(
@@ -255,19 +350,42 @@ class ThongKeTs extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(s.$1, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
+                      Text(
+                        s.$1,
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text(s.$2, style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF))),
+                      Text(
+                        s.$2,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF9CA3AF),
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
                   decoration: BoxDecoration(
                     color: s.$5.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(s.$3, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: s.$5)),
+                  child: Text(
+                    s.$3,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: s.$5,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -285,7 +403,13 @@ class ThongKeTs extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
-        boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 20, offset: Offset(0, 6))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x10000000),
+            blurRadius: 20,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -297,12 +421,20 @@ class ThongKeTs extends StatelessWidget {
                   color: const Color(0xFFEFF6FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.map_rounded, color: Color(0xFF2563EB), size: 18),
+                child: const Icon(
+                  Icons.map_rounded,
+                  color: Color(0xFF2563EB),
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 10),
               const Text(
                 'Phân Bố Khu Vực',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF111827)),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF111827),
+                ),
               ),
             ],
           ),
@@ -318,11 +450,23 @@ class ThongKeTs extends StatelessWidget {
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _LegendItem(color: Color(0xFF3B82F6), text: 'Miền Bắc', percent: '45%'),
+                _LegendItem(
+                  color: Color(0xFF3B82F6),
+                  text: 'Miền Bắc',
+                  percent: '45%',
+                ),
                 _LegendDivider(),
-                _LegendItem(color: Color(0xFF10B981), text: 'Miền Nam', percent: '33%'),
+                _LegendItem(
+                  color: Color(0xFF10B981),
+                  text: 'Miền Nam',
+                  percent: '33%',
+                ),
                 _LegendDivider(),
-                _LegendItem(color: Color(0xFFF59E0B), text: 'Miền Trung', percent: '22%'),
+                _LegendItem(
+                  color: Color(0xFFF59E0B),
+                  text: 'Miền Trung',
+                  percent: '22%',
+                ),
               ],
             ),
           ),
@@ -347,8 +491,16 @@ class ThongKeTs extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         border: Border(left: BorderSide(color: accentColor, width: 3.5)),
         boxShadow: [
-          BoxShadow(color: accentColor.withOpacity(0.08), blurRadius: 20, offset: const Offset(0, 6)),
-          const BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 3)),
+          BoxShadow(
+            color: accentColor.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+          const BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 12,
+            offset: Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
@@ -365,7 +517,14 @@ class ThongKeTs extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: Color(0xFF111827))),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF111827),
+                  ),
+                ),
               ),
               if (trailing != null) trailing,
             ],
@@ -398,10 +557,21 @@ class ThongKeTs extends StatelessWidget {
             ],
           ),
           boxShadow: [
-            BoxShadow(color: const Color(0xff2563eb).withOpacity(0.22), blurRadius: 18, spreadRadius: 2, offset: const Offset(0, 6)),
+            BoxShadow(
+              color: const Color(0xff2563eb).withOpacity(0.22),
+              blurRadius: 18,
+              spreadRadius: 2,
+              offset: const Offset(0, 6),
+            ),
           ],
         ),
-        child: const Center(child: Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 30)),
+        child: const Center(
+          child: Icon(
+            Icons.auto_awesome_rounded,
+            color: Colors.white,
+            size: 30,
+          ),
+        ),
       ),
     );
   }
@@ -409,8 +579,18 @@ class ThongKeTs extends StatelessWidget {
   // ───────────────────────── BOTTOM BAR ─────────────────────────
   Widget _buildBottomBar(BuildContext context) {
     return Container(
-      width: double.infinity, height: 72,
-      decoration: const BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 14, offset: Offset(0, -2))]),
+      width: double.infinity,
+      height: 72,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 14,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
@@ -424,7 +604,12 @@ class ThongKeTs extends StatelessWidget {
     );
   }
 
-  Widget _navItem(BuildContext context, IconData icon, String label, int index) {
+  Widget _navItem(
+    BuildContext context,
+    IconData icon,
+    String label,
+    int index,
+  ) {
     return InkWell(
       onTap: () {
         Navigator.pop(context);
@@ -438,7 +623,14 @@ class ThongKeTs extends StatelessWidget {
           children: [
             Icon(icon, size: 26, color: Colors.grey),
             const SizedBox(height: 4),
-            Text(label, style: const TextStyle(fontSize: 11.5, color: Colors.grey, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
@@ -453,16 +645,32 @@ class _ActiveBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF22C55E), Color(0xFF16A34A)]),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF22C55E), Color(0xFF16A34A)],
+        ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: const Color(0xFF22C55E).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF22C55E).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.circle, size: 6, color: Colors.white),
           SizedBox(width: 5),
-          Text('ACTIVE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 0.5)),
+          Text(
+            'ACTIVE',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: 0.5,
+            ),
+          ),
         ],
       ),
     );
@@ -476,7 +684,13 @@ class _MetricItem extends StatelessWidget {
   final Color gradientColor;
   final String label;
   final String value;
-  const _MetricItem({required this.icon, required this.iconColor, required this.gradientColor, required this.label, required this.value});
+  const _MetricItem({
+    required this.icon,
+    required this.iconColor,
+    required this.gradientColor,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -499,9 +713,24 @@ class _MetricItem extends StatelessWidget {
             child: Icon(icon, color: iconColor, size: 18),
           ),
           const SizedBox(height: 8),
-          Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: iconColor.withOpacity(0.8), letterSpacing: 0.5)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: iconColor.withOpacity(0.8),
+              letterSpacing: 0.5,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF111827),
+            ),
+          ),
         ],
       ),
     );
@@ -512,26 +741,51 @@ class _MetricItem extends StatelessWidget {
 class _LegendDivider extends StatelessWidget {
   const _LegendDivider();
   @override
-  Widget build(BuildContext context) => Container(width: 1, height: 30, color: const Color(0xFFE5E7EB));
+  Widget build(BuildContext context) =>
+      Container(width: 1, height: 30, color: const Color(0xFFE5E7EB));
 }
 
 class _LegendItem extends StatelessWidget {
   final Color color;
   final String text;
   final String percent;
-  const _LegendItem({required this.color, required this.text, required this.percent});
+  const _LegendItem({
+    required this.color,
+    required this.text,
+    required this.percent,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 6),
-          Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF4B5563))),
-        ]),
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4B5563),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 3),
-        Text(percent, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: color)),
+        Text(
+          percent,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
       ],
     );
   }
@@ -553,11 +807,28 @@ class _RegionDonutChart extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Tổng', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey.shade500)),
+              Text(
+                'Tổng',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade500,
+                ),
+              ),
               const SizedBox(height: 2),
-              const Text('100%', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
+              const Text(
+                '100%',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF111827),
+                ),
+              ),
               const SizedBox(height: 1),
-              Text('học sinh', style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+              Text(
+                'học sinh',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+              ),
             ],
           ),
         ],
@@ -573,7 +844,11 @@ class _DonutPainter extends CustomPainter {
     final rect = Offset.zero & size;
     final arcRect = rect.deflate(strokeWidth / 2);
 
-    final colors = [const Color(0xFF3B82F6), const Color(0xFF10B981), const Color(0xFFF59E0B)];
+    final colors = [
+      const Color(0xFF3B82F6),
+      const Color(0xFF10B981),
+      const Color(0xFFF59E0B),
+    ];
     final values = [0.45, 0.33, 0.22];
     const gap = 0.015; // small gap between segments
 
@@ -596,7 +871,11 @@ class _DonutPainter extends CustomPainter {
       ..color = Colors.black.withOpacity(0.05)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    canvas.drawCircle(size.center(Offset.zero), size.width / 2 - strokeWidth, shadowPaint);
+    canvas.drawCircle(
+      size.center(Offset.zero),
+      size.width / 2 - strokeWidth,
+      shadowPaint,
+    );
   }
 
   @override
