@@ -6,6 +6,7 @@ import 'LichSu.dart';
 import 'home_page.dart';
 import 'Profile.dart';
 import 'KetQua.dart';
+import 'ThongKeTs.dart';
 import 'About.dart';
 import 'ContactPage.dart';
 
@@ -39,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
     const LichSuScreen(),
     ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
+
   ];
 
   onRestart() {
