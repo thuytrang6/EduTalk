@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:ui_login_out/screens/KetQua.dart';
-import 'KetQua.dart';
 
 class PhanTichScreen extends StatefulWidget {
   final VoidCallback onBack;
