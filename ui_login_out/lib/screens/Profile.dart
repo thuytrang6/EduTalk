@@ -485,6 +485,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 horizontal: 16,
                 vertical: 14,
               ),
+
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: const BorderSide(color: Color(0xffe2e8f0)),
