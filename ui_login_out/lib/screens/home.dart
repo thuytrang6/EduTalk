@@ -40,7 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
     const LichSuScreen(),
     ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
-
   ];
 
   onRestart() {

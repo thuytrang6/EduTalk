@@ -176,7 +176,7 @@ class _ContactPageState extends State<ContactPage> {
           IconButton(
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
-            onPressed: () => Navigator.pop(context),
+            onPressed: widget.onBack,
             icon: const Icon(
               Icons.arrow_back_ios_new,
               color: Colors.white,
