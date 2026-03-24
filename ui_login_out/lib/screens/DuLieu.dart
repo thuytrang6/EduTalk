@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:ui_login_out/screens/PhanTich.dart';
-import 'home.dart';
 import 'Premium_screen.dart';
 
 class DuLieuScreen extends StatefulWidget {
@@ -10,10 +8,10 @@ class DuLieuScreen extends StatefulWidget {
   const DuLieuScreen({super.key, this.onChangeTab, this.onOPenPhanTich});
 
   @override
-  State<DuLieuScreen> createState() => _DuLieuScreenState();
+  State<DuLieuScreen> createState() => DuLieuScreenState();
 }
 
-class _DuLieuScreenState extends State<DuLieuScreen> {
+class DuLieuScreenState extends State<DuLieuScreen> {
   String region = "Cả nước";
   String group = "A00";
 
@@ -68,6 +66,27 @@ class _DuLieuScreenState extends State<DuLieuScreen> {
     widget.onOPenPhanTich?.call();
   }
 
+  void resetForm() {
+    setState(() {
+      region = "Cả nước";
+      group = "A00";
+      subjects = subjectsMap[group]!;
+      for (var controller in scores) {
+        controller.text = "0.0";
+      }
+    });
+  }
+
+  void scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOut,
+    );
+  }
+
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void dispose() {
     for (final controller in scores) {
@@ -82,6 +101,7 @@ class _DuLieuScreenState extends State<DuLieuScreen> {
       backgroundColor: const Color(0xfff6f7fb),
       body: SafeArea(
         child: SingleChildScrollView(
+          controller: _scrollController,
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [

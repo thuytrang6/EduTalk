@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 enum ContactStatus { idle, sending, success }
 
 class ContactPage extends StatefulWidget {
-  const ContactPage({super.key});
+  final VoidCallback? onBack;
+  const ContactPage({super.key, this.onBack});
 
   @override
   State<ContactPage> createState() => _ContactPageState();
@@ -87,14 +88,14 @@ class _ContactPageState extends State<ContactPage> {
                                   _InputField(
                                     controller: _emailController,
                                     hint: 'email@example.com',
-                                    keyboardType:
-                                        TextInputType.emailAddress,
+                                    keyboardType: TextInputType.emailAddress,
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return 'Nhập email';
                                       }
                                       final regex = RegExp(
-                                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                                        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                                      );
                                       if (!regex.hasMatch(value)) {
                                         return 'Email không hợp lệ';
                                       }
@@ -116,32 +117,31 @@ class _ContactPageState extends State<ContactPage> {
                                     child: ElevatedButton(
                                       onPressed:
                                           _status == ContactStatus.sending
-                                              ? null
-                                              : _submit,
+                                          ? null
+                                          : _submit,
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF2563EB),
+                                        backgroundColor: const Color(
+                                          0xFF2563EB,
+                                        ),
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(14),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
                                         ),
                                       ),
-                                      child: _status ==
-                                              ContactStatus.sending
+                                      child: _status == ContactStatus.sending
                                           ? const SizedBox(
                                               width: 18,
                                               height: 18,
-                                              child:
-                                                  CircularProgressIndicator(
+                                              child: CircularProgressIndicator(
                                                 strokeWidth: 2,
                                                 color: Colors.white,
                                               ),
                                             )
                                           : const Text(
                                               'Gửi tin nhắn',
-                                              style: TextStyle(
-                                                  fontSize: 15),
+                                              style: TextStyle(fontSize: 15),
                                             ),
                                     ),
                                   ),
@@ -170,38 +170,42 @@ class _ContactPageState extends State<ContactPage> {
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            height: 40,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned(
-                  left: 0,
-                  child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 20),
-                  ),
-                ),
-                const Text(
-                  'Liên hệ',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
+          // 👈 Row riêng cho nút back
+          IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.white,
+              size: 20,
             ),
           ),
+
+          const SizedBox(height: 8),
+
+          // 👈 Title căn giữa
+          const Center(
+            child: Text(
+              'Liên hệ',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+
           const SizedBox(height: 10),
-          const Text(
-            'Gửi tin nhắn cho chúng tôi nếu bạn cần hỗ trợ.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFFDBEAFE),
+
+          // 👈 Subtitle
+          const Center(
+            child: Text(
+              'Gửi tin nhắn cho chúng tôi nếu bạn cần hỗ trợ.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: Color(0xFFDBEAFE)),
             ),
           ),
         ],
@@ -253,8 +257,10 @@ class _InputField extends StatelessWidget {
         hintText: hint,
         filled: true,
         fillColor: const Color(0xFFF9FAFB),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
@@ -265,8 +271,7 @@ class _InputField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: Color(0xFF2563EB), width: 1.4),
+          borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.4),
         ),
       ),
     );
