@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ui_login_out/screens/PhanTich.dart';
+import 'PhanTich.dart';
 import 'DuLieu.dart';
 import 'ThaoLuan.dart';
 import 'LichSu.dart';
@@ -7,10 +7,13 @@ import 'home_page.dart';
 import 'Profile.dart';
 import 'KetQua.dart';
 import 'ThongKeTs.dart';
+import 'About.dart';
+import 'ContactPage.dart';
+
 class HomeScreen extends StatefulWidget {
   final String userName;
 
-  const HomeScreen({super.key, required this.userName});
+  HomeScreen({super.key, required this.userName});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,15 +23,35 @@ class _HomeScreenState extends State<HomeScreen> {
   int currentIndex = 0;
   bool isShowingPhanTich = false;
   bool isShowingKetQua = false;
-
+  bool isShowingAbout = false;
+  bool isShowingContact = false;
+  final GlobalKey<DuLieuScreenState> duLieukey = GlobalKey();
   late final List<Widget> pages = [
-    HomePage(onChangeTab: _changeTab),
+    HomePage(
+      onChangeTab: _changeTab,
+      onOpenAbout: openAbout,
+      onOpenContact: openContact,
+    ),
     const ThaoLuanScreen(),
-    DuLieuScreen(onChangeTab: _changeTab, onOPenPhanTich: openPhanTich),
+    DuLieuScreen(
+      key: duLieukey,
+      onChangeTab: _changeTab,
+      onOPenPhanTich: openPhanTich,
+    ),
     const LichSuScreen(),
     ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
 
   ];
+
+  onRestart() {
+    setState(() {
+      currentIndex = 2;
+      isShowingKetQua = false;
+      isShowingPhanTich = false;
+    });
+    duLieukey.currentState?.resetForm();
+    duLieukey.currentState?.scrollToTop();
+  }
 
   void _changeTab(int index) {
     if (currentIndex == index && !isShowingPhanTich) return;
@@ -63,6 +86,27 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void openAbout() {
+    setState(() {
+      isShowingAbout = true;
+      isShowingContact = false;
+    });
+  }
+
+  void openContact() {
+    setState(() {
+      isShowingContact = true;
+      isShowingAbout = false;
+    });
+  }
+
+  void closeExtraPage() {
+    setState(() {
+      isShowingAbout = false;
+      isShowingContact = false;
+    });
+  }
+
   void closeOverlayPage() {
     setState(() {
       currentIndex = 2;
@@ -94,11 +138,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   setState(() {
                     currentIndex = 2;
                     isShowingKetQua = false;
-                    isShowingPhanTich = true;
+                    isShowingPhanTich = false;
                   });
                 },
               ),
             ),
+          if (isShowingAbout)
+            Positioned.fill(child: AboutPage(onBack: closeExtraPage)),
+          if (isShowingContact)
+            Positioned.fill(child: ContactPage(onBack: closeExtraPage)),
         ],
       ),
       floatingActionButton: AnimatedScale(

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:ui_login_out/screens/DuLieu.dart';
-import 'package:ui_login_out/screens/LichSu.dart';
-import 'package:ui_login_out/screens/ThaoLuan.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
 import 'Premium_screen.dart';
 import 'ThongKeTs.dart';
 class HomePage extends StatelessWidget {
   final ValueChanged<int>? onChangeTab;
-  const HomePage({super.key, this.onChangeTab});
+  final VoidCallback? onOpenAbout;
+  final VoidCallback? onOpenContact;
+  const HomePage({
+    super.key,
+    this.onChangeTab,
+    this.onOpenContact,
+    this.onOpenAbout,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -184,12 +188,7 @@ class HomePage extends StatelessWidget {
             title: "Về chúng tôi",
             subtitle: "Giới thiệu về D30 AI",
             onTap: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => const VeChungToiScreen(),
-              //   ),
-              // );
+              onOpenAbout?.call();
             },
           ),
 
@@ -202,12 +201,7 @@ class HomePage extends StatelessWidget {
             title: "Liên hệ hỗ trợ",
             subtitle: "Gửi câu hỏi cho chúng tôi",
             onTap: () {
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(
-              //     builder: (context) => const LienHeHoTroScreen(),
-              //   ),
-              // );
+              onOpenContact?.call();
             },
           ),
         ],
