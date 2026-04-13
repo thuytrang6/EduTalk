@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '/screens/Register.dart';
 import '/screens/home.dart';
+import '/screens/admin/admin_layout.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,10 +12,12 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _userController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _userController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -115,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 10),
                       TextField(
+                        controller: _passwordController,
                         obscureText: true,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
@@ -146,13 +150,23 @@ class _LoginScreenState extends State<LoginScreen> {
                         //====Chuyển sang HomeScreen khi đăng nhập thành công ====//
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    HomeScreen(userName: _userController.text),
-                              ),
-                            );
+                            if (_userController.text == "admin" &&
+                                _passwordController.text == "admin123") {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AdminLayout(),
+                                ),
+                              );
+                            } else {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => HomeScreen(
+                                      userName: _userController.text),
+                                ),
+                              );
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
