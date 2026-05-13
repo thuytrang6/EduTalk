@@ -36,6 +36,12 @@
       <excludeFolder url="file://$MODULE_DIR$/ui_login_out/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows/example/.dart_tool" />
       <excludeFolder url="file://$MODULE_DIR$/ui_login_out/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows/example/.pub" />
       <excludeFolder url="file://$MODULE_DIR$/ui_login_out/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows/example/build" />
+      <excludeFolder url="file://$MODULE_DIR$/ui_login_out/.idea" />
+      <excludeFolder url="file://$MODULE_DIR$/ui_login_out/android/.gradle" />
+      <excludeFolder url="file://$MODULE_DIR$/ui_login_out/ios/Flutter/ephemeral" />
+      <excludeFolder url="file://$MODULE_DIR$/ui_login_out/linux/flutter/ephemeral" />
+      <excludeFolder url="file://$MODULE_DIR$/ui_login_out/macos/Flutter/ephemeral" />
+      <excludeFolder url="file://$MODULE_DIR$/ui_login_out/windows/flutter/ephemeral" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
