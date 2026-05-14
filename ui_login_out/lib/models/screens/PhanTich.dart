@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:ui_login_out/services/api_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class PhanTichScreen extends StatefulWidget {
   final VoidCallback onBack;
-  final VoidCallback onShowKetQua;
+  // ← Đổi type để nhận (major, recommendations)
+  final Function(String major, List<dynamic> recommendations) onShowKetQua;
 
   const PhanTichScreen({
     super.key,
@@ -15,6 +18,44 @@ class PhanTichScreen extends StatefulWidget {
 }
 
 class _PhanTichScreenState extends State<PhanTichScreen> {
+  final _apiService = ApiService();
+
+  Future<void> _onPredict() async {
+    // Hiện loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      final result = await _apiService.predict(
+        scores: inItems.map((item) => item.value.toDouble()).toList(),
+        userId: uid,
+      );
+
+      if (context.mounted) Navigator.pop(context); // đóng loading
+
+      if (result['success'] == true) {
+        final major = result['predicted_major'] as String;
+        final unis = result['recommendations'] as List<dynamic>;
+        widget.onShowKetQua(major, unis); // ← truyền data thật sang KetQua
+      } else {
+        _showError('Dự đoán thất bại: ${result['error'] ?? ''}');
+      }
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+      _showError('Lỗi kết nối BE: $e');
+    }
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+  }
+
   final List<InterestItem> inItems = [
     InterestItem(
       title: 'Sự năng động & Hoạt bát',
@@ -87,6 +128,7 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
       value: 3,
     ),
   ];
+
   String getMoodEmoji(int value) {
     switch (value) {
       case 1:
@@ -161,11 +203,7 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: () {
-                            widget.onShowKetQua();
-
-                            // TODO: xử lý phân tích AI
-                          },
+                          onPressed: _onPredict, // ← chỉ gọi 1 hàm này
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -238,7 +276,6 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
                   ),
                 ),
               ),
-
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(

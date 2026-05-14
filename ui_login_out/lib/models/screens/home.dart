@@ -6,7 +6,6 @@ import 'LichSu.dart';
 import 'home_page.dart';
 import 'Profile.dart';
 import 'KetQua.dart';
-import 'ThongKeTs.dart';
 import 'About.dart';
 import 'ContactPage.dart';
 
@@ -25,6 +24,11 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isShowingKetQua = false;
   bool isShowingAbout = false;
   bool isShowingContact = false;
+
+  // ← Lưu kết quả từ API
+  String _predictedMajor = '';
+  List<dynamic> _recommendations = [];
+
   final GlobalKey<DuLieuScreenState> duLieukey = GlobalKey();
   late final List<Widget> pages = [
     HomePage(
@@ -42,11 +46,13 @@ class _HomeScreenState extends State<HomeScreen> {
     ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
   ];
 
-  onRestart() {
+  void onRestart() {
     setState(() {
       currentIndex = 2;
       isShowingKetQua = false;
       isShowingPhanTich = false;
+      _predictedMajor = '';
+      _recommendations = [];
     });
     duLieukey.currentState?.resetForm();
     duLieukey.currentState?.scrollToTop();
@@ -54,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _changeTab(int index) {
     if (currentIndex == index && !isShowingPhanTich) return;
-
     setState(() {
       currentIndex = index;
       isShowingPhanTich = false;
@@ -69,8 +74,11 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void openKetQua() {
+  // ← Nhận data từ PhanTich
+  void openKetQua(String major, List<dynamic> recommendations) {
     setState(() {
+      _predictedMajor = major;
+      _recommendations = recommendations;
       currentIndex = 2;
       isShowingPhanTich = false;
       isShowingKetQua = true;
@@ -126,20 +134,16 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned.fill(
               child: PhanTichScreen(
                 onBack: closeOverlayPage,
-                onShowKetQua: openKetQua,
+                onShowKetQua: openKetQua, // ← truyền hàm nhận (major, unis)
               ),
             ),
           if (isShowingKetQua)
             Positioned.fill(
               child: KetQuaScreen(
                 onBack: closeKetQua,
-                onRestart: () {
-                  setState(() {
-                    currentIndex = 2;
-                    isShowingKetQua = false;
-                    isShowingPhanTich = false;
-                  });
-                },
+                onRestart: onRestart,
+                predictedMajor: _predictedMajor, // ← truyền data thật
+                recommendations: _recommendations, // ← truyền data thật
               ),
             ),
           if (isShowingAbout)
@@ -216,7 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _navItem(IconData icon, String label, int index) {
     final bool active = currentIndex == index;
-
     return InkWell(
       borderRadius: BorderRadius.circular(18),
       onTap: () => _changeTab(index),

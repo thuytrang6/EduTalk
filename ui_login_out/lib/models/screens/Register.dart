@@ -1,29 +1,8 @@
-<<<<<<< HEAD
 import 'package:flutter/material.dart';
-=======
-﻿import 'package:flutter/material.dart';
->>>>>>> origin/quan
-import '/screens/Register.dart';
-import '/screens/home.dart';
-import '/screens/admin/admin_layout.dart';
+import 'Login.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _userController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-
-  @override
-  void dispose() {
-    _userController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF1A237E), Color(0xFF121212)],
+            colors: [Color(0xFF4A148C), Color(0xFF121212)],
           ),
         ),
         child: SafeArea(
@@ -54,13 +33,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: const Icon(
                     Icons.psychology_outlined,
                     size: 80,
-                    color: Color(0xFF4DD0E1),
+                    color: Color(0xFFBA68C8),
                   ),
                 ),
                 const SizedBox(height: 40),
                 // Title
                 const Text(
-                  'Chào mừng trở lại!',
+                  'Tạo tài khoản',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -69,11 +48,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Đăng nhập để tiếp tục sử dụng EduTalk.',
+                  'Tham gia cộng đồng D30 ngay hôm nay.',
                   style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 50),
-                // Login Form Card
+                // Register Form Card
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -85,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'TÊN ĐĂNG NHẬP / EMAIL',
+                        'TÊN HIỂN THỊ',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -94,14 +73,40 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 10),
                       TextField(
-                        controller: _userController,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(
+                            Icons.person_outline,
+                            color: Colors.white70,
+                          ),
+                          hintText: 'Nhập tên của bạn...',
+                          hintStyle: const TextStyle(color: Colors.white38),
+                          filled: true,
+                          fillColor: Colors.white.withOpacity(0.1),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'EMAIL',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(
                             Icons.mail_outline,
                             color: Colors.white70,
                           ),
-                          hintText: 'Nhập tên của bạn...',
+                          hintText: 'email@example.com',
                           hintStyle: const TextStyle(color: Colors.white38),
                           filled: true,
                           fillColor: Colors.white.withOpacity(0.1),
@@ -122,7 +127,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 10),
                       TextField(
-                        controller: _passwordController,
                         obscureText: true,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
@@ -141,37 +145,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 30),
-                      // Login Button
+                      // Register Button
                       Container(
                         width: double.infinity,
                         height: 55,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF00E5FF), Color(0xFF2979FF)],
+                            colors: [Color(0xFF9575CD), Color(0xFF673AB7)],
                           ),
                           borderRadius: BorderRadius.circular(15),
                         ),
-                        //====Chuyển sang HomeScreen khi đăng nhập thành công ====//
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (_userController.text == "admin" &&
-                                _passwordController.text == "admin123") {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AdminLayout(),
-                                ),
-                              );
-                            } else {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => HomeScreen(
-                                      userName: _userController.text),
-                                ),
-                              );
-                            }
-                          },
+                          onPressed: () {},
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -183,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Đăng nhập',
+                                'Đăng ký',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -205,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Chưa có tài khoản? ',
+                      'Đã có tài khoản? ',
                       style: TextStyle(color: Colors.white70),
                     ),
                     GestureDetector(
@@ -213,14 +198,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const RegisterScreen(),
+                            builder: (context) => const LoginScreen(),
                           ),
                         );
                       },
                       child: const Text(
-                        'Đăng ký ngay',
+                        'Đăng nhập',
                         style: TextStyle(
-                          color: Color(0xFF00E5FF),
+                          color: Color(0xFFBA68C8),
                           fontWeight: FontWeight.bold,
                         ),
                       ),

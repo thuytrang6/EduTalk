@@ -1,8 +1,25 @@
 import 'package:flutter/material.dart';
-import '/screens/Login.dart';
+import 'Register.dart';
+import 'home.dart';
+import 'admin/admin_layout.dart';
 
-class RegisterScreen extends StatelessWidget {
-  const RegisterScreen({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _userController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _userController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +31,7 @@ class RegisterScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF4A148C), Color(0xFF121212)],
+            colors: [Color(0xFF1A237E), Color(0xFF121212)],
           ),
         ),
         child: SafeArea(
@@ -33,13 +50,13 @@ class RegisterScreen extends StatelessWidget {
                   child: const Icon(
                     Icons.psychology_outlined,
                     size: 80,
-                    color: Color(0xFFBA68C8),
+                    color: Color(0xFF4DD0E1),
                   ),
                 ),
                 const SizedBox(height: 40),
                 // Title
                 const Text(
-                  'Tạo tài khoản',
+                  'Chào mừng trở lại!',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -48,14 +65,11 @@ class RegisterScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Tham gia cộng đồng D30 ngay hôm nay.',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  'Đăng nhập để tiếp tục sử dụng EduTalk.',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 50),
-                // Register Form Card
+                // Login Form Card
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -67,7 +81,7 @@ class RegisterScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'TÊN HIỂN THỊ',
+                        'TÊN ĐĂNG NHẬP / EMAIL',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -76,34 +90,14 @@ class RegisterScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       TextField(
+                        controller: _userController,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.person_outline, color: Colors.white70),
-                          hintText: 'Nhập tên của bạn...',
-                          hintStyle: const TextStyle(color: Colors.white38),
-                          filled: true,
-                          fillColor: Colors.white.withOpacity(0.1),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(15),
-                            borderSide: BorderSide.none,
+                          prefixIcon: const Icon(
+                            Icons.mail_outline,
+                            color: Colors.white70,
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'EMAIL',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.mail_outline, color: Colors.white70),
-                          hintText: 'email@example.com',
+                          hintText: 'Nhập tên của bạn...',
                           hintStyle: const TextStyle(color: Colors.white38),
                           filled: true,
                           fillColor: Colors.white.withOpacity(0.1),
@@ -124,10 +118,14 @@ class RegisterScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       TextField(
+                        controller: _passwordController,
                         obscureText: true,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.lock_outline, color: Colors.white70),
+                          prefixIcon: const Icon(
+                            Icons.lock_outline,
+                            color: Colors.white70,
+                          ),
                           hintText: '........',
                           hintStyle: const TextStyle(color: Colors.white38),
                           filled: true,
@@ -139,18 +137,38 @@ class RegisterScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 30),
-                      // Register Button
+                      // Login Button
                       Container(
                         width: double.infinity,
                         height: 55,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF9575CD), Color(0xFF673AB7)],
+                            colors: [Color(0xFF00E5FF), Color(0xFF2979FF)],
                           ),
                           borderRadius: BorderRadius.circular(15),
                         ),
+                        //====Chuyển sang HomeScreen khi đăng nhập thành công ====//
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            if (_userController.text == "admin" &&
+                                _passwordController.text == "admin123") {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AdminLayout(),
+                                ),
+                              );
+                            } else {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => HomeScreen(
+                                    userName: _userController.text,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -162,7 +180,7 @@ class RegisterScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                'Đăng ký',
+                                'Đăng nhập',
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
@@ -184,20 +202,22 @@ class RegisterScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Đã có tài khoản? ',
+                      'Chưa có tài khoản? ',
                       style: TextStyle(color: Colors.white70),
                     ),
                     GestureDetector(
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const LoginScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => const RegisterScreen(),
+                          ),
                         );
                       },
                       child: const Text(
-                        'Đăng nhập',
+                        'Đăng ký ngay',
                         style: TextStyle(
-                          color: Color(0xFFBA68C8),
+                          color: Color(0xFF00E5FF),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
