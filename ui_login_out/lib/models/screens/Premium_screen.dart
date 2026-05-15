@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'package:url_launcher/url_launcher.dart';
+import 'package:ui_login_out/services/api_service.dart';
 class PremiumScreen extends StatelessWidget {
   final ValueChanged<int>? onTabChange;
 
@@ -56,6 +57,67 @@ class PremiumScreen extends StatelessWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       onTabChange?.call(index);
     });
+  }
+
+  Future<void> _handleMoMoPayment(BuildContext context, String price) async {
+    try {
+      // 1. Tiền xử lý giá: "29.000" -> 29000.0
+      double amount = double.parse(price.replaceAll('.', ''));
+
+      // 2. Tạo thông tin đơn hàng ngẫu nhiên (hoặc theo logic backend)
+      String orderId = DateTime.now().millisecondsSinceEpoch.toString();
+      String orderInfo = "Thanh toán gói Premium EduTalk";
+
+      // Hiển thị loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+
+      // 3. Gọi API backend để lấy payUrl
+      final apiService = ApiService();
+      final result = await apiService.createMoMoPayment(
+        amount: amount,
+        orderId: orderId,
+        orderInfo: orderInfo,
+      );
+
+      // Đóng loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      if (result.containsKey('payUrl')) {
+        String payUrl = result['payUrl'];
+        final Uri url = Uri.parse(payUrl);
+
+        // 4. Mở ứng dụng MoMo (Deep Link) hoặc Browser
+        if (await canLaunchUrl(url)) {
+          await launchUrl(
+            url,
+            mode: LaunchMode.externalApplication,
+          );
+        } else {
+          throw 'Không thể mở liên kết thanh toán';
+        }
+      } else {
+        throw 'Không nhận được link thanh toán từ server';
+      }
+    } catch (e) {
+      // Đóng loading dialog nếu còn đang hiện
+      if (context.mounted) {
+        // Kiểm tra xem có dialog đang mở không (đơn giản hóa)
+        // Trong thực tế nên dùng một flag hoặc Navigator.canPop
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi thanh toán: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
 
   Widget _buildFab(BuildContext context) {
@@ -550,7 +612,7 @@ class PremiumScreen extends StatelessWidget {
                       ],
                     ),
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => _handleMoMoPayment(context, price),
                       icon: Icon(buttonIcon, color: Colors.white, size: 20),
                       label: Text(
                         buttonText,

@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Permissions for image_picker -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
@@ -55,6 +56,12 @@
         <intent>
             <action android:name="android.intent.action.GET_CONTENT" />
             <data android:mimeType="image/*" />
+        </intent>
+        <package android:name="com.mservice.momotransfer" />
+        <package android:name="com.mservice.momo.uat" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="momo" />
         </intent>
     </queries>
 </manifest>

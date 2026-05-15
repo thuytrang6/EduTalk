@@ -6,7 +6,7 @@ class FirestoreService {
   Stream<List<PredictionModel>> getPredictionsForUser(String userId) {
     return _db
         .collection('predictions')
-        .where('userId', isEqualTo: userId)
+        .where('user_id', isEqualTo: userId)
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map(
