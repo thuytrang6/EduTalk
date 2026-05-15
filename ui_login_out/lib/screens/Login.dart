@@ -1,8 +1,6 @@
-<<<<<<< HEAD
 import 'package:flutter/material.dart';
-=======
-﻿import 'package:flutter/material.dart';
->>>>>>> origin/quan
+import 'package:firebase_auth/firebase_auth.dart'; 
+import '../auth_service.dart';
 import '/screens/Register.dart';
 import '/screens/home.dart';
 import '/screens/admin/admin_layout.dart';
@@ -17,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
 
   @override
   void dispose() {
@@ -24,6 +23,56 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
+
+  void _handleLogin() async {
+    String email = _userController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng nhập đầy đủ thông tin")),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFF4DD0E1)),
+      ),
+    );
+
+    final Map<String, dynamic>? result =
+        await _authService.login(email, password) as Map<String, dynamic>?;
+
+    if (!mounted) return;
+    Navigator.pop(context); 
+    if (result != null && result["status"] == "success") {
+      String role = result["role"]?.toString() ?? "user";
+      String realName =
+          FirebaseAuth.instance.currentUser?.displayName ?? email.split('@')[0];
+      if (role == "admin") {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminLayout()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HomeScreen(userName: realName),
+          ),
+        );
+      }
+    } else {
+      String errorMessage =
+          result?["status"]?.toString() ?? "Đăng nhập thất bại";
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Lỗi: $errorMessage")));
+    }
+  } 
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 60),
-                // Logo
+                // Logo Icon
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -58,7 +107,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                // Title
                 const Text(
                   'Chào mừng trở lại!',
                   style: TextStyle(
@@ -67,13 +115,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Đăng nhập để tiếp tục sử dụng EduTalk.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
                 const SizedBox(height: 50),
-                // Login Form Card
+                // Login Form
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -85,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'TÊN ĐĂNG NHẬP / EMAIL',
+                        'EMAIL',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
@@ -101,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Icons.mail_outline,
                             color: Colors.white70,
                           ),
-                          hintText: 'Nhập tên của bạn...',
+                          hintText: 'Nhập email của bạn...',
                           hintStyle: const TextStyle(color: Colors.white38),
                           filled: true,
                           fillColor: Colors.white.withOpacity(0.1),
@@ -141,7 +184,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 30),
-                      // Login Button
                       Container(
                         width: double.infinity,
                         height: 55,
@@ -151,27 +193,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           borderRadius: BorderRadius.circular(15),
                         ),
-                        //====Chuyển sang HomeScreen khi đăng nhập thành công ====//
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (_userController.text == "admin" &&
-                                _passwordController.text == "admin123") {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AdminLayout(),
-                                ),
-                              );
-                            } else {
-                              Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => HomeScreen(
-                                      userName: _userController.text),
-                                ),
-                              );
-                            }
-                          },
+                          onPressed: _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -200,7 +223,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-                // Footer
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

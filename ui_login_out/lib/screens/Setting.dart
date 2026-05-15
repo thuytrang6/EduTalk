@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../auth_service.dart';
+import 'Login.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -179,7 +183,26 @@ class _SettingScreenState extends State<SettingScreen> {
               title: "Đăng xuất",
               subtitle: "Thoát khỏi tài khoản hiện tại",
               titleColor: const Color(0xffef4444),
-              onTap: () {},
+              onTap: () async {
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(color: Colors.red),
+                  ),
+                );
+                final AuthService authService = AuthService();
+                await authService.signOut();
+
+                if (!mounted) return;
+                Navigator.pop(context); 
+
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
+              },
             ),
             _buildNavigationItem(
               icon: Icons.delete_outline_rounded,
@@ -188,7 +211,103 @@ class _SettingScreenState extends State<SettingScreen> {
               title: "Xóa tài khoản",
               subtitle: "Xóa vĩnh viễn tài khoản và dữ liệu",
               titleColor: const Color(0xffef4444),
-              onTap: () {},
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext ctx) {
+                    return AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      title: const Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.red),
+                          SizedBox(width: 10),
+                          Text("Xóa tài khoản?"),
+                        ],
+                      ),
+                      content: const Text(
+                        "Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này không? Dữ liệu sẽ không thể khôi phục.",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text(
+                            "Hủy",
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(ctx);
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => const Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.red,
+                                ),
+                              ),
+                            );
+
+                            try {
+                              User? user = FirebaseAuth.instance.currentUser;
+                              if (user != null) {
+                                String uid = user.uid;
+
+                                await FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(uid)
+                                    .delete();
+
+                                await user.delete();
+
+                                if (!mounted) return;
+                                Navigator.pop(context);
+
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const LoginScreen(),
+                                  ),
+                                  (route) => false,
+                                );
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Đã xóa tài khoản vĩnh viễn!",
+                                    ),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "Bảo mật: Vui lòng Đăng xuất rồi Đăng nhập lại để thực hiện Xóa!",
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text(
+                            "Xóa vĩnh viễn",
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),

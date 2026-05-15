@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'Setting.dart';
@@ -31,8 +32,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.username);
-    _emailController = TextEditingController(text: "example@email.com");
+    final user = FirebaseAuth.instance.currentUser;
+    String userEmail = user?.email ?? "Chưa có email";
+    String displayName = user?.displayName ?? "";
+    if (displayName.isEmpty && userEmail.contains('@')) {
+      displayName = userEmail.split('@')[0];
+    } else if (displayName.isEmpty) {
+      displayName = widget.username;
+    }
+    _nameController = TextEditingController(text: displayName);
+    _emailController = TextEditingController(text: userEmail);
     _phoneController = TextEditingController(text: "0123456789");
     _dobController = TextEditingController(text: "01/01/2000");
   }
