@@ -625,7 +625,10 @@ class PremiumScreen extends StatelessWidget {
                       ],
                     ),
                     child: ElevatedButton.icon(
-                      onPressed: () => _handleMoMoPayment(context, price),
+                      onPressed: () {
+                        // Lưu context vào biến local hoặc đảm bảo gọi trong phạm vi an toàn
+                        _handleMoMoPayment(context, price);
+                      },
                       icon: Icon(buttonIcon, color: Colors.white, size: 20),
                       label: Text(
                         buttonText,
