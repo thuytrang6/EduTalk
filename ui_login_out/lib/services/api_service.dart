@@ -26,16 +26,18 @@ class ApiService {
     required double amount,
     required String orderId,
     required String orderInfo,
+    required String userId, // Thêm dòng này
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/momo-payment'), // Endpoint này tạo ở Backend Render
+        Uri.parse('$baseUrl/momo-payment'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'amount': amount.toString(),
+          'user_id': userId, // Gửi userId lên backend
           'orderId': orderId,
           'orderInfo': orderInfo,
-          'requestId': orderId, // dùng chung với orderId(đon giản)
+          'requestId': orderId,
         }),
       );
 

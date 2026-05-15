@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ui_login_out/services/api_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 class PremiumScreen extends StatelessWidget {
   final ValueChanged<int>? onTabChange;
 
@@ -38,7 +39,7 @@ class PremiumScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   _buildComparisonCard(),
                   const SizedBox(height: 20),
-                  _buildPricingPlans(),
+                  _buildPricingPlans(context),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -77,16 +78,23 @@ class PremiumScreen extends StatelessWidget {
         ),
       );
 
-      // 3. Gọi API backend để lấy payUrl
+      // 3. Lấy UserId từ Firebase Auth
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw 'Bạn cần đăng nhập để thực hiện thanh toán';
+      String userId = user.uid;
+
+      // 4. Gọi API backend để lấy payUrl
       final apiService = ApiService();
       final result = await apiService.createMoMoPayment(
         amount: amount,
         orderId: orderId,
         orderInfo: orderInfo,
+        userId: userId,
       );
 
       // Đóng loading dialog
-      if (context.mounted) Navigator.pop(context);
+      if (!context.mounted) return;
+      Navigator.pop(context);
 
       if (result.containsKey('payUrl')) {
         String payUrl = result['payUrl'];
@@ -107,16 +115,17 @@ class PremiumScreen extends StatelessWidget {
     } catch (e) {
       // Đóng loading dialog nếu còn đang hiện
       if (context.mounted) {
-        // Kiểm tra xem có dialog đang mở không (đơn giản hóa)
-        // Trong thực tế nên dùng một flag hoặc Navigator.canPop
+        // Có thể cần Navigator.pop(context) ở đây nếu dialog chưa đóng
       }
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lỗi thanh toán: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi thanh toán: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -380,10 +389,11 @@ class PremiumScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPricingPlans() {
+  Widget _buildPricingPlans(BuildContext context) {
     return Column(
       children: [
         _buildPlanCard(
+          context: context,
           title: "Gói Tháng",
           subtitle: "Linh hoạt, thử nghiệm",
           price: "29.000",
@@ -396,6 +406,7 @@ class PremiumScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _buildPlanCard(
+          context: context,
           title: "Gói Năm",
           subtitle: "Tiết kiệm 40% - Tốt nhất",
           price: "216.000",
@@ -411,6 +422,7 @@ class PremiumScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _buildPlanCard(
+          context: context,
           title: "Gói Trọn Đời",
           subtitle: "Một lần thanh toán, sử dụng mãi mãi",
           price: "499.000",
@@ -426,6 +438,7 @@ class PremiumScreen extends StatelessWidget {
   }
 
   Widget _buildPlanCard({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required String price,
