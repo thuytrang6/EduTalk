@@ -39,12 +39,12 @@ FEATURE_NAMES = [
 ]
 
 # ── HEALTH CHECK ───────────────────────────────────────────────────────────────
-@app.route('/', methods=['GET'])
+@app.route('/', methods=['GET'], strict_slashes=False)
 def health_check():
-    return "AI Server is running v2!"
+    return "AI Server is running!"
 
 # ── API DỰ ĐOÁN NGÀNH + LƯU FIRESTORE ─────────────────────────────────────────
-@app.route('/predict', methods=['POST'])
+@app.route('/predict', methods=['POST'], strict_slashes=False)
 def predict():
     try:
         data = request.get_json()
@@ -82,7 +82,7 @@ def predict():
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ── API LẤY LỊCH SỬ DỰ ĐOÁN THEO USER ────────────────────────────────────────
-@app.route('/history/<user_id>', methods=['GET'])
+@app.route('/history/<user_id>', methods=['GET'], strict_slashes=False)
 def get_history(user_id):
     try:
         docs = db.collection('predictions') \
@@ -106,7 +106,7 @@ def get_history(user_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ── API ADMIN: ĐỘ QUAN TRỌNG CÁC YẾU TỐ ──────────────────────────────────────
-@app.route('/admin/stats', methods=['GET'])
+@app.route('/admin/stats', methods=['GET'], strict_slashes=False)
 def get_admin_stats():
     try:
         importances = model.feature_importances_
@@ -141,20 +141,35 @@ def create_momo_payment():
         return "Momo Payment endpoint is active. Use POST to create a payment link."
     try:
         data = request.get_json()
-        amount = data.get('amount')
-        user_id = data.get('user_id')
-        order_id = data.get('orderId', str(uuid.uuid4()))
-        order_info = data.get('orderInfo', "Thanh toán EduTalk")
-        request_id = data.get('requestId', order_id)
+        if not data:
+            return jsonify({"success": False, "message": "Missing JSON body"}), 400
+            
+        # Ép kiểu dữ liệu chuẩn
+        # amount phải là chuỗi khi ký, nhưng là số khi gửi JSON
+        raw_amount = str(data.get('amount', '0')).split('.')[0] 
+        user_id = str(data.get('user_id', ''))
+        order_id = str(data.get('orderId', uuid.uuid4()))
+        order_info = str(data.get('orderInfo', "Thanh toan EduTalk"))
+        request_id = str(data.get('requestId', order_id))
+        extra_data = user_id # MoMo yêu cầu string, nếu rỗng thì ""
         
-        extra_data = user_id if user_id else ""
-        
-        # URL phải khớp chính xác với route bên dưới
         redirect_url = "https://edutalk-7ndf.onrender.com/payment-callback"
         ipn_url = "https://edutalk-7ndf.onrender.com/payment-callback"
+        request_type = "captureWallet"
 
-        # 1. Tạo chuỗi ký tự (Phải có extraData trong chuỗi ký)
-        raw_signature = f"accessKey={MOMO_ACCESS_KEY}&amount={amount}&extraData={extra_data}&ipnUrl={ipn_url}&orderId={order_id}&orderInfo={order_info}&partnerCode={MOMO_PARTNER_CODE}&redirectUrl={redirect_url}&requestId={request_id}&requestType=captureWallet"
+        # 1. Tạo chuỗi ký tự signature (Thứ tự Alphabet của key là BẮT BUỘC)
+        raw_signature = (
+            f"accessKey={MOMO_ACCESS_KEY}&"
+            f"amount={raw_amount}&"
+            f"extraData={extra_data}&"
+            f"ipnUrl={ipn_url}&"
+            f"orderId={order_id}&"
+            f"orderInfo={order_info}&"
+            f"partnerCode={MOMO_PARTNER_CODE}&"
+            f"redirectUrl={redirect_url}&"
+            f"requestId={request_id}&"
+            f"requestType={request_type}"
+        )
 
         # 2. Tạo chữ ký SHA256
         signature = hmac.new(
@@ -163,25 +178,27 @@ def create_momo_payment():
             hashlib.sha256
         ).hexdigest()
 
-        # 3. Gửi request đến MoMo
+        # 3. Payload gửi sang MoMo (amount phải là kiểu INT)
         payload = {
             "partnerCode": MOMO_PARTNER_CODE,
-            "partnerName": "EduTalk Test",
-            "storeId": "EduTalkStore",
+            "partnerName": "EduTalk",
+            "storeId": MOMO_PARTNER_CODE, # Dùng luôn PartnerCode làm StoreId cho sandbox
             "requestId": request_id,
-            "amount": amount,
+            "amount": int(raw_amount),
             "orderId": order_id,
             "orderInfo": order_info,
             "redirectUrl": redirect_url,
             "ipnUrl": ipn_url,
             "lang": "vi",
             "extraData": extra_data,
-            "requestType": "captureWallet",
+            "requestType": request_type,
             "signature": signature
         }
 
+        print(f"Payload gửi MoMo: {json.dumps(payload)}")
         response = requests.post(MOMO_ENDPOINT, json=payload)
         res_data = response.json()
+        print(f"MoMo trả về: {res_data}")
 
         if res_data.get('resultCode') == 0:
             return jsonify({
@@ -192,7 +209,7 @@ def create_momo_payment():
         else:
             return jsonify({
                 "success": False,
-                "message": res_data.get('message', "Lỗi MoMo"),
+                "message": res_data.get('message', "Lỗi từ MoMo"),
                 "details": res_data
             }), 400
 
