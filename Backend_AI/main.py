@@ -130,9 +130,9 @@ def get_admin_stats():
 
 # ── MoMo PAYMENT INTEGRATION ─────────────────────────────────────────────────
 # MoMo Sandbox Settings
-MOMO_PARTNER_CODE = "MOMOBKUN20180810"
-MOMO_ACCESS_KEY = "klm0567nd9y3rt12"
-MOMO_SECRET_KEY = "at670n6789ay7nd6"  # GIẢ ĐỊNH - Trong thực tế dùng biến môi trường
+MOMO_PARTNER_CODE = "MOMO5RGW20180417"
+MOMO_ACCESS_KEY = "E8661U6S42426954"
+MOMO_SECRET_KEY = "W9W6S9D63X52426954"
 MOMO_ENDPOINT = "https://test-payment.momo.vn/v2/gateway/api/create"
 
 @app.route('/momo-payment', methods=['POST', 'GET'], strict_slashes=False)
@@ -151,7 +151,7 @@ def create_momo_payment():
         order_id = str(data.get('orderId', uuid.uuid4()))
         order_info = str(data.get('orderInfo', "Thanh toan EduTalk"))
         request_id = str(data.get('requestId', order_id))
-        extra_data = user_id # MoMo yêu cầu string, nếu rỗng thì ""
+        extra_data = user_id if user_id else ""
         
         redirect_url = "https://edutalk-7ndf.onrender.com/payment-callback"
         ipn_url = "https://edutalk-7ndf.onrender.com/payment-callback"
