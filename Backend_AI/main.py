@@ -2,6 +2,10 @@ import joblib
 import pandas as pd
 import os
 import json
+import hashlib
+import hmac
+import requests
+import uuid
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import firebase_admin
@@ -37,7 +41,7 @@ FEATURE_NAMES = [
 # ── HEALTH CHECK ───────────────────────────────────────────────────────────────
 @app.route('/', methods=['GET'])
 def health_check():
-    return "AI Server is running!"
+    return "AI Server is running v2!"
 
 # ── API DỰ ĐOÁN NGÀNH + LƯU FIRESTORE ─────────────────────────────────────────
 @app.route('/predict', methods=['POST'])
@@ -121,6 +125,101 @@ def get_admin_stats():
             "feature_importances": feature_data
         })
 
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ── MoMo PAYMENT INTEGRATION ─────────────────────────────────────────────────
+# MoMo Sandbox Settings
+MOMO_PARTNER_CODE = "MOMOBKUN20180810"
+MOMO_ACCESS_KEY = "klm0567nd9y3rt12"
+MOMO_SECRET_KEY = "at670n6789ay7nd6"  # GIẢ ĐỊNH - Trong thực tế dùng biến môi trường
+MOMO_ENDPOINT = "https://test-payment.momo.vn/v2/gateway/api/create"
+
+@app.route('/momo-payment', methods=['POST', 'GET'], strict_slashes=False)
+def create_momo_payment():
+    if request.method == 'GET':
+        return "Momo Payment endpoint is active. Use POST to create a payment link."
+    try:
+        data = request.get_json()
+        amount = data.get('amount')
+        user_id = data.get('user_id')
+        order_id = data.get('orderId', str(uuid.uuid4()))
+        order_info = data.get('orderInfo', "Thanh toán EduTalk")
+        request_id = data.get('requestId', order_id)
+        
+        extra_data = user_id if user_id else ""
+        
+        # URL phải khớp chính xác với route bên dưới
+        redirect_url = "https://edutalk-7ndf.onrender.com/payment-callback"
+        ipn_url = "https://edutalk-7ndf.onrender.com/payment-callback"
+
+        # 1. Tạo chuỗi ký tự (Phải có extraData trong chuỗi ký)
+        raw_signature = f"accessKey={MOMO_ACCESS_KEY}&amount={amount}&extraData={extra_data}&ipnUrl={ipn_url}&orderId={order_id}&orderInfo={order_info}&partnerCode={MOMO_PARTNER_CODE}&redirectUrl={redirect_url}&requestId={request_id}&requestType=captureWallet"
+
+        # 2. Tạo chữ ký SHA256
+        signature = hmac.new(
+            MOMO_SECRET_KEY.encode('utf-8'),
+            raw_signature.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+
+        # 3. Gửi request đến MoMo
+        payload = {
+            "partnerCode": MOMO_PARTNER_CODE,
+            "partnerName": "EduTalk Test",
+            "storeId": "EduTalkStore",
+            "requestId": request_id,
+            "amount": amount,
+            "orderId": order_id,
+            "orderInfo": order_info,
+            "redirectUrl": redirect_url,
+            "ipnUrl": ipn_url,
+            "lang": "vi",
+            "extraData": extra_data,
+            "requestType": "captureWallet",
+            "signature": signature
+        }
+
+        response = requests.post(MOMO_ENDPOINT, json=payload)
+        res_data = response.json()
+
+        if res_data.get('resultCode') == 0:
+            return jsonify({
+                "success": True,
+                "payUrl": res_data.get('payUrl'),
+                "message": "Tạo đơn hàng thành công"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": res_data.get('message', "Lỗi MoMo"),
+                "details": res_data
+            }), 400
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/payment-callback', methods=['POST', 'GET'], strict_slashes=False)
+def momo_callback():
+    if request.method == 'GET':
+        return "Momo Callback endpoint is active. Use POST to simulate a callback."
+    try:
+        data = request.get_json()
+        print("MoMo Callback Data:", data) # Để debug trong console Render
+        
+        result_code = data.get('resultCode')
+        user_id = data.get('extraData') # Lấy lại user_id đã gửi lúc đầu
+        
+        if result_code == 0 and user_id:
+            # ✅ Thanh toán thành công -> Cập nhật Firestore
+            user_ref = db.collection('users').document(user_id)
+            user_ref.update({
+                'isPremium': True,
+                'premiumAt': firestore.SERVER_TIMESTAMP
+            })
+            return jsonify({"success": True, "message": "Updated Premium"}), 200
+        
+        return jsonify({"success": False, "message": "Payment failed or no user_id"}), 400
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
