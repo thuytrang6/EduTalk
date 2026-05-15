@@ -29,12 +29,11 @@ class ApiService {
     required String userId,
   }) async {
     try {
-      // Đảm bảo URL khớp chính xác với backend (đã thêm dấu / ở cuối cho an toàn)
       final response = await http.post(
-        Uri.parse('$baseUrl/momo-payment/'),
+        Uri.parse('$baseUrl/momo-payment'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'amount': amount.toInt().toString(), // MoMo yêu cầu số nguyên (string)
+          'amount': amount.toInt().toString(), // MoMo yêu cầu số nguyên dạng chuỗi
           'user_id': userId,
           'orderId': orderId,
           'orderInfo': orderInfo,
