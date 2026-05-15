@@ -4,8 +4,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class PhanTichScreen extends StatefulWidget {
   final VoidCallback onBack;
-  // ← Đổi type để nhận (major, recommendations)
-  final Function(String major, List<dynamic> recommendations) onShowKetQua;
+  final Function(
+    String major,
+    List<dynamic> recommendations,
+    List<int> userScores,
+    List<int> majorRequirements,
+  )
+  onShowKetQua;
 
   const PhanTichScreen({
     super.key,
@@ -21,7 +26,6 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
   final _apiService = ApiService();
 
   Future<void> _onPredict() async {
-    // Hiện loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -35,12 +39,22 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
         userId: uid,
       );
 
-      if (context.mounted) Navigator.pop(context); // đóng loading
+      if (context.mounted) Navigator.pop(context);
 
       if (result['success'] == true) {
         final major = result['predicted_major'] as String;
         final unis = result['recommendations'] as List<dynamic>;
-        widget.onShowKetQua(major, unis); // ← truyền data thật sang KetQua
+        final userScores = List<int>.from(
+          (result['user_scores'] as List<dynamic>? ?? []).map(
+            (e) => (e as num).round(),
+          ),
+        );
+        final majorReqs = List<int>.from(
+          (result['major_requirements'] as List<dynamic>? ?? []).map(
+            (e) => (e as num).round(),
+          ),
+        );
+        widget.onShowKetQua(major, unis, userScores, majorReqs);
       } else {
         _showError('Dự đoán thất bại: ${result['error'] ?? ''}');
       }
@@ -72,7 +86,7 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
       value: 3,
     ),
     InterestItem(
-      title: 'Sự năng động & Hoạt bát',
+      title: 'Sự Sáng tạo & Đổi mới',
       icon: Icons.lightbulb_outline,
       iconBg: const Color(0xFFFFE7E7),
       iconColor: Colors.red,
@@ -146,8 +160,6 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
     }
   }
 
-  //======================================================================================
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -180,8 +192,6 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
                       );
                     },
                   ),
-
-                  /// Nút dưới cùng
                   Positioned(
                     left: 16,
                     right: 16,
@@ -203,7 +213,7 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
                           ],
                         ),
                         child: ElevatedButton(
-                          onPressed: _onPredict, // ← chỉ gọi 1 hàm này
+                          onPressed: _onPredict,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -242,8 +252,6 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
       ),
     );
   }
-
-  //=============================================================================
 
   Widget _buildHeader() {
     return Container(
@@ -322,8 +330,6 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
   }
 }
 
-//===========================================================================================
-
 class InterestItem {
   final String title;
   final IconData icon;
@@ -355,8 +361,6 @@ class InterestItem {
     );
   }
 }
-
-//=========================================================================================
 
 class InterestCard extends StatelessWidget {
   final InterestItem item;

@@ -11,7 +11,6 @@ import 'ContactPage.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;
-
   HomeScreen({super.key, required this.userName});
 
   @override
@@ -25,9 +24,11 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isShowingAbout = false;
   bool isShowingContact = false;
 
-  // ← Lưu kết quả từ API
   String _predictedMajor = '';
   List<dynamic> _recommendations = [];
+  List<int> _userScores = [];
+  List<int> _majorRequirements = [];
+  double _totalScore = 0.0; // ← tổng điểm từ DuLieu
 
   final GlobalKey<DuLieuScreenState> duLieukey = GlobalKey();
   late final List<Widget> pages = [
@@ -40,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     DuLieuScreen(
       key: duLieukey,
       onChangeTab: _changeTab,
-      onOPenPhanTich: openPhanTich,
+      onOPenPhanTich: openPhanTich, // ← nhận double
     ),
     const LichSuScreen(),
     ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
@@ -53,6 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
       isShowingPhanTich = false;
       _predictedMajor = '';
       _recommendations = [];
+      _userScores = [];
+      _majorRequirements = [];
+      _totalScore = 0.0;
     });
     duLieukey.currentState?.resetForm();
     duLieukey.currentState?.scrollToTop();
@@ -63,22 +67,36 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       currentIndex = index;
       isShowingPhanTich = false;
+      isShowingKetQua = false;
+      isShowingAbout = false;
+      isShowingContact = false;
     });
+    if (index == 2) {
+      duLieukey.currentState?.resetForm();
+    }
   }
 
-  void openPhanTich() {
+  // ← Nhận totalScore từ DuLieu
+  void openPhanTich(double totalScore) {
     setState(() {
+      _totalScore = totalScore;
       currentIndex = 2;
       isShowingPhanTich = true;
       isShowingKetQua = false;
     });
   }
 
-  // ← Nhận data từ PhanTich
-  void openKetQua(String major, List<dynamic> recommendations) {
+  void openKetQua(
+    String major,
+    List<dynamic> recommendations,
+    List<int> userScores,
+    List<int> majorRequirements,
+  ) {
     setState(() {
       _predictedMajor = major;
       _recommendations = recommendations;
+      _userScores = userScores;
+      _majorRequirements = majorRequirements;
       currentIndex = 2;
       isShowingPhanTich = false;
       isShowingKetQua = true;
@@ -93,34 +111,23 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void openAbout() {
-    setState(() {
-      isShowingAbout = true;
-      isShowingContact = false;
-    });
-  }
-
-  void openContact() {
-    setState(() {
-      isShowingContact = true;
-      isShowingAbout = false;
-    });
-  }
-
-  void closeExtraPage() {
-    setState(() {
-      isShowingAbout = false;
-      isShowingContact = false;
-    });
-  }
-
-  void closeOverlayPage() {
-    setState(() {
-      currentIndex = 2;
-      isShowingPhanTich = false;
-      isShowingKetQua = false;
-    });
-  }
+  void openAbout() => setState(() {
+    isShowingAbout = true;
+    isShowingContact = false;
+  });
+  void openContact() => setState(() {
+    isShowingContact = true;
+    isShowingAbout = false;
+  });
+  void closeExtraPage() => setState(() {
+    isShowingAbout = false;
+    isShowingContact = false;
+  });
+  void closeOverlayPage() => setState(() {
+    currentIndex = 2;
+    isShowingPhanTich = false;
+    isShowingKetQua = false;
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -130,25 +137,28 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Stack(
         children: [
           IndexedStack(index: currentIndex, children: pages),
-          if (isShowingPhanTich)
+          if (isShowingPhanTich && currentIndex == 2)
             Positioned.fill(
               child: PhanTichScreen(
                 onBack: closeOverlayPage,
-                onShowKetQua: openKetQua, // ← truyền hàm nhận (major, unis)
+                onShowKetQua: openKetQua,
               ),
             ),
-          if (isShowingKetQua)
+          if (isShowingKetQua && currentIndex == 2)
             Positioned.fill(
               child: KetQuaScreen(
                 onBack: closeKetQua,
                 onRestart: onRestart,
-                predictedMajor: _predictedMajor, // ← truyền data thật
-                recommendations: _recommendations, // ← truyền data thật
+                predictedMajor: _predictedMajor,
+                recommendations: _recommendations,
+                userScores: _userScores,
+                majorRequirements: _majorRequirements,
+                totalScore: _totalScore, // ← truyền tổng điểm
               ),
             ),
-          if (isShowingAbout)
+          if (isShowingAbout && currentIndex == 2)
             Positioned.fill(child: AboutPage(onBack: closeExtraPage)),
-          if (isShowingContact)
+          if (isShowingContact && currentIndex == 2)
             Positioned.fill(child: ContactPage(onBack: closeExtraPage)),
         ],
       ),
