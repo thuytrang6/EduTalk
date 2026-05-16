@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ui_login_out/models/screens/free_usage_store.dart';
+import 'package:ui_login_out/screens/free_usage_store.dart';
 import 'Premium_screen.dart';
 import 'ThongKeTs.dart';
 
