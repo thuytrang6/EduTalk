@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 class KetQuaScreen extends StatefulWidget {
   final VoidCallback onBack;
   final VoidCallback? onRestart;
-  final String predictedMajor; // ← nhận từ API
-  final List<dynamic> recommendations; // ← nhận từ API
+  final String predictedMajor;
+  final List<dynamic> recommendations;
+  final List<int> userScores;
+  final List<int> majorRequirements;
+  final double totalScore; // ← tổng điểm từ DuLieu
 
   const KetQuaScreen({
     super.key,
@@ -12,6 +15,9 @@ class KetQuaScreen extends StatefulWidget {
     this.onRestart,
     required this.predictedMajor,
     required this.recommendations,
+    required this.userScores,
+    required this.majorRequirements,
+    required this.totalScore,
   });
 
   @override
@@ -19,8 +25,6 @@ class KetQuaScreen extends StatefulWidget {
 }
 
 class _KetQuaScreenState extends State<KetQuaScreen> {
-  bool _showAllMajors = false;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,7 +46,7 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
                     const SizedBox(height: 16),
                     buildChartCard(),
                     const SizedBox(height: 16),
-                    buildUniversityCard(), // ← hiển thị trường thật từ API
+                    buildUniversityCard(),
                     const SizedBox(height: 20),
                     buildRestartButton(),
                     const SizedBox(height: 150),
@@ -56,7 +60,6 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  //=========================HEADER================================
   Widget buildTopSection() {
     return Stack(
       clipBehavior: Clip.none,
@@ -119,7 +122,6 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // ← Hiển thị ngành thật từ API
                 Text(
                   widget.predictedMajor,
                   style: const TextStyle(
@@ -131,6 +133,7 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 18),
+                // ← Hiển thị tổng điểm thay vì "Kết quả AI"
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -143,16 +146,16 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(
-                        Icons.auto_awesome_rounded,
+                    children: [
+                      const Icon(
+                        Icons.stars_rounded,
                         color: Color(0xFFFFE66D),
                         size: 18,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
-                        'Kết quả AI',
-                        style: TextStyle(
+                        'Điểm của bạn: ${widget.totalScore.toStringAsFixed(2)}',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -169,7 +172,6 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  //======================CỤC VỊ TRÍ VIỆC LÀM===============================
   Widget buildResultCard() {
     return Container(
       padding: const EdgeInsets.all(10),
@@ -280,14 +282,12 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  //=====================CỤC TẠI SAO CHỌN NGÀNH NÌ===========================
   Widget buildReasonCard() {
     final reasons = [
       'Dựa trên 10 chỉ số sở thích của bạn',
       'Mô hình AI phân tích và gợi ý ngành phù hợp nhất',
       'Kết quả được lưu vào lịch sử của bạn',
     ];
-
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -354,8 +354,19 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  //=====================CỤC BIỂU ĐỒ============================
   Widget buildChartCard() {
+    final labels = [
+      'Năng động',
+      'Hướng nội',
+      'Sáng tạo',
+      'Logic',
+      'Tò mò',
+      'Cảm thông',
+      'Công nghệ',
+      'Xã hội',
+      'Sức khỏe',
+      'Nghệ thuật',
+    ];
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       decoration: BoxDecoration(
@@ -381,6 +392,7 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
             ),
           ),
           const SizedBox(height: 18),
+          // Radar chart placeholder — sẽ thêm fl_chart sau
           Container(
             height: 260,
             width: double.infinity,
@@ -390,25 +402,38 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
               border: Border.all(color: const Color(0xFFE9EEF5)),
             ),
             alignment: Alignment.center,
-            child: const Text(
-              'Radar Chart ở đây',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF94A3B8),
-              ),
-            ),
+            child: widget.userScores.isEmpty
+                ? const Text(
+                    'Chưa có dữ liệu',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  )
+                : CustomPaint(
+                    size: const Size(240, 240),
+                    painter: _RadarChartPainter(
+                      userScores: widget.userScores
+                          .map((e) => e.toDouble())
+                          .toList(),
+                      majorRequirements: widget.majorRequirements
+                          .map((e) => e.toDouble())
+                          .toList(),
+                      labels: labels,
+                    ),
+                  ),
           ),
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              buildLegendItem(
+              _buildLegendItem(
                 color: const Color(0xFF3B82F6),
                 label: 'Hồ sơ của bạn',
               ),
               const SizedBox(width: 18),
-              buildLegendItem(
+              _buildLegendItem(
                 color: const Color(0xFFEF4444),
                 label: 'Yêu cầu ngành',
                 isDashed: true,
@@ -420,7 +445,7 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  Widget buildLegendItem({
+  Widget _buildLegendItem({
     required Color color,
     required String label,
     bool isDashed = false,
@@ -449,7 +474,6 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  //=====================CỤC TOP TRƯỜNG ĐÀO TẠO (DATA THẬT TỪ API)==========
   Widget buildUniversityCard() {
     return Container(
       width: double.infinity,
@@ -483,8 +507,6 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
             ],
           ),
           const SizedBox(height: 14),
-
-          // ← Hiển thị data thật từ BE
           if (widget.recommendations.isEmpty)
             const Center(
               child: Padding(
@@ -500,7 +522,6 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
               final index = entry.key;
               final uni = entry.value as Map<String, dynamic>;
               final isLast = index == widget.recommendations.length - 1;
-
               return Container(
                 padding: const EdgeInsets.only(top: 8, bottom: 14),
                 decoration: BoxDecoration(
@@ -557,27 +578,23 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE8F7EE),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  'Điểm chuẩn 2024: ${uni['diem_chuan_2024'] ?? '-'}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF16A34A),
-                                  ),
-                                ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F7EE),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              'Điểm chuẩn 2024: ${uni['diem_chuan_2024'] ?? '-'}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF16A34A),
                               ),
-                            ],
+                            ),
                           ),
                           if (uni['website'] != null &&
                               uni['website'].toString().isNotEmpty) ...[
@@ -602,7 +619,6 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  //=====================CỤC BUTTON PHÂN TÍCH LẠI============================
   Widget buildRestartButton() {
     return SizedBox(
       width: double.infinity,
@@ -634,4 +650,177 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
       ),
     );
   }
+}
+
+// ── RADAR CHART PAINTER ────────────────────────────────────────────────────────
+class _RadarChartPainter extends CustomPainter {
+  final List<double> userScores;
+  final List<double> majorRequirements;
+  final List<String> labels;
+
+  _RadarChartPainter({
+    required this.userScores,
+    required this.majorRequirements,
+    required this.labels,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final int n = labels.length;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 30;
+    const maxVal = 5.0;
+
+    // Vẽ lưới nền
+    final gridPaint = Paint()
+      ..color = const Color(0xFFE2E8F0)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (int level = 1; level <= 5; level++) {
+      final r = radius * level / maxVal;
+      final path = Path();
+      for (int i = 0; i < n; i++) {
+        final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
+        final x = center.dx + r * cos(angle);
+        final y = center.dy + r * sin(angle);
+        if (i == 0)
+          path.moveTo(x, y);
+        else
+          path.lineTo(x, y);
+      }
+      path.close();
+      canvas.drawPath(path, gridPaint);
+    }
+
+    // Vẽ trục
+    final axisPaint = Paint()
+      ..color = const Color(0xFFCBD5E1)
+      ..strokeWidth = 1;
+    for (int i = 0; i < n; i++) {
+      final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
+      canvas.drawLine(
+        center,
+        Offset(
+          center.dx + radius * cos(angle),
+          center.dy + radius * sin(angle),
+        ),
+        axisPaint,
+      );
+    }
+
+    // Vẽ vùng yêu cầu ngành (đỏ, nét đứt)
+    if (majorRequirements.length == n) {
+      final majorPath = Path();
+      for (int i = 0; i < n; i++) {
+        final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
+        final r = radius * (majorRequirements[i] / maxVal);
+        final x = center.dx + r * cos(angle);
+        final y = center.dy + r * sin(angle);
+        if (i == 0)
+          majorPath.moveTo(x, y);
+        else
+          majorPath.lineTo(x, y);
+      }
+      majorPath.close();
+      canvas.drawPath(
+        majorPath,
+        Paint()
+          ..color = const Color(0x22EF4444)
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawPath(
+        majorPath,
+        Paint()
+          ..color = const Color(0xFFEF4444)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5,
+      );
+    }
+
+    // Vẽ vùng người dùng (xanh)
+    if (userScores.length == n) {
+      final userPath = Path();
+      for (int i = 0; i < n; i++) {
+        final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
+        final r = radius * (userScores[i] / maxVal);
+        final x = center.dx + r * cos(angle);
+        final y = center.dy + r * sin(angle);
+        if (i == 0)
+          userPath.moveTo(x, y);
+        else
+          userPath.lineTo(x, y);
+      }
+      userPath.close();
+      canvas.drawPath(
+        userPath,
+        Paint()
+          ..color = const Color(0x443B82F6)
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawPath(
+        userPath,
+        Paint()
+          ..color = const Color(0xFF3B82F6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+
+      // Chấm tròn tại các đỉnh
+      final dotPaint = Paint()
+        ..color = const Color(0xFF3B82F6)
+        ..style = PaintingStyle.fill;
+      for (int i = 0; i < n; i++) {
+        final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
+        final r = radius * (userScores[i] / maxVal);
+        canvas.drawCircle(
+          Offset(center.dx + r * cos(angle), center.dy + r * sin(angle)),
+          4,
+          dotPaint,
+        );
+      }
+    }
+
+    // Vẽ nhãn
+    final textStyle = const TextStyle(
+      color: Color(0xFF475569),
+      fontSize: 9,
+      fontWeight: FontWeight.w600,
+    );
+    for (int i = 0; i < n; i++) {
+      final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
+      final labelR = radius + 18;
+      final x = center.dx + labelR * cos(angle);
+      final y = center.dy + labelR * sin(angle);
+      final tp = TextPainter(
+        text: TextSpan(text: labels[i], style: textStyle),
+        textDirection: TextDirection.ltr,
+        textAlign: TextAlign.center,
+      )..layout(maxWidth: 60);
+      tp.paint(canvas, Offset(x - tp.width / 2, y - tp.height / 2));
+    }
+  }
+
+  double cos(double angle) => (angle == 0) ? 1 : _cos(angle);
+  double sin(double angle) => (angle == 0) ? 0 : _sin(angle);
+
+  double _cos(double x) {
+    double result = 1, term = 1;
+    for (int i = 1; i <= 10; i++) {
+      term *= -x * x / ((2 * i - 1) * (2 * i));
+      result += term;
+    }
+    return result;
+  }
+
+  double _sin(double x) {
+    double result = x, term = x;
+    for (int i = 1; i <= 10; i++) {
+      term *= -x * x / ((2 * i) * (2 * i + 1));
+      result += term;
+    }
+    return result;
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

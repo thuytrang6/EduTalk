@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'Premium_screen.dart';
 
 class DuLieuScreen extends StatefulWidget {
   final ValueChanged<int>? onChangeTab;
-  final VoidCallback? onOPenPhanTich;
+  final Function(double totalScore)? onOPenPhanTich; // ← nhận totalScore
   const DuLieuScreen({super.key, this.onChangeTab, this.onOPenPhanTich});
 
   @override
@@ -39,6 +39,11 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     TextEditingController(text: "0.0"),
   ];
 
+  double get _totalScore => scores.fold(
+    0.0,
+    (sum, c) => sum + (double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0),
+  );
+
   void changeGroup(String value) {
     setState(() {
       group = value;
@@ -60,10 +65,6 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     final normalized = value.clamp(0.0, 10.0);
     scores[index].text = normalized.toStringAsFixed(1);
     setState(() {});
-  }
-
-  void handleOpenPhanTich() {
-    widget.onOPenPhanTich?.call();
   }
 
   void resetForm() {
@@ -120,7 +121,6 @@ class DuLieuScreenState extends State<DuLieuScreen> {
                   ],
                 ),
               ),
-              //const SizedBox(height: 3),
               _buildAnalyzeButton(),
               const SizedBox(height: 24),
             ],
@@ -217,7 +217,6 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     );
   }
 
-  //Thêm chuyển trang Nâng Cấp ở đây nè
   Widget _buildTrialCard() {
     return Container(
       width: double.infinity,
@@ -349,7 +348,6 @@ class DuLieuScreenState extends State<DuLieuScreen> {
           region = value;
         });
       },
-
       icon: const Icon(
         Icons.keyboard_arrow_down_rounded,
         color: Color(0xff9ca3af),
@@ -357,19 +355,23 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: EdgeInsets.all(10),
+        contentPadding: const EdgeInsets.all(10),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: Color(0xffd6dbe7), width: 1.4),
+          borderSide: const BorderSide(color: Color(0xffd6dbe7), width: 1.4),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: Color(0xff3b82f6), width: 1.8),
+          borderSide: const BorderSide(color: Color(0xff3b82f6), width: 1.8),
         ),
       ),
       dropdownColor: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      style: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        color: Colors.black87,
+      ),
       items: const [
         DropdownMenuItem(value: "Cả nước", child: Text("Cả nước")),
         DropdownMenuItem(value: "Miền Bắc", child: Text("Miền Bắc")),
@@ -519,8 +521,19 @@ class DuLieuScreenState extends State<DuLieuScreen> {
                       decimal: true,
                     ),
                     textAlign: TextAlign.center,
+                    onTap: () {
+                      controller.selection = TextSelection(
+                        baseOffset: 0,
+                        extentOffset: controller.text.length,
+                      );
+                    },
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                      _ScoreInputFormatter(),
+                    ],
                     onFieldSubmitted: (_) => _normalizeScore(index),
                     onEditingComplete: () => _normalizeScore(index),
+
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
@@ -580,7 +593,8 @@ class DuLieuScreenState extends State<DuLieuScreen> {
         width: double.infinity,
         child: ElevatedButton(
           onPressed: () {
-            widget.onOPenPhanTich?.call();
+            // ← Tính tổng điểm và truyền sang home
+            widget.onOPenPhanTich?.call(_totalScore);
           },
           style: ElevatedButton.styleFrom(
             elevation: 8,
@@ -606,5 +620,46 @@ class DuLieuScreenState extends State<DuLieuScreen> {
         ),
       ),
     );
+  }
+}
+
+// ── FORMATTER: giới hạn điểm 0.0 → 10.0, nhập 99 → 9.9 ─────────────────────
+class _ScoreInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text.replaceAll(',', '.');
+    if (text.isEmpty) return newValue.copyWith(text: '');
+
+    // Chỉ cho phép 1 dấu chấm
+    final dotCount = text.split('').where((c) => c == '.').length;
+    if (dotCount > 1) return oldValue;
+
+    // Nếu nhập 2 chữ số liền không có dấu chấm (vd: 99, 78) → chèn dấu chấm vào giữa (9.9, 7.8)
+    if (!text.contains('.') && text.length == 2) {
+      final auto = '${text[0]}.${text[1]}';
+      final parsed = double.tryParse(auto) ?? 0.0;
+      if (parsed > 10.0) {
+        // vd: nhập "99" → "9.9", nhập "19" → không hợp lệ → giữ "1"
+        return TextEditingValue(
+          text: '9.9',
+          selection: const TextSelection.collapsed(offset: 3),
+        );
+      }
+      return TextEditingValue(
+        text: auto,
+        selection: TextSelection.collapsed(offset: auto.length),
+      );
+    }
+
+    // Kiểm tra giá trị > 10
+    final parsed = double.tryParse(text);
+    if (parsed != null && parsed > 10.0) {
+      return oldValue;
+    }
+
+    return newValue.copyWith(text: text);
   }
 }
