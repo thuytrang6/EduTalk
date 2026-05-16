@@ -8,21 +8,21 @@ from firebase_admin import firestore
 
 payment_bp = Blueprint('payment', __name__)
 
-# ── MoMo Sandbox Settings ──────────────────────────────────────────────────────
+#MoMo Sandbox Settings
 MOMO_PARTNER_CODE = "MOMOBKUN20180529"
 MOMO_ACCESS_KEY   = "klm05TvNBzhg7h7j"
 MOMO_SECRET_KEY   = "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa"
 MOMO_ENDPOINT     = "https://test-payment.momo.vn/v2/gateway/api/create"
 BACKEND_URL       = "https://edutalk-7ndf.onrender.com"
 
-# ── Cấu hình các gói Premium ───────────────────────────────────────────────────
+#Cấu hình các gói Premium
 PLANS = {
     'monthly':  {'name': 'Gói Tháng',    'amount': 29000,  'duration_days': 30},
     'yearly':   {'name': 'Gói Năm',      'amount': 216000, 'duration_days': 365},
     'lifetime': {'name': 'Gói Trọn Đời', 'amount': 499000, 'duration_days': -1},
 }
 
-# ── TẠO ĐƠN THANH TOÁN ────────────────────────────────────────────────────────
+#TẠO ĐƠN THANH TOÁN
 @payment_bp.route('/momo-payment', methods=['POST', 'GET'], strict_slashes=False)
 def create_momo_payment():
     if request.method == 'GET':
@@ -114,7 +114,7 @@ def create_momo_payment():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-# ── CALLBACK TỪ MOMO ──────────────────────────────────────────────────────────
+#CALLBACK TỪ MOMO
 @payment_bp.route('/payment-callback', methods=['POST', 'GET'], strict_slashes=False)
 def momo_callback():
     if request.method == 'GET':

@@ -66,7 +66,7 @@ class PremiumScreen extends StatelessWidget {
       // 1. Tiền xử lý giá: "29.000" -> 29000.0
       double amount = double.parse(price.replaceAll('.', ''));
 
-      // 2. Lấy UserId từ Firebase Auth
+      // 2. Lấy UserId
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw 'Bạn cần đăng nhập để thực hiện thanh toán';
 

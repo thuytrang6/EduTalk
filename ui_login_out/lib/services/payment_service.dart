@@ -7,8 +7,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 class PaymentService {
   static const String baseUrl = 'https://edutalk-7ndf.onrender.com';
 
-  // ── Map plan code từ tên hiển thị ─────────────────────────────────────────
-  // Premium_screen gửi title ("Gói Tháng") → convert sang plan code ("monthly")
+  //Map plan code từ tên hiển thị
+  //Premium_screen gửi title
   static const Map<String, String> _planCodeMap = {
     'Gói Tháng':    'monthly',
     'Gói Năm':      'yearly',
@@ -19,7 +19,7 @@ class PaymentService {
     return _planCodeMap[planName] ?? 'monthly';
   }
 
-  // ── GỌI API TẠO ĐƠN MOMO ─────────────────────────────────────────────────
+  //GỌI API TẠO ĐƠN MOMO
   Future<Map<String, dynamic>> _createOrder({
     required String userId,
     required String plan,
@@ -40,15 +40,15 @@ class PaymentService {
     }
   }
 
-  // ── XỬ LÝ THANH TOÁN CHÍNH ───────────────────────────────────────────────
+  //XỬ LÝ THANH TOÁN CHÍNH
   // planName: tên hiển thị từ UI ("Gói Tháng" | "Gói Năm" | "Gói Trọn Đời")
   Future<void> handlePayment(
       BuildContext context, {
-        required double amount,   // giữ lại để tương thích, backend tự lấy amount từ plan
+        required double amount,
         required String userId,
-        required String plan,     // nhận planName từ Premium_screen
+        required String plan,
       }) async {
-    final planCode = _toPlanCode(plan); // convert "Gói Tháng" → "monthly"
+    final planCode = _toPlanCode(plan);
 
     showDialog(
       context: context,
@@ -111,7 +111,7 @@ class PaymentService {
   }
 }
 
-// ── WEBVIEW FALLBACK ──────────────────────────────────────────────────────────
+//WEBVIEW FALLBACK
 class MoMoWebViewScreen extends StatefulWidget {
   final String payUrl;
   final String orderId;
