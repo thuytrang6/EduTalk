@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ui_login_out/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PhanTichScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -54,6 +55,32 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
             (e) => (e as num).round(),
           ),
         );
+
+        // ← Lưu kết quả lên Firestore
+        if (uid.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('predictions')
+              .doc(uid)
+              .collection('history')
+              .add({
+                'predicted_major': major,
+                'user_scores': userScores,
+                'major_requirements': majorReqs,
+                'recommendations': unis
+                    .map(
+                      (u) => {
+                        'ten_truong': u['ten_truong'] ?? '',
+                        'ma_truong': u['ma_truong'] ?? '',
+                        'diem_chuan_2024': u['diem_chuan_2024'] ?? '',
+                        'website': u['website'] ?? '',
+                      },
+                    )
+                    .toList(),
+                'input_scores': inItems.map((item) => item.value).toList(),
+                'created_at': FieldValue.serverTimestamp(),
+              });
+        }
+
         widget.onShowKetQua(major, unis, userScores, majorReqs);
       } else {
         _showError('Dự đoán thất bại: ${result['error'] ?? ''}');

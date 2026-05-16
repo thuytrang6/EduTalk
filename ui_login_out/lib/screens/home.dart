@@ -31,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double _totalScore = 0.0; // ← tổng điểm từ DuLieu
 
   final GlobalKey<DuLieuScreenState> duLieukey = GlobalKey();
-  late final List<Widget> pages = [
+  List<Widget> get pages => [
     HomePage(
       onChangeTab: _changeTab,
       onOpenAbout: openAbout,
@@ -44,7 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
       onOPenPhanTich: openPhanTich, // ← nhận double
     ),
     const LichSuScreen(),
-    ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
+    ProfileScreen(),
+    // ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
   ];
 
   void onRestart() {
