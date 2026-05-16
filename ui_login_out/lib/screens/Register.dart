@@ -1,8 +1,86 @@
 import 'package:flutter/material.dart';
-import 'Login.dart';
+import '../auth_service.dart';
+import '/screens/Login.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleRegister() async {
+    String name = _nameController.text.trim();
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng điền đầy đủ thông tin")),
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Mật khẩu phải có ít nhất 6 ký tự")),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final Map<String, dynamic>? result = await _authService.register(
+      name,
+      email,
+      password,
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context); // Tắt vòng xoay chờ
+
+    if (result != null && result["status"] == "success") {
+      // Đăng xuất ngay để không bị nhảy thẳng vào Home
+      await _authService.signOut();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Đăng ký thành công! Mời bạn đăng nhập ✨"),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context);
+    } else {
+      String errorMessage = result?["status"]?.toString() ?? "Đăng ký thất bại";
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Lỗi: $errorMessage"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +115,6 @@ class RegisterScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 40),
-                // Title
                 const Text(
                   'Tạo tài khoản',
                   style: TextStyle(
@@ -48,11 +125,11 @@ class RegisterScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Tham gia cộng đồng D30 ngay hôm nay.',
+                  'Tham gia cộng đồng EduTalk ngay hôm nay.',
                   style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 50),
-                // Register Form Card
+                // Form Card
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -73,6 +150,7 @@ class RegisterScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       TextField(
+                        controller: _nameController,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(
@@ -100,6 +178,7 @@ class RegisterScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       TextField(
+                        controller: _emailController,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           prefixIcon: const Icon(
@@ -127,6 +206,7 @@ class RegisterScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       TextField(
+                        controller: _passwordController,
                         obscureText: true,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
@@ -145,7 +225,7 @@ class RegisterScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 30),
-                      // Register Button
+                      // Nút Đăng ký
                       Container(
                         width: double.infinity,
                         height: 55,
@@ -156,7 +236,7 @@ class RegisterScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(15),
                         ),
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: _handleRegister,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -194,14 +274,7 @@ class RegisterScreen extends StatelessWidget {
                       style: TextStyle(color: Colors.white70),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginScreen(),
-                          ),
-                        );
-                      },
+                      onTap: () => Navigator.pop(context),
                       child: const Text(
                         'Đăng nhập',
                         style: TextStyle(
