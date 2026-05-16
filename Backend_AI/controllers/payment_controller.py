@@ -49,7 +49,7 @@ def create_momo_payment():
 
         # extra_data lưu user_id + plan để callback dùng
         extra_data   = json.dumps({"user_id": user_id, "plan": plan}, separators=(',', ':'))
-        redirect_url = f"{BACKEND_URL}/payment-callback"
+        redirect_url = "edutalk://payment-result"
         ipn_url      = f"{BACKEND_URL}/payment-callback"
         request_type = "captureWallet"
 
