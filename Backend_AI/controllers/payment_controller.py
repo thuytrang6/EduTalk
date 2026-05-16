@@ -79,9 +79,10 @@ def create_momo_payment():
 
         if res_data.get('resultCode') == 0:
             return jsonify({
-                "success": True,
-                "payUrl": res_data.get('payUrl'),
-                "message": "Tạo đơn hàng thành công"
+                "success":    True,
+                "payUrl":     res_data.get('payUrl'),
+                "deeplink":   res_data.get('deeplink'),
+                "qrCodeUrl":  res_data.get('qrCodeUrl'),
             })
         else:
             return jsonify({
@@ -105,7 +106,6 @@ def momo_callback():
         user_id = data.get('extraData') 
         
         if result_code == 0 and user_id:
-            # ✅ Thanh toán thành công -> Cập nhật Firestore
             db = firestore.client()
             user_ref = db.collection('users').document(user_id)
             user_ref.update({

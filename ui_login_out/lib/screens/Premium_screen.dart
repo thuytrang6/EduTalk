@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ui_login_out/services/api_service.dart';
+import 'package:ui_login_out/services/payment_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 class PremiumScreen extends StatelessWidget {
   final ValueChanged<int>? onTabChange;
@@ -60,68 +61,28 @@ class PremiumScreen extends StatelessWidget {
     });
   }
 
-  Future<void> _handleMoMoPayment(BuildContext context, String price) async {
+  Future<void> _handleMoMoPayment(BuildContext context, String price, String planName) async {
     try {
       // 1. Tiền xử lý giá: "29.000" -> 29000.0
       double amount = double.parse(price.replaceAll('.', ''));
 
-      // 2. Tạo thông tin đơn hàng ngẫu nhiên (hoặc theo logic backend)
-      String orderId = DateTime.now().millisecondsSinceEpoch.toString();
-      String orderInfo = "Thanh toán gói Premium EduTalk";
-
-      // Hiển thị loading indicator
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        ),
-      );
-
-      // 3. Lấy UserId từ Firebase Auth
+      // 2. Lấy UserId từ Firebase Auth
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw 'Bạn cần đăng nhập để thực hiện thanh toán';
-      String userId = user.uid;
 
-      // 4. Gọi API backend để lấy payUrl
-      final apiService = ApiService();
-      final result = await apiService.createMoMoPayment(
+      // 3. Sử dụng PaymentService để xử lý toàn bộ quy trình (Loading -> App/WebView)
+      final paymentService = PaymentService();
+      await paymentService.handlePayment(
+        context,
         amount: amount,
-        orderId: orderId,
-        orderInfo: orderInfo,
-        userId: userId,
+        userId: user.uid,
+        plan: planName,
       );
-
-      // Đóng loading dialog
-      if (!context.mounted) return;
-      Navigator.pop(context);
-
-      if (result.containsKey('payUrl')) {
-        String payUrl = result['payUrl'];
-        final Uri url = Uri.parse(payUrl);
-
-        // 4. Mở ứng dụng MoMo (Deep Link) hoặc Browser
-        if (await canLaunchUrl(url)) {
-          await launchUrl(
-            url,
-            mode: LaunchMode.externalApplication,
-          );
-        } else {
-          throw 'Không thể mở liên kết thanh toán';
-        }
-      } else {
-        throw 'Không nhận được link thanh toán từ server';
-      }
     } catch (e) {
-      // Đóng loading dialog nếu còn đang hiện
-      if (context.mounted) {
-        // Có thể cần Navigator.pop(context) ở đây nếu dialog chưa đóng
-      }
-      
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Lỗi thanh toán: $e'),
+            content: Text('Lỗi: $e'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -626,8 +587,7 @@ class PremiumScreen extends StatelessWidget {
                     ),
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // Lưu context vào biến local hoặc đảm bảo gọi trong phạm vi an toàn
-                        _handleMoMoPayment(context, price);
+                        _handleMoMoPayment(context, price, title);
                       },
                       icon: Icon(buttonIcon, color: Colors.white, size: 20),
                       label: Text(

@@ -21,34 +21,4 @@ class ApiService {
     }
   }
 
-  //Payment
-  Future<Map<String, dynamic>> createMoMoPayment({
-    required double amount,
-    required String orderId,
-    required String orderInfo,
-    required String userId,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/momo-payment'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'amount': amount.toInt().toString(), // MoMo yêu cầu số nguyên dạng chuỗi
-          'user_id': userId,
-          'orderId': orderId,
-          'orderInfo': orderInfo,
-          'requestId': orderId,
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('Lỗi tạo thanh toán MoMo: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Không thể kết nối server: $e');
-    }
-  }
-
 }
