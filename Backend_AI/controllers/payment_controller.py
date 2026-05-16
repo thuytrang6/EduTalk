@@ -108,14 +108,14 @@ def momo_callback():
         if result_code == 0 and user_id:
             db = firestore.client()
             user_ref = db.collection('users').document(user_id)
-            # user_ref.update({
-            #     'isPremium': True,
-            #     'premiumAt': firestore.SERVER_TIMESTAMP
-            # })
-            user_ref.set({
+            user_ref.update({
                 'isPremium': True,
                 'premiumAt': firestore.SERVER_TIMESTAMP
-            }, merge=True)
+            })
+            # user_ref.set({
+            #     'isPremium': True,
+            #     'premiumAt': firestore.SERVER_TIMESTAMP
+            # }, merge=True)
             return jsonify({"success": True, "message": "Updated Premium"}), 200
         
         return jsonify({"success": False, "message": "Payment failed or no user_id"}), 400
