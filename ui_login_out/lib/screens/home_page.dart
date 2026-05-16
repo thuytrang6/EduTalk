@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; 
 import 'package:ui_login_out/screens/free_usage_store.dart';
 import 'Premium_screen.dart';
 import 'ThongKeTs.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   final ValueChanged<int>? onChangeTab;
   final VoidCallback? onOpenAbout;
   final VoidCallback? onOpenContact;
+
   const HomePage({
     super.key,
     this.onChangeTab,
@@ -15,19 +17,39 @@ class HomePage extends StatelessWidget {
   });
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+ 
+  String _userName = "Bạn";
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserSession(); // Gọi hàm lấy tên khi trang vừa mở
+  }
+
+  void _loadUserSession() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        _userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xfff6f7fb),
-
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(), // hiệu ứng cuộn mượt mà
-          //   // cho phép cuộn nếu nội dung vượt quá màn hình
           child: Column(
             children: [
               Stack(
-                clipBehavior:
-                    Clip.none, // cho phép phần tử con vượt ra ngoài Stack
+                clipBehavior: Clip.none, // cho phép phần tử con vượt ra ngoài Stack
                 children: [
                   Container(
                     height: 550,
@@ -48,14 +70,15 @@ class HomePage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           "Xin chào",
                           style: TextStyle(color: Colors.white70),
                         ),
-                        SizedBox(height: 5),
+                        const SizedBox(height: 5),
+                        // ĐÃ THAY CHỮ "BẠN" BẰNG BIẾN _userName
                         Text(
-                          "Bạn 👋",
-                          style: TextStyle(
+                          "$_userName 👋",
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -69,9 +92,8 @@ class HomePage extends StatelessWidget {
                     ),
                   ),
 
-                  // 🔹 CARD NỔI LÊN
                   Positioned(
-                    top: 450, // chỉnh số này để nổi lên
+                    top: 450, 
                     left: 20,
                     right: 20,
                     child: Row(
@@ -85,7 +107,7 @@ class HomePage extends StatelessWidget {
                             iconColor: const Color(0xff2563eb),
                             iconBackground: const Color(0xffeff6ff),
                             onTap: () {
-                              onChangeTab?.call(3);
+                              widget.onChangeTab?.call(3); 
                             },
                           ),
                         ),
@@ -99,7 +121,7 @@ class HomePage extends StatelessWidget {
                             iconColor: const Color(0xff059669),
                             iconBackground: const Color(0xffd1fae5),
                             onTap: () {
-                              onChangeTab?.call(1);
+                              widget.onChangeTab?.call(1); 
                             },
                           ),
                         ),
@@ -122,7 +144,6 @@ class HomePage extends StatelessWidget {
               ),
             ],
           ),
-          // ),
         ),
       ),
     );
@@ -146,10 +167,10 @@ class HomePage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              Icon(Icons.explore, color: const Color(0xff2563eb), size: 18),
-              const SizedBox(width: 6),
+              Icon(Icons.explore, color: Color(0xff2563eb), size: 18),
+              SizedBox(width: 6),
               Expanded(
                 child: Text(
                   "Khám phá thêm",
@@ -174,12 +195,11 @@ class HomePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ThongKeTs(onTabChange: onChangeTab),
+                  builder: (context) => ThongKeTs(onTabChange: widget.onChangeTab), // Thêm chữ widget.
                 ),
               );
             },
           ),
-
           const SizedBox(height: 10),
           moreItems(
             context,
@@ -189,10 +209,9 @@ class HomePage extends StatelessWidget {
             title: "Về chúng tôi",
             subtitle: "Giới thiệu về D30 AI",
             onTap: () {
-              onOpenAbout?.call();
+              widget.onOpenAbout?.call(); // Thêm chữ widget.
             },
           ),
-
           const SizedBox(height: 10),
           moreItems(
             context,
@@ -202,7 +221,7 @@ class HomePage extends StatelessWidget {
             title: "Liên hệ hỗ trợ",
             subtitle: "Gửi câu hỏi cho chúng tôi",
             onTap: () {
-              onOpenContact?.call();
+              widget.onOpenContact?.call(); // Thêm chữ widget.
             },
           ),
         ],
@@ -248,7 +267,7 @@ class HomePage extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -257,7 +276,7 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                 ],
               ),
@@ -289,9 +308,9 @@ class HomePage extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.trending_up, color: const Color(0xff22c55e), size: 18),
+              const Icon(Icons.trending_up, color: Color(0xff22c55e), size: 18),
               const SizedBox(width: 6),
-              Expanded(
+              const Expanded(
                 child: Text(
                   "Ngành Hot 2024",
                   style: TextStyle(
@@ -306,11 +325,11 @@ class HomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ThongKeTs(onTabChange: onChangeTab),
+                      builder: (context) => ThongKeTs(onTabChange: widget.onChangeTab), // Thêm chữ widget.
                     ),
                   );
                 },
-                child: Text(
+                child: const Text(
                   "Xem dữ liệu",
                   style: TextStyle(
                     fontSize: 14,
@@ -350,10 +369,10 @@ class HomePage extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
                   color: Color(0x10000000),
                   blurRadius: 6,
@@ -364,7 +383,7 @@ class HomePage extends StatelessWidget {
             child: Center(
               child: Text(
                 index,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.black,
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -450,7 +469,7 @@ class HomePage extends StatelessWidget {
             height: 50,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 colors: [
                   Color.fromARGB(255, 254, 187, 54),
                   Color.fromARGB(255, 255, 155, 48),
@@ -469,9 +488,9 @@ class HomePage extends StatelessWidget {
                   ),
                 );
               },
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Icon(Icons.workspace_premium, color: Colors.white, size: 18),
                   SizedBox(width: 6),
                   Text(
@@ -520,7 +539,7 @@ class HomePage extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () {
-                onChangeTab?.call(2);
+                widget.onChangeTab?.call(2); // Thêm chữ widget.
               },
               child: Container(
                 width: double.infinity,

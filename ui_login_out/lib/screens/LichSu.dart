@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// 1. Model dữ liệu (Bạn có thể chuyển class này ra file riêng trong thư mục lib/models sau này)
 class ConsultationResult {
   final int id;
   final String date;
@@ -17,13 +17,39 @@ class ConsultationResult {
   });
 }
 
-class LichSuScreen extends StatelessWidget {
+class LichSuScreen extends StatefulWidget {
   const LichSuScreen({super.key});
 
   @override
+  State<LichSuScreen> createState() => _LichSuScreenState();
+}
+
+class _LichSuScreenState extends State<LichSuScreen> {
+  String _userName = "Đang tải...";
+  String _currentUid = ""; 
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserSession();
+  }
+  void _loadUserSession() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        // Lấy Tên thật hoặc Email
+        _userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
+        _currentUid = user.uid; // Lưu lại ID để sau này dùng lọc Lịch sử
+      });
+    } else {
+      setState(() {
+        _userName = "Chưa đăng nhập";
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Dữ liệu mẫu tạm thời để build UI.
-    // Sau này khi ráp code với team, bạn sẽ lấy data này từ DB hoặc State Management.
     final List<ConsultationResult> historyData = [
       ConsultationResult(
         id: 3,
@@ -85,13 +111,13 @@ class LichSuScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 RichText(
-                  text: const TextSpan(
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  text: TextSpan(
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
                     children: [
-                      TextSpan(text: 'Hồ sơ của tài khoản: '),
+                      const TextSpan(text: 'Hồ sơ của tài khoản: '),
                       TextSpan(
-                        text: 'phuongnhi', // Sau này thay bằng biến tên user
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                        text: _userName, // ĐÃ THAY BIẾN TÊN VÀO ĐÂY
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ],
                   ),
@@ -99,8 +125,6 @@ class LichSuScreen extends StatelessWidget {
               ],
             ),
           ),
-
-          // Danh sách các thẻ Lịch sử
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 100),
@@ -115,8 +139,6 @@ class LichSuScreen extends StatelessWidget {
     );
   }
 }
-
-// 2. Widget Card hiển thị từng mục (Tách riêng để code dễ đọc)
 class HistoryCard extends StatelessWidget {
   final ConsultationResult data;
 
