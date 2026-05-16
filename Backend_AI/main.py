@@ -130,9 +130,9 @@ def get_admin_stats():
 
 # ── MoMo PAYMENT INTEGRATION ─────────────────────────────────────────────────
 # MoMo Sandbox Settings
-MOMO_PARTNER_CODE = "MOMO5RGW20180417"
-MOMO_ACCESS_KEY = "E8661U6S42426954"
-MOMO_SECRET_KEY = "W9W6S9D63X52426954"
+MOMO_PARTNER_CODE = "MOMOBKUN20180529"
+MOMO_ACCESS_KEY   = "klm05TvNBzhg7h7j"
+MOMO_SECRET_KEY   = "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa"
 MOMO_ENDPOINT = "https://test-payment.momo.vn/v2/gateway/api/create"
 
 @app.route('/momo-payment', methods=['POST', 'GET'], strict_slashes=False)
