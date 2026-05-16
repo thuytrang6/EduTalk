@@ -8,12 +8,21 @@ from firebase_admin import firestore
 
 payment_bp = Blueprint('payment', __name__)
 
-# ── MoMo Sandbox Settings ─────────────────────────────────────────────────
+# ── MoMo Sandbox Settings ──────────────────────────────────────────────────────
 MOMO_PARTNER_CODE = "MOMOBKUN20180529"
 MOMO_ACCESS_KEY   = "klm05TvNBzhg7h7j"
 MOMO_SECRET_KEY   = "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa"
-MOMO_ENDPOINT = "https://test-payment.momo.vn/v2/gateway/api/create"
+MOMO_ENDPOINT     = "https://test-payment.momo.vn/v2/gateway/api/create"
+BACKEND_URL       = "https://edutalk-7ndf.onrender.com"
 
+# ── Cấu hình các gói Premium ───────────────────────────────────────────────────
+PLANS = {
+    'monthly':  {'name': 'Gói Tháng',    'amount': 29000,  'duration_days': 30},
+    'yearly':   {'name': 'Gói Năm',      'amount': 216000, 'duration_days': 365},
+    'lifetime': {'name': 'Gói Trọn Đời', 'amount': 499000, 'duration_days': -1},
+}
+
+# ── TẠO ĐƠN THANH TOÁN ────────────────────────────────────────────────────────
 @payment_bp.route('/momo-payment', methods=['POST', 'GET'], strict_slashes=False)
 def create_momo_payment():
     if request.method == 'GET':
@@ -22,20 +31,28 @@ def create_momo_payment():
         data = request.get_json()
         if not data:
             return jsonify({"success": False, "message": "Missing JSON body"}), 400
-            
-        # Ép kiểu dữ liệu chuẩn
-        amount = str(data.get('amount', '0')).split('.')[0] 
+
         user_id = str(data.get('user_id', ''))
-        order_id = str(data.get('orderId', uuid.uuid4()))
-        order_info = str(data.get('orderInfo', "Thanh toan EduTalk"))
-        request_id = str(data.get('requestId', order_id))
-        extra_data = user_id if user_id else ""
-        
-        redirect_url = "https://edutalk-7ndf.onrender.com/payment-callback"
-        ipn_url = "https://edutalk-7ndf.onrender.com/payment-callback"
+        plan    = str(data.get('plan', ''))
+
+        # Validate plan
+        if plan not in PLANS:
+            return jsonify({"success": False, "message": f"Plan không hợp lệ. Chọn: {list(PLANS.keys())}"}), 400
+        if not user_id:
+            return jsonify({"success": False, "message": "Thiếu user_id"}), 400
+
+        plan_info  = PLANS[plan]
+        amount     = str(plan_info['amount'])
+        order_id   = f"EDUTALK_{plan.upper()}_{uuid.uuid4().hex[:8].upper()}"
+        request_id = order_id
+        order_info = f"EduTalk {plan_info['name']}"
+
+        # extra_data lưu user_id + plan để callback dùng
+        extra_data   = json.dumps({"user_id": user_id, "plan": plan}, separators=(',', ':'))
+        redirect_url = f"{BACKEND_URL}/payment-callback"
+        ipn_url      = f"{BACKEND_URL}/payment-callback"
         request_type = "captureWallet"
 
-        # 1. Tạo chuỗi ký tự signature (Alphabet order)
         raw_signature = (
             f"accessKey={MOMO_ACCESS_KEY}&"
             f"amount={amount}&"
@@ -55,69 +72,103 @@ def create_momo_payment():
             hashlib.sha256
         ).hexdigest()
 
-        # 3. Payload gửi sang MoMo
         payload = {
             "partnerCode": MOMO_PARTNER_CODE,
             "partnerName": "EduTalk",
-            "storeId": MOMO_PARTNER_CODE,
-            "requestId": request_id,
-            "amount": int(amount),
-            "orderId": order_id,
-            "orderInfo": order_info,
+            "storeId":     MOMO_PARTNER_CODE,
+            "requestId":   request_id,
+            "amount":      int(amount),
+            "orderId":     order_id,
+            "orderInfo":   order_info,
             "redirectUrl": redirect_url,
-            "ipnUrl": ipn_url,
-            "lang": "vi",
-            "extraData": extra_data,
+            "ipnUrl":      ipn_url,
+            "lang":        "vi",
+            "extraData":   extra_data,
             "requestType": request_type,
-            "signature": signature
+            "signature":   signature
         }
 
-        print(f"Payload gửi MoMo: {json.dumps(payload)}")
+        print(f"[Payment] Tạo đơn: {order_id} | Plan: {plan} | Amount: {amount}")
         response = requests.post(MOMO_ENDPOINT, json=payload)
         res_data = response.json()
-        print(f"MoMo trả về: {res_data}")
+        print(f"[Payment] MoMo response: resultCode={res_data.get('resultCode')}")
 
         if res_data.get('resultCode') == 0:
             return jsonify({
-                "success":    True,
-                "payUrl":     res_data.get('payUrl'),
-                "deeplink":   res_data.get('deeplink'),
-                "qrCodeUrl":  res_data.get('qrCodeUrl'),
+                "success":   True,
+                "orderId":   order_id,
+                "plan":      plan,
+                "amount":    int(amount),
+                "payUrl":    res_data.get('payUrl'),
+                "deeplink":  res_data.get('deeplink'),
+                "qrCodeUrl": res_data.get('qrCodeUrl'),
             })
         else:
             return jsonify({
                 "success": False,
                 "message": res_data.get('message', "Lỗi từ MoMo"),
-                "details": res_data
             }), 400
 
     except Exception as e:
+        print(f"[Payment] Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+# ── CALLBACK TỪ MOMO ──────────────────────────────────────────────────────────
 @payment_bp.route('/payment-callback', methods=['POST', 'GET'], strict_slashes=False)
 def momo_callback():
     if request.method == 'GET':
-        return "Momo Callback endpoint is active. Use POST to simulate a callback."
+        return "Momo Callback endpoint is active."
     try:
-        data = request.get_json()
-        print("MoMo Callback Data:", data)
-        
+        data        = request.get_json()
         result_code = data.get('resultCode')
-        user_id = data.get('extraData') 
-        
-        if result_code == 0 and user_id:
-            db = firestore.client()
-            user_ref = db.collection('users').document(user_id)
-            user_ref.update({
-                'isPremium': True,
-                'premiumAt': firestore.SERVER_TIMESTAMP
+        extra_data  = data.get('extraData', '')
+
+        print(f"[Callback] resultCode={result_code} | extraData={extra_data}")
+
+        if result_code == 0 and extra_data:
+            # Parse extra_data
+            try:
+                extra   = json.loads(extra_data)
+                user_id = extra.get('user_id')
+                plan    = extra.get('plan', 'monthly')
+            except Exception:
+                user_id = extra_data  # fallback: test thủ công qua Postman
+                plan    = 'monthly'
+
+            if not user_id:
+                return jsonify({"success": False, "message": "Thiếu user_id"}), 400
+
+            plan_info = PLANS.get(plan, PLANS['monthly'])
+            db        = firestore.client()
+
+            # Cập nhật user → isPremium
+            db.collection('users').document(user_id).set({
+                'isPremium':    True,
+                'plan':         plan,
+                'planName':     plan_info['name'],
+                'durationDays': plan_info['duration_days'],
+                'premiumAt':    firestore.SERVER_TIMESTAMP,
+            }, merge=True)
+
+            # Lưu lịch sử giao dịch
+            db.collection('transactions').add({
+                'user_id':   user_id,
+                'plan':      plan,
+                'planName':  plan_info['name'],
+                'amount':    data.get('amount'),
+                'orderId':   data.get('orderId'),
+                'transId':   data.get('transId'),
+                'status':    'success',
+                'createdAt': firestore.SERVER_TIMESTAMP,
             })
-            # user_ref.set({
-            #     'isPremium': True,
-            #     'premiumAt': firestore.SERVER_TIMESTAMP
-            # }, merge=True)
-            return jsonify({"success": True, "message": "Updated Premium"}), 200
-        
-        return jsonify({"success": False, "message": "Payment failed or no user_id"}), 400
+
+            print(f"[Callback]  User {user_id} upgraded → {plan}")
+            return jsonify({"success": True, "message": f"Upgraded to {plan}"}), 200
+
+        print(f"[Callback]  Payment failed: resultCode={result_code}")
+        return jsonify({"success": False, "message": "Payment failed"}), 400
+
     except Exception as e:
+        print(f"[Callback] Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
