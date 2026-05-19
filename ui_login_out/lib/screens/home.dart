@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'PhanTich.dart';
 import 'DuLieu.dart';
 import 'ThaoLuan.dart';
@@ -137,12 +138,22 @@ class _HomeScreenState extends State<HomeScreen> {
     isShowingKetQua = false;
   });
 
+  void openAIChatSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _AIChatSheetGlobal(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
       backgroundColor: const Color(0xfff5f6fa),
       body: Stack(
+        clipBehavior: Clip.none, // Cho phép widget con tràn ra ngoài nếu cần
         children: [
           IndexedStack(index: currentIndex, children: pages),
           if (isShowingPhanTich && currentIndex == 2)
@@ -150,9 +161,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: PhanTichScreen(
                 onBack: closeOverlayPage,
                 onShowKetQua: openKetQua,
-                totalScore: _totalScore, // ← THÊM DÒNG NÀY
-                subjects: _subjects, // ← THÊM DÒNG NÀY
-                scoresDetail: _scoresDetail, // ← THÊM DÒNG NÀY
+                totalScore: _totalScore,
+                subjects: _subjects,
+                scoresDetail: _scoresDetail,
               ),
             ),
           if (isShowingKetQua && currentIndex == 2)
@@ -173,68 +184,75 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned.fill(child: ContactPage(onBack: closeExtraPage)),
         ],
       ),
-      floatingActionButton: AnimatedScale(
-        scale: currentIndex == 2 ? 1.08 : 1.0,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutBack,
-        child: Container(
-          height: 65,
-          width: 65,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [
-                Color.fromARGB(255, 25, 199, 170),
-                Color.fromARGB(255, 34, 197, 197),
-                Color.fromARGB(255, 46, 108, 189),
-              ],
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0xff2563eb).withOpacity(0.22),
-                blurRadius: 18,
-                spreadRadius: 2,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: FloatingActionButton(
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            shape: const CircleBorder(),
-            onPressed: () => _changeTab(2),
-            child: const Icon(
-              Icons.auto_awesome_rounded,
-              color: Colors.white,
-              size: 35,
-            ),
+
+      // Con AI Lottie lơ lửng ở góc phải trên thanh điều hướng
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 12.0, right: 0.0),
+        child: GestureDetector(
+          onTap: openAIChatSheet,
+          child: Lottie.asset(
+            'assets/Live chatbot.json',
+            width: 76,
+            height: 76,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(
+                Icons.smart_toy_rounded,
+                color: Color(0xff2563eb),
+                size: 40,
+              );
+            },
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: Container(
-        width: double.infinity,
-        height: 72,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 14,
-              offset: Offset(0, -2),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+
+      // SỬA ĐỔI: Sử dụng một Custom Bottom Navigation Stack để nút chính giữa nhô cao lên
+      bottomNavigationBar: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip
+            .none, // QUAN TRỌNG: Cho phép nút Phân Tích lọt ra khỏi Container thanh navi
+        children: [
+          // Khối nền trắng của thanh điều hướng (Height 72)
+          Container(
+            width: double.infinity,
+            height: 72,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 14,
+                  offset: Offset(0, -2),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _navItem(Icons.home_rounded, "Trang chủ", 0),
-            _navItem(Icons.chat_bubble_rounded, "Thảo luận", 1),
-            const SizedBox(width: 50),
-            _navItem(Icons.history_rounded, "Lịch sử", 3),
-            _navItem(Icons.person_rounded, "Cá nhân", 4),
-          ],
-        ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _navItem(Icons.home_rounded, "Trang chủ", 0),
+                _navItem(Icons.chat_bubble_rounded, "Thảo luận", 1),
+
+                // Khoảng trống ở giữa để nhường chỗ cho nút nhô cao lên
+                const SizedBox(width: 70),
+
+                _navItem(Icons.history_rounded, "Lịch sử", 3),
+                _navItem(Icons.person_rounded, "Cá nhân", 4),
+              ],
+            ),
+          ),
+
+          // ĐÃ SỬA: Đưa nút Phân tích tròn Gradient nhô hẳn lên trên (Tràn ra ngoài 22px)
+          Positioned(
+            top:
+                -22, // Đẩy lùi lên phía trên thanh navi 22 đơn vị để tạo hiệu ứng nổi bật hẳn
+            child: _buildCenterGradientNavItem(
+              Icons.auto_awesome_rounded,
+              "",
+              2,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -278,6 +296,261 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Widget nút tròn gradient Phân Tích nhô cao lên hẳn
+  Widget _buildCenterGradientNavItem(IconData icon, String label, int index) {
+    final bool active = currentIndex == index;
+    return GestureDetector(
+      onTap: () => _changeTab(index),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Vòng tròn Gradient nhô hẳn ra ngoài thanh điều hướng
+          Container(
+            width: 54, // Tăng kích thước vòng tròn lên 54 để tạo điểm nhấn
+            height: 54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [
+                  Color.fromARGB(255, 25, 199, 170),
+                  Color.fromARGB(255, 34, 197, 197),
+                  Color.fromARGB(255, 46, 108, 189),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(
+                    0xff2563eb,
+                  ).withOpacity(0.35), // Tăng đổ bóng cho cảm giác 3D tách biệt
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 28, // Icon bên trong to rõ ràng hơn
+            ),
+          ),
+          const SizedBox(height: 5),
+          // Nhãn chữ nằm gọn bên dưới
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              color: active ? const Color(0xff2563eb) : Colors.grey,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AIChatSheetGlobal extends StatefulWidget {
+  const _AIChatSheetGlobal();
+
+  @override
+  State<_AIChatSheetGlobal> createState() => _AIChatSheetGlobalState();
+}
+
+class _AIChatSheetGlobalState extends State<_AIChatSheetGlobal> {
+  final TextEditingController _chatController = TextEditingController();
+  final List<Map<String, dynamic>> _messages = [
+    {
+      "sender": "ai",
+      "text":
+          "Xin chào! Mình là trợ lý AI hệ thống. Bạn cần mình giải đáp hay hỗ trợ gì lúc này không? ✨",
+    },
+  ];
+
+  void _sendMessage() {
+    final text = _chatController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      _messages.add({"sender": "user", "text": text});
+      _chatController.clear();
+    });
+
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (mounted) {
+        setState(() {
+          _messages.add({
+            "sender": "ai",
+            "text":
+                "Cảm ơn câu hỏi của bạn! Tính năng kết nối API AI đang được thiết lập, mình sẽ sớm trả lời bạn thật chi tiết nhé! 🤖",
+          });
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _chatController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: const BoxDecoration(
+              color: Color(0xff2563eb),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.smart_toy_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Trợ lý EduTalk AI",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      Text(
+                        "Đang trực tuyến",
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Container(
+              color: const Color(0xFFF8FAFC),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(20),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final msg = _messages[index];
+                  final isMe = msg["sender"] == "user";
+                  return Align(
+                    alignment: isMe
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.75,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isMe ? const Color(0xff2563eb) : Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(16),
+                          topRight: const Radius.circular(16),
+                          bottomLeft: Radius.circular(isMe ? 16 : 4),
+                          bottomRight: Radius.circular(isMe ? 4 : 16),
+                        ),
+                      ),
+                      child: Text(
+                        msg["text"],
+                        style: TextStyle(
+                          color: isMe ? Colors.white : const Color(0xFF1E293B),
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              top: 12,
+              left: 16,
+              right: 16,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _chatController,
+                    decoration: InputDecoration(
+                      hintText: "Hỏi AI bất cứ điều gì...",
+                      filled: true,
+                      fillColor: const Color(0xFFF1F5F9),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _sendMessage,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: const BoxDecoration(
+                      color: Color(0xff2563eb),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
