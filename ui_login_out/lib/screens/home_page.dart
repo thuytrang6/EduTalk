@@ -209,7 +209,7 @@ class _HomePageState extends State<HomePage> {
             iconColor: const Color(0xff9333ea),
             iconBackground: const Color(0xfff5f3ff),
             title: "Về chúng tôi",
-            subtitle: "Giới thiệu về D30 AI",
+            subtitle: "Giới thiệu về EduTalk",
             onTap: () {
               widget.onOpenAbout?.call(); // Thêm chữ widget.
             },

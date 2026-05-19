@@ -2,9 +2,43 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'Setting.dart';
 import 'Premium_screen.dart';
+
+// ── CUSTOM FORMATTER CHUẨN: KHÔNG BỊ THỤT SỐ KHI NHẬP NGÀY SINH ──
+class DateTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Lấy chuỗi mới và loại bỏ toàn bộ ký tự không phải là số
+    String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Giới hạn tối đa 8 chữ số (DDMMYYYY)
+    if (newText.length > 8) {
+      newText = newText.substring(0, 8);
+    }
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < newText.length; i++) {
+      buffer.write(newText[i]);
+      // Chèn dấu '/' sau vị trí số thứ 2 (ngày) và số thứ 4 (tháng)
+      if ((i == 1 || i == 3) && i != newText.length - 1) {
+        buffer.write('/');
+      }
+    }
+
+    final resultText = buffer.toString();
+
+    return TextEditingValue(
+      text: resultText,
+      selection: TextSelection.collapsed(offset: resultText.length),
+    );
+  }
+}
 
 class ProfileScreen extends StatefulWidget {
   final String username;
@@ -56,7 +90,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
-  /// Load phone & dob đã lưu từ Firestore
+  void _showTopNotification({
+    required String message,
+    required Color backgroundColor,
+    IconData icon = Icons.info_outline,
+  }) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 10,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: Colors.white, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
+  }
+
   Future<void> _loadUserData() async {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -83,17 +172,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// Lưu phone & dob lên Firestore
   Future<void> _handleUpdate() async {
     final phone = _phoneController.text.trim();
     final dob = _dobController.text.trim();
 
     if (phone.isEmpty && dob.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Vui lòng nhập số điện thoại hoặc ngày sinh!"),
-          backgroundColor: Colors.orange,
-        ),
+      _showTopNotification(
+        message: "Vui lòng nhập số điện thoại hoặc ngày sinh!",
+        backgroundColor: Colors.orange,
+        icon: Icons.warning_amber_rounded,
+      );
+      return;
+    }
+
+    if (dob.isNotEmpty && dob.length < 10) {
+      _showTopNotification(
+        message: "Ngày sinh chưa đúng định dạng DD/MM/YYYY",
+        backgroundColor: Colors.orange,
+        icon: Icons.date_range_outlined,
       );
       return;
     }
@@ -104,32 +200,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) throw Exception("Chưa đăng nhập");
 
-      await FirebaseFirestore.instance.collection('users').doc(uid).set(
-        {
-          'phone': phone,
-          'dob': dob,
-          'updated_at': FieldValue.serverTimestamp(),
-        },
-        SetOptions(
-          merge: true,
-        ), // Giữ nguyên các field khác (name, email, role...)
-      );
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'phone': phone,
+        'dob': dob,
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("✅ Cập nhật thông tin thành công!"),
-            backgroundColor: Colors.green,
-          ),
+        _showTopNotification(
+          message: "Cập nhật thông tin thành công!",
+          backgroundColor: const Color.fromARGB(255, 190, 193, 190),
+          icon: Icons.check_circle_outline_rounded,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Lỗi cập nhật: $e"),
-            backgroundColor: Colors.redAccent,
-          ),
+        _showTopNotification(
+          message: "Lỗi cập nhật: $e",
+          backgroundColor: Colors.redAccent,
+          icon: Icons.error_outline_rounded,
         );
       }
     } finally {
@@ -148,17 +237,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (image != null) {
         setState(() => _imageFile = File(image.path));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Đã cập nhật ảnh đại diện mới!")),
+          _showTopNotification(
+            message: "Đã cập nhật ảnh đại diện mới!",
+            backgroundColor: const Color.fromARGB(255, 180, 180, 181),
+            icon: Icons.add_a_photo_outlined,
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Lỗi khi chọn ảnh. Vui lòng cấp quyền!"),
-          ),
+        _showTopNotification(
+          message: "Lỗi khi chọn ảnh. Vui lòng cấp quyền!",
+          backgroundColor: Colors.redAccent,
+          icon: Icons.lock_open_outlined,
         );
       }
     }
@@ -182,7 +273,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Color.fromARGB(255, 0, 0, 0),
                 ),
               ),
               const SizedBox(height: 20),
@@ -231,7 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.4),
+                color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.4),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: Colors.white, size: 28),
@@ -542,8 +633,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               builder: (_) => PremiumScreen(onTabChange: widget.onChangeTab),
             ),
           );
-          if (targetTab != null && widget.onChangeTab != null)
+          if (targetTab != null && widget.onChangeTab != null) {
             widget.onChangeTab!(targetTab);
+          }
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
@@ -579,7 +671,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tiêu đề
           const Row(
             children: [
               Icon(
@@ -600,7 +691,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Họ và tên (readOnly)
           _buildTextField(
             "Họ và tên",
             "Nhập tên của bạn",
@@ -608,7 +698,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _nameController,
             readOnly: true,
           ),
-          // Email (readOnly)
           _buildTextField(
             "Email",
             "example@email.com",
@@ -616,7 +705,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _emailController,
             readOnly: true,
           ),
-          // Số điện thoại (có thể sửa)
           _buildTextField(
             "Số điện thoại",
             "Nhập số điện thoại...",
@@ -624,18 +712,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _phoneController,
             keyboardType: TextInputType.phone,
           ),
-          // Ngày sinh (có thể sửa)
+
+          // Ô nhập Ngày sinh đã fix hoàn toàn lỗi thụt ký tự
           _buildTextField(
             "Ngày sinh",
             "DD/MM/YYYY",
             Icons.calendar_today_outlined,
             _dobController,
-            keyboardType: TextInputType.datetime,
+            keyboardType: TextInputType.number,
+            inputFormatters: [DateTextFormatter()],
           ),
 
           const SizedBox(height: 8),
 
-          // Nút Cập nhật
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -681,6 +770,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     TextEditingController controller, {
     bool readOnly = false,
     TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -700,6 +790,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             controller: controller,
             readOnly: readOnly,
             keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
             style: TextStyle(
               color: readOnly ? const Color(0xff94a3b8) : Colors.black,
               fontWeight: FontWeight.w500,

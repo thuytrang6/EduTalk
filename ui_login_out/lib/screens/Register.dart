@@ -18,6 +18,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
   Timer? _verifyTimer;
 
+  // Biến dùng để lưu trữ và hiển thị thông báo lỗi ngay dưới ô mật khẩu
+  String? _passwordError;
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -25,6 +28,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _verifyTimer?.cancel();
     super.dispose();
+  }
+
+  // Hàm kiểm tra định dạng mật khẩu bằng Regular Expression
+  bool _validatePassword(String password) {
+    if (password.isEmpty) {
+      setState(() {
+        _passwordError = "Vui lòng nhập mật khẩu";
+      });
+      return false;
+    }
+
+    // Kiểm tra độ dài tối thiểu 8 ký tự
+    if (password.length < 8) {
+      setState(() {
+        _passwordError = "Mật khẩu phải có tối thiểu 8 ký tự";
+      });
+      return false;
+    }
+
+    // Kiểm tra chữ hoa, số và ký tự đặc biệt
+    final hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
+    final hasDigits = RegExp(r'[0-9]').hasMatch(password);
+    final hasSpecialCharacters = RegExp(
+      r'[!@#$%^&*(),.?":{}|<>]',
+    ).hasMatch(password);
+
+    if (!hasUppercase || !hasDigits || !hasSpecialCharacters) {
+      setState(() {
+        _passwordError = "Mật khẩu phải bao gồm: Chữ hoa, số và kí tự đặc biệt";
+      });
+      return false;
+    }
+
+    // Nếu hợp lệ, xóa thông báo lỗi
+    setState(() {
+      _passwordError = null;
+    });
+    return true;
   }
 
   void _handleRegister() async {
@@ -39,10 +80,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Mật khẩu phải có ít nhất 6 ký tự")),
-      );
+    // Gọi hàm validate mật khẩu, nếu không thỏa mãn thì dừng lại
+    if (!_validatePassword(password)) {
       return;
     }
 
@@ -76,8 +115,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // Poll Firebase mỗi 3s — khi user nhấn link verify trong mail,
-  // emailVerified sẽ thành true và dialog tự đóng.
   void _showVerifyEmailDialog(String email, String password) {
     _verifyTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       try {
@@ -285,11 +322,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // ── PASSWORD FIELD VỚI NÚT HIỆN/ẨN ──
+                      // ── PASSWORD FIELD ĐÃ ĐƯỢC CẬP NHẬT ──
                       TextField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
                         style: const TextStyle(color: Colors.white),
+                        // Thêm onChanged để kiểm tra ngay lập tức khi người dùng gõ phím (Realtime validation)
+                        onChanged: (value) {
+                          if (_passwordError != null) {
+                            _validatePassword(value);
+                          }
+                        },
                         decoration: InputDecoration(
                           prefixIcon: const Icon(
                             Icons.lock_outline,
@@ -312,9 +355,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           hintStyle: const TextStyle(color: Colors.white38),
                           filled: true,
                           fillColor: Colors.white.withOpacity(0.1),
+                          // Gán thông báo lỗi vào đây, Flutter tự động style màu đỏ và đẩy xuống dưới box nhập
+                          errorText: _passwordError,
+                          errorMaxLines:
+                              2, // Đảm bảo hiển thị đủ nội dung khi chuỗi lỗi dài
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(15),
                             borderSide: BorderSide.none,
+                          ),
+                          // Giữ nguyên viền khi có lỗi (hoặc tùy biến màu viền lỗi tại đây nếu muốn)
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: const BorderSide(
+                              color: Colors.redAccent,
+                              width: 1,
+                            ),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: const BorderSide(
+                              color: Colors.redAccent,
+                              width: 1.5,
+                            ),
                           ),
                         ),
                       ),
