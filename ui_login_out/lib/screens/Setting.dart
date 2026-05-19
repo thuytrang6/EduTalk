@@ -184,24 +184,75 @@ class _SettingScreenState extends State<SettingScreen> {
               subtitle: "Thoát khỏi tài khoản hiện tại",
               titleColor: const Color(0xffef4444),
               onTap: () async {
-                showDialog(
+                // Hiển thị dialog xác nhận trước khi đăng xuất
+                final shouldLogout = await showDialog<bool>(
                   context: context,
-                  barrierDismissible: false,
-                  builder: (context) => const Center(
-                    child: CircularProgressIndicator(color: Colors.red),
-                  ),
+                  builder: (BuildContext ctx) {
+                    return AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      title: const Row(
+                        children: [
+                          Icon(Icons.logout_rounded, color: Color(0xffef4444)),
+                          SizedBox(width: 10),
+                          Text("Đăng xuất"),
+                        ],
+                      ),
+                      content: const Text(
+                        "Bạn có chắc chắn muốn đăng xuất không?",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text(
+                            "Hủy",
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text(
+                            "Đăng xuất",
+                            style: TextStyle(
+                              color: Color(0xffef4444),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 );
-                final AuthService authService = AuthService();
-                await authService.signOut();
 
-                if (!mounted) return;
-                Navigator.pop(context); 
+                if (shouldLogout == true) {
+                  // Hiển thị loading
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xffef4444),
+                      ),
+                    ),
+                  );
 
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  (route) => false,
-                );
+                  final AuthService authService = AuthService();
+                  await authService.signOut();
+
+                  if (!mounted) return;
+
+                  // Đóng dialog loading
+                  Navigator.pop(context);
+
+                  // QUAN TRỌNG: Không tự điều hướng về LoginScreen
+                  // AuthGate sẽ tự động xử lý và hiển thị LoginScreen
+                  // Chỉ cần pop về màn hình trước đó (home) và để AuthGate làm việc
+                  Navigator.popUntil(context, (route) => route.isFirst);
+                }
               },
             ),
             _buildNavigationItem(
@@ -243,6 +294,7 @@ class _SettingScreenState extends State<SettingScreen> {
                         TextButton(
                           onPressed: () async {
                             Navigator.pop(ctx);
+
                             showDialog(
                               context: context,
                               barrierDismissible: false,
@@ -254,43 +306,44 @@ class _SettingScreenState extends State<SettingScreen> {
                             );
 
                             try {
-                              User? user = FirebaseAuth.instance.currentUser;
-                              if (user != null) {
-                                String uid = user.uid;
+                              final AuthService authService = AuthService();
+                              final result = await authService.deleteAccount();
 
-                                await FirebaseFirestore.instance
-                                    .collection('users')
-                                    .doc(uid)
-                                    .delete();
+                              if (!mounted) return;
+                              Navigator.pop(context); // Đóng loading
 
-                                await user.delete();
-
-                                if (!mounted) return;
-                                Navigator.pop(context);
-
-                                Navigator.pushAndRemoveUntil(
+                              if (result['status'] == 'success') {
+                                // Quay về màn hình login
+                                Navigator.popUntil(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const LoginScreen(),
-                                  ),
-                                  (route) => false,
+                                  (route) => route.isFirst,
                                 );
-
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
                                       "Đã xóa tài khoản vĩnh viễn!",
                                     ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      result['message'] ??
+                                          "Xóa tài khoản thất bại",
+                                    ),
+                                    backgroundColor: Colors.red,
                                   ),
                                 );
                               }
                             } catch (e) {
+                              if (!mounted) return;
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "Bảo mật: Vui lòng Đăng xuất rồi Đăng nhập lại để thực hiện Xóa!",
-                                  ),
+                                SnackBar(
+                                  content: Text("Lỗi: $e"),
+                                  backgroundColor: Colors.red,
                                 ),
                               );
                             }

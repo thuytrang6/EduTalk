@@ -4,7 +4,12 @@ import 'Premium_screen.dart';
 
 class DuLieuScreen extends StatefulWidget {
   final ValueChanged<int>? onChangeTab;
-  final Function(double totalScore)? onOPenPhanTich; // ← nhận totalScore
+  final Function(
+    double totalScore,
+    List<String> subjects,
+    List<double> scoresDetail,
+  )?
+  onOPenPhanTich;
   const DuLieuScreen({super.key, this.onChangeTab, this.onOPenPhanTich});
 
   @override
@@ -593,8 +598,13 @@ class DuLieuScreenState extends State<DuLieuScreen> {
         width: double.infinity,
         child: ElevatedButton(
           onPressed: () {
-            // ← Tính tổng điểm và truyền sang home
-            widget.onOPenPhanTich?.call(_totalScore);
+            // Lấy danh sách điểm từ các TextEditingController
+            final List<double> scoresDetail = scores
+                .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
+                .toList();
+
+            // Gọi callback với đúng dữ liệu
+            widget.onOPenPhanTich?.call(_totalScore, subjects, scoresDetail);
           },
           style: ElevatedButton.styleFrom(
             elevation: 8,
@@ -621,9 +631,9 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       ),
     );
   }
-}
+} // ← Đóng class DuLieuScreenState
 
-// ── FORMATTER: giới hạn điểm 0.0 → 10.0, nhập 99 → 9.9 ─────────────────────
+// ── FORMATTER ────────────────────────────────────────────────────────────────
 class _ScoreInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -633,16 +643,13 @@ class _ScoreInputFormatter extends TextInputFormatter {
     final text = newValue.text.replaceAll(',', '.');
     if (text.isEmpty) return newValue.copyWith(text: '');
 
-    // Chỉ cho phép 1 dấu chấm
     final dotCount = text.split('').where((c) => c == '.').length;
     if (dotCount > 1) return oldValue;
 
-    // Nếu nhập 2 chữ số liền không có dấu chấm (vd: 99, 78) → chèn dấu chấm vào giữa (9.9, 7.8)
     if (!text.contains('.') && text.length == 2) {
       final auto = '${text[0]}.${text[1]}';
       final parsed = double.tryParse(auto) ?? 0.0;
       if (parsed > 10.0) {
-        // vd: nhập "99" → "9.9", nhập "19" → không hợp lệ → giữ "1"
         return TextEditingValue(
           text: '9.9',
           selection: const TextSelection.collapsed(offset: 3),
@@ -654,7 +661,6 @@ class _ScoreInputFormatter extends TextInputFormatter {
       );
     }
 
-    // Kiểm tra giá trị > 10
     final parsed = double.tryParse(text);
     if (parsed != null && parsed > 10.0) {
       return oldValue;

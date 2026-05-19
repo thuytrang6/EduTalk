@@ -12,11 +12,17 @@ class PhanTichScreen extends StatefulWidget {
     List<int> majorRequirements,
   )
   onShowKetQua;
+  final double totalScore; // ← THÊM
+  final List<String> subjects; // ← THÊM
+  final List<double> scoresDetail; // ← THÊM
 
   const PhanTichScreen({
     super.key,
     required this.onBack,
     required this.onShowKetQua,
+    required this.totalScore,
+    required this.subjects,
+    required this.scoresDetail,
   });
 
   @override
@@ -56,7 +62,7 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
           ),
         );
 
-        // ← Lưu kết quả lên Firestore
+        // ← LƯU KẾT QUẢ LÊN FIRESTORE (THÊM total_score, subjects, scores_detail)
         if (uid.isNotEmpty) {
           await FirebaseFirestore.instance
               .collection('predictions')
@@ -77,6 +83,9 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
                     )
                     .toList(),
                 'input_scores': inItems.map((item) => item.value).toList(),
+                'total_score': widget.totalScore, // ← THÊM DÒNG NÀY
+                'subjects': widget.subjects, // ← THÊM DÒNG NÀY
+                'scores_detail': widget.scoresDetail, // ← THÊM DÒNG NÀY
                 'created_at': FieldValue.serverTimestamp(),
               });
         }

@@ -120,9 +120,10 @@ dependencies:
   lucide_icons: ^0.257.0
   firebase_core: ^3.15.2
   cloud_firestore: ^5.6.12
-  firebase_auth: ^5.3.1
+  firebase_auth: ^5.4.1
   http: ^1.6.0
   fl_chart: ^1.2.0
+  google_sign_in: ^6.2.2
 
 dev_dependencies:
   flutter_test:

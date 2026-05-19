@@ -28,9 +28,12 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _recommendations = [];
   List<int> _userScores = [];
   List<int> _majorRequirements = [];
-  double _totalScore = 0.0; // ← tổng điểm từ DuLieu
+  double _totalScore = 0.0;
+  List<String> _subjects = [];
+  List<double> _scoresDetail = [];
 
   final GlobalKey<DuLieuScreenState> duLieukey = GlobalKey();
+
   List<Widget> get pages => [
     HomePage(
       onChangeTab: _changeTab,
@@ -41,11 +44,10 @@ class _HomeScreenState extends State<HomeScreen> {
     DuLieuScreen(
       key: duLieukey,
       onChangeTab: _changeTab,
-      onOPenPhanTich: openPhanTich, // ← nhận double
+      onOPenPhanTich: _openPhanTich,
     ),
     const LichSuScreen(),
     ProfileScreen(),
-    // ProfileScreen(username: widget.userName, onChangeTab: _changeTab),
   ];
 
   void onRestart() {
@@ -77,13 +79,16 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ← Nhận totalScore từ DuLieu
-  void openPhanTich(double totalScore) {
+  void _openPhanTich(
+    double totalScore,
+    List<String> subjects,
+    List<double> scoresDetail,
+  ) {
     setState(() {
       _totalScore = totalScore;
-      currentIndex = 2;
+      _subjects = subjects;
+      _scoresDetail = scoresDetail;
       isShowingPhanTich = true;
-      isShowingKetQua = false;
     });
   }
 
@@ -98,7 +103,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _recommendations = recommendations;
       _userScores = userScores;
       _majorRequirements = majorRequirements;
-      currentIndex = 2;
       isShowingPhanTich = false;
       isShowingKetQua = true;
     });
@@ -116,14 +120,17 @@ class _HomeScreenState extends State<HomeScreen> {
     isShowingAbout = true;
     isShowingContact = false;
   });
+
   void openContact() => setState(() {
     isShowingContact = true;
     isShowingAbout = false;
   });
+
   void closeExtraPage() => setState(() {
     isShowingAbout = false;
     isShowingContact = false;
   });
+
   void closeOverlayPage() => setState(() {
     currentIndex = 2;
     isShowingPhanTich = false;
@@ -143,6 +150,9 @@ class _HomeScreenState extends State<HomeScreen> {
               child: PhanTichScreen(
                 onBack: closeOverlayPage,
                 onShowKetQua: openKetQua,
+                totalScore: _totalScore, // ← THÊM DÒNG NÀY
+                subjects: _subjects, // ← THÊM DÒNG NÀY
+                scoresDetail: _scoresDetail, // ← THÊM DÒNG NÀY
               ),
             ),
           if (isShowingKetQua && currentIndex == 2)
@@ -154,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 recommendations: _recommendations,
                 userScores: _userScores,
                 majorRequirements: _majorRequirements,
-                totalScore: _totalScore, // ← truyền tổng điểm
+                totalScore: _totalScore,
               ),
             ),
           if (isShowingAbout && currentIndex == 2)

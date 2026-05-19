@@ -56,15 +56,13 @@ class LichSuScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 8),
-                // 📌 NOTE: Dùng FutureBuilder để kéo tên thực tế từ bảng users lên hiển thị realtime
                 FutureBuilder<DocumentSnapshot>(
                   future: FirebaseFirestore.instance
                       .collection('users')
                       .doc(uid)
                       .get(),
                   builder: (context, userSnapshot) {
-                    String dynamicName =
-                        userName; // Dự phòng bằng tên truyền qua constructor
+                    String dynamicName = userName;
                     if (userSnapshot.hasData && userSnapshot.data!.exists) {
                       final userData =
                           userSnapshot.data!.data() as Map<String, dynamic>?;
@@ -166,12 +164,10 @@ class LichSuScreen extends StatelessWidget {
                               .where((s) => s.isNotEmpty)
                               .take(3)
                               .toList();
-                          final inputScores =
-                              (data['input_scores'] as List<dynamic>? ?? []);
-                          final totalScore = inputScores.fold<double>(
-                            0,
-                            (sum, s) => sum + (s as num).toDouble(),
-                          );
+
+                          // LẤY TỔNG ĐIỂM 3 MÔN (đã lưu khi gọi API)
+                          final totalScore =
+                              (data['total_score'] as num?)?.toDouble() ?? 0.0;
 
                           String dateStr = '';
                           final ts = data['created_at'];
@@ -295,7 +291,7 @@ class HistoryCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'TỔNG ĐIỂM SỞ THÍCH',
+                              'ĐIỂM CỦA BẠN',
                               style: TextStyle(
                                 color: Colors.grey,
                                 fontSize: 11,
@@ -303,12 +299,36 @@ class HistoryCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              totalScore.toStringAsFixed(0),
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFE11D48),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                                color: const Color(0xFFFEF2F2),
+                                border: Border.all(
+                                  color: const Color(0xFFFECACA),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.stars_rounded,
+                                    color: Color(0xFFFFE66D),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    totalScore.toStringAsFixed(2),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFE11D48),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
