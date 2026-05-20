@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
 import 'Premium_screen.dart';
 import 'ThongKeTs.dart';
+import 'about_screen.dart';
+import 'support_screen.dart';
 
 class HomePage extends StatefulWidget {
   final ValueChanged<int>? onChangeTab;
@@ -211,6 +213,12 @@ class _HomePageState extends State<HomePage> {
             title: "Về chúng tôi",
             subtitle: "Giới thiệu về D30 AI",
             onTap: () {
+              Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => const AboutScreen(),
+  ),
+);
               widget.onOpenAbout?.call(); // Thêm chữ widget.
             },
           ),
@@ -223,6 +231,12 @@ class _HomePageState extends State<HomePage> {
             title: "Liên hệ hỗ trợ",
             subtitle: "Gửi câu hỏi cho chúng tôi",
             onTap: () {
+              Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => const SupportScreen(),
+  ),
+);
               widget.onOpenContact?.call(); // Thêm chữ widget.
             },
           ),

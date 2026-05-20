@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../auth_service.dart';
 import 'Login.dart';
+import 'privacy_policy_screen.dart';
+import 'terms_screen.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -141,21 +143,37 @@ class _SettingScreenState extends State<SettingScreen> {
               subtitle: "Cập nhật mật khẩu của bạn",
               onTap: () {},
             ),
+
             _buildNavigationItem(
               icon: Icons.security_outlined,
               iconColor: const Color(0xff6366f1),
               bgColor: const Color(0xffeef2ff),
               title: "Chính sách bảo mật",
               subtitle: "Xem cách chúng tôi bảo vệ dữ liệu",
-              onTap: () {},
+
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PrivacyPolicyScreen(),
+                  ),
+                );
+              },
             ),
+
             _buildNavigationItem(
               icon: Icons.description_outlined,
               iconColor: const Color(0xff06b6d4),
               bgColor: const Color(0xffecfeff),
               title: "Điều khoản sử dụng",
               subtitle: "Xem điều khoản & điều kiện",
-              onTap: () {},
+
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TermsScreen()),
+                );
+              },
             ),
           ],
         ),
