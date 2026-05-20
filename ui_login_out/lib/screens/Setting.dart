@@ -195,7 +195,7 @@ class _SettingScreenState extends State<SettingScreen> {
                 await authService.signOut();
 
                 if (!mounted) return;
-                Navigator.pop(context); 
+                Navigator.pop(context);
 
                 Navigator.pushAndRemoveUntil(
                   context,

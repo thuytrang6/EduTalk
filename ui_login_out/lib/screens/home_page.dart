@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
 import 'Premium_screen.dart';
 import 'ThongKeTs.dart';
@@ -21,7 +21,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
- 
   String _userName = "Bạn";
 
   @override
@@ -49,7 +48,8 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             children: [
               Stack(
-                clipBehavior: Clip.none, // cho phép phần tử con vượt ra ngoài Stack
+                clipBehavior:
+                    Clip.none, // cho phép phần tử con vượt ra ngoài Stack
                 children: [
                   Container(
                     height: 550,
@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> {
                   ),
 
                   Positioned(
-                    top: 450, 
+                    top: 450,
                     left: 20,
                     right: 20,
                     child: Row(
@@ -107,7 +107,7 @@ class _HomePageState extends State<HomePage> {
                             iconColor: const Color(0xff2563eb),
                             iconBackground: const Color(0xffeff6ff),
                             onTap: () {
-                              widget.onChangeTab?.call(3); 
+                              widget.onChangeTab?.call(3);
                             },
                           ),
                         ),
@@ -121,7 +121,7 @@ class _HomePageState extends State<HomePage> {
                             iconColor: const Color(0xff059669),
                             iconBackground: const Color(0xffd1fae5),
                             onTap: () {
-                              widget.onChangeTab?.call(1); 
+                              widget.onChangeTab?.call(1);
                             },
                           ),
                         ),
@@ -195,7 +195,9 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ThongKeTs(onTabChange: widget.onChangeTab), // Thêm chữ widget.
+                  builder: (context) => ThongKeTs(
+                    onTabChange: widget.onChangeTab,
+                  ), // Thêm chữ widget.
                 ),
               );
             },
@@ -325,7 +327,9 @@ class _HomePageState extends State<HomePage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ThongKeTs(onTabChange: widget.onChangeTab), // Thêm chữ widget.
+                      builder: (context) => ThongKeTs(
+                        onTabChange: widget.onChangeTab,
+                      ), // Thêm chữ widget.
                     ),
                   );
                 },
