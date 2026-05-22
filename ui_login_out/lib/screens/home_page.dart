@@ -46,7 +46,7 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xfff6f7fb),
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(), // hiệu ứng cuộn mượt mà
+          physics: const ClampingScrollPhysics(), // hiệu ứng cuộn mượt mà
           child: Column(
             children: [
               Stack(
@@ -214,11 +214,9 @@ class _HomePageState extends State<HomePage> {
             subtitle: "Giới thiệu về EduTalk",
             onTap: () {
               Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => const AboutScreen(),
-  ),
-);
+                context,
+                MaterialPageRoute(builder: (_) => const AboutScreen()),
+              );
               widget.onOpenAbout?.call(); // Thêm chữ widget.
             },
           ),
@@ -232,11 +230,9 @@ class _HomePageState extends State<HomePage> {
             subtitle: "Gửi câu hỏi cho chúng tôi",
             onTap: () {
               Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => const SupportScreen(),
-  ),
-);
+                context,
+                MaterialPageRoute(builder: (_) => const SupportScreen()),
+              );
               widget.onOpenContact?.call(); // Thêm chữ widget.
             },
           ),

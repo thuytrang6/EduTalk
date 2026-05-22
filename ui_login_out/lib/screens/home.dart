@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:ui_login_out/screens/free_usage_store.dart';
 import 'PhanTich.dart';
 import 'DuLieu.dart';
 import 'ThaoLuan.dart';
@@ -34,6 +35,9 @@ class _HomeScreenState extends State<HomeScreen> {
   List<double> _scoresDetail = [];
 
   final GlobalKey<DuLieuScreenState> duLieukey = GlobalKey();
+
+  double _aiIconRight = 16;
+  double _aiIconBottom = 90;
 
   List<Widget> get pages => [
     HomePage(
@@ -99,6 +103,41 @@ class _HomeScreenState extends State<HomeScreen> {
     List<int> userScores,
     List<int> majorRequirements,
   ) {
+    // Trừ 1 lượt free
+    final currentCount = freeUsageCount.value;
+    if (currentCount > 0) {
+      freeUsageCount.value = currentCount - 1;
+    }
+
+    // Nếu sau khi trừ còn 0 lượt → hiện thông báo hết lượt
+    if (freeUsageCount.value == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.white),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Bạn đã hết lượt dùng thử',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xffef4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      });
+    }
+
     setState(() {
       _predictedMajor = major;
       _recommendations = recommendations;
@@ -149,111 +188,128 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBody: true,
-      backgroundColor: const Color(0xfff5f6fa),
-      body: Stack(
-        clipBehavior: Clip.none, // Cho phép widget con tràn ra ngoài nếu cần
-        children: [
-          IndexedStack(index: currentIndex, children: pages),
-          if (isShowingPhanTich && currentIndex == 2)
-            Positioned.fill(
-              child: PhanTichScreen(
-                onBack: closeOverlayPage,
-                onShowKetQua: openKetQua,
-                totalScore: _totalScore,
-                subjects: _subjects,
-                scoresDetail: _scoresDetail,
-              ),
-            ),
-          if (isShowingKetQua && currentIndex == 2)
-            Positioned.fill(
-              child: KetQuaScreen(
-                onBack: closeKetQua,
-                onRestart: onRestart,
-                predictedMajor: _predictedMajor,
-                recommendations: _recommendations,
-                userScores: _userScores,
-                majorRequirements: _majorRequirements,
-                totalScore: _totalScore,
-              ),
-            ),
-          if (isShowingAbout && currentIndex == 2)
-            Positioned.fill(child: AboutPage(onBack: closeExtraPage)),
-          if (isShowingContact && currentIndex == 2)
-            Positioned.fill(child: ContactPage(onBack: closeExtraPage)),
-        ],
-      ),
+    return Stack(
+      children: [
+        Scaffold(
+          extendBody: true,
+          backgroundColor: const Color(0xfff5f6fa),
+          body: Stack(
+            clipBehavior:
+                Clip.none, // Cho phép widget con tràn ra ngoài nếu cần
+            children: [
+              IndexedStack(index: currentIndex, children: pages),
+              if (isShowingPhanTich && currentIndex == 2)
+                Positioned.fill(
+                  child: PhanTichScreen(
+                    onBack: closeOverlayPage,
+                    onShowKetQua: openKetQua,
+                    totalScore: _totalScore,
+                    subjects: _subjects,
+                    scoresDetail: _scoresDetail,
+                  ),
+                ),
+              if (isShowingKetQua && currentIndex == 2)
+                Positioned.fill(
+                  child: KetQuaScreen(
+                    onBack: closeKetQua,
+                    onRestart: onRestart,
+                    predictedMajor: _predictedMajor,
+                    recommendations: _recommendations,
+                    userScores: _userScores,
+                    majorRequirements: _majorRequirements,
+                    totalScore: _totalScore,
+                  ),
+                ),
+              if (isShowingAbout && currentIndex == 2)
+                Positioned.fill(child: AboutPage(onBack: closeExtraPage)),
+              if (isShowingContact && currentIndex == 2)
+                Positioned.fill(child: ContactPage(onBack: closeExtraPage)),
+            ],
+          ),
 
-      // Con AI Lottie lơ lửng ở góc phải trên thanh điều hướng
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 12.0, right: 0.0),
-        child: GestureDetector(
-          onTap: openAIChatSheet,
-          child: Lottie.asset(
-            'assets/Live chatbot.json',
-            width: 76,
-            height: 76,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return const Icon(
-                Icons.smart_toy_rounded,
-                color: Color(0xff2563eb),
-                size: 40,
-              );
+          // SỬA ĐỔI: Sử dụng một Custom Bottom Navigation Stack để nút chính giữa nhô cao lên
+          bottomNavigationBar: Stack(
+            alignment: Alignment.topCenter,
+            clipBehavior: Clip
+                .none, // QUAN TRỌNG: Cho phép nút Phân Tích lọt ra khỏi Container thanh navi
+            children: [
+              // Khối nền trắng của thanh điều hướng (Height 72)
+              Container(
+                width: double.infinity,
+                height: 72,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 14,
+                      offset: Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _navItem(Icons.home_rounded, "Trang chủ", 0),
+                    _navItem(Icons.chat_bubble_rounded, "Thảo luận", 1),
+
+                    // Khoảng trống ở giữa để nhường chỗ cho nút nhô cao lên
+                    const SizedBox(width: 70),
+
+                    _navItem(Icons.history_rounded, "Lịch sử", 3),
+                    _navItem(Icons.person_rounded, "Cá nhân", 4),
+                  ],
+                ),
+              ),
+
+              // ĐÃ SỬA: Đưa nút Phân tích tròn Gradient nhô hẳn lên trên (Tràn ra ngoài 22px)
+              Positioned(
+                top:
+                    -22, // Đẩy lùi lên phía trên thanh navi 22 đơn vị để tạo hiệu ứng nổi bật hẳn
+                child: _buildCenterGradientNavItem(
+                  Icons.auto_awesome_rounded,
+                  "",
+                  2,
+                ),
+              ),
+            ],
+          ),
+        ), // end Scaffold
+        // Icon AI nổi trên tất cả kể cả navigator
+        Positioned(
+          right: _aiIconRight,
+          bottom: _aiIconBottom,
+          child: GestureDetector(
+            onTap: openAIChatSheet,
+            onPanUpdate: (details) {
+              final size = MediaQuery.of(context).size;
+              setState(() {
+                _aiIconRight = (_aiIconRight - details.delta.dx).clamp(
+                  0.0,
+                  size.width - 100,
+                );
+                _aiIconBottom = (_aiIconBottom - details.delta.dy).clamp(
+                  0.0,
+                  size.height - 100,
+                );
+              });
             },
+            child: Lottie.asset(
+              'assets/Live chatbot.json',
+              width: 100,
+              height: 100,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.smart_toy_rounded,
+                  color: Color(0xff2563eb),
+                  size: 40,
+                );
+              },
+            ),
           ),
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-
-      // SỬA ĐỔI: Sử dụng một Custom Bottom Navigation Stack để nút chính giữa nhô cao lên
-      bottomNavigationBar: Stack(
-        alignment: Alignment.topCenter,
-        clipBehavior: Clip
-            .none, // QUAN TRỌNG: Cho phép nút Phân Tích lọt ra khỏi Container thanh navi
-        children: [
-          // Khối nền trắng của thanh điều hướng (Height 72)
-          Container(
-            width: double.infinity,
-            height: 72,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 14,
-                  offset: Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _navItem(Icons.home_rounded, "Trang chủ", 0),
-                _navItem(Icons.chat_bubble_rounded, "Thảo luận", 1),
-
-                // Khoảng trống ở giữa để nhường chỗ cho nút nhô cao lên
-                const SizedBox(width: 70),
-
-                _navItem(Icons.history_rounded, "Lịch sử", 3),
-                _navItem(Icons.person_rounded, "Cá nhân", 4),
-              ],
-            ),
-          ),
-
-          // ĐÃ SỬA: Đưa nút Phân tích tròn Gradient nhô hẳn lên trên (Tràn ra ngoài 22px)
-          Positioned(
-            top:
-                -22, // Đẩy lùi lên phía trên thanh navi 22 đơn vị để tạo hiệu ứng nổi bật hẳn
-            child: _buildCenterGradientNavItem(
-              Icons.auto_awesome_rounded,
-              "",
-              2,
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
