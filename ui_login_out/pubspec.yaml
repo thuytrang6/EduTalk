@@ -125,7 +125,9 @@ dependencies:
   fl_chart: ^1.2.0
   google_sign_in: ^6.2.2
   lottie: ^3.3.3
-
+  app_links: ^6.0.0
+  url_launcher: ^6.3.2
+  webview_flutter: ^4.4.2
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'payment_selection_screen.dart';
 
 class PremiumScreen extends StatelessWidget {
   final ValueChanged<int>? onTabChange;
@@ -37,7 +38,7 @@ class PremiumScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   _buildComparisonCard(),
                   const SizedBox(height: 20),
-                  _buildPricingPlans(),
+                  _buildPricingPlans(context),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -121,12 +122,12 @@ class PremiumScreen extends StatelessWidget {
   }
 
   Widget _navItem(
-    BuildContext context,
-    IconData icon,
-    String label,
-    bool active,
-    int index,
-  ) {
+      BuildContext context,
+      IconData icon,
+      String label,
+      bool active,
+      int index,
+      ) {
     return InkWell(
       onTap: () {
         if (!active) {
@@ -318,10 +319,11 @@ class PremiumScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPricingPlans() {
+  Widget _buildPricingPlans(BuildContext context) {
     return Column(
       children: [
         _buildPlanCard(
+          context: context,
           title: "Gói Tháng",
           subtitle: "Linh hoạt, thử nghiệm",
           price: "29.000",
@@ -334,6 +336,7 @@ class PremiumScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _buildPlanCard(
+          context: context,
           title: "Gói Năm",
           subtitle: "Tiết kiệm 40% - Tốt nhất",
           price: "216.000",
@@ -349,6 +352,7 @@ class PremiumScreen extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _buildPlanCard(
+          context: context,
           title: "Gói Trọn Đời",
           subtitle: "Một lần thanh toán, sử dụng mãi mãi",
           price: "499.000",
@@ -363,7 +367,21 @@ class PremiumScreen extends StatelessWidget {
     );
   }
 
+  void _onBuyPressed(BuildContext context, String planName, int price) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (_) => PaymentSelectionScreen(
+        planName: planName,
+        userId: "USER123456",
+        planPrice: price.toDouble(),
+      ),
+    );
+  }
+
   Widget _buildPlanCard({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required String price,
@@ -377,6 +395,7 @@ class PremiumScreen extends StatelessWidget {
     String? oldPrice,
     String? savings,
   }) {
+    final priceInt = int.parse(price.replaceAll('.', ''));
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -550,7 +569,7 @@ class PremiumScreen extends StatelessWidget {
                       ],
                     ),
                     child: ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () => _onBuyPressed(context, title, priceInt),
                       icon: Icon(buttonIcon, color: Colors.white, size: 20),
                       label: Text(
                         buttonText,
