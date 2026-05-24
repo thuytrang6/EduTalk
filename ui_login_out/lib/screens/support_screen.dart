@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'support_request_screen.dart';
 
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
@@ -172,7 +173,16 @@ class SupportScreen extends StatelessWidget {
                   height: 56,
 
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            const SupportRequestScreen(),
+      ),
+    );
+                    },
+                  
 
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xff1e293b),
