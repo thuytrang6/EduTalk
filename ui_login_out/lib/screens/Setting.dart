@@ -246,8 +246,17 @@ class _SettingScreenState extends State<SettingScreen> {
                   },
                 );
 
-                if (!mounted) return;
-                Navigator.pop(context);
+                if (shouldLogout == true) {
+                  // Hiển thị loading
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xffef4444),
+                      ),
+                    ),
+                  );
 
                   final AuthService authService = AuthService();
                   await authService.signOut();

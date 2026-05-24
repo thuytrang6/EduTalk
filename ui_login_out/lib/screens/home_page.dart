@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       setState(() {
-        userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
+        _userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
       });
     }
   }
@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 5),
                         // ĐÃ THAY CHỮ "BẠN" BẰNG BIẾN _userName
                         Text(
-                          "$userName 👋",
+                          "$_userName 👋",
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -214,11 +214,9 @@ class _HomePageState extends State<HomePage> {
             subtitle: "Giới thiệu về EduTalk",
             onTap: () {
               Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => const AboutScreen(),
-  ),
-);
+                context,
+                MaterialPageRoute(builder: (_) => const AboutScreen()),
+              );
               widget.onOpenAbout?.call(); // Thêm chữ widget.
             },
           ),
@@ -232,11 +230,9 @@ class _HomePageState extends State<HomePage> {
             subtitle: "Gửi câu hỏi cho chúng tôi",
             onTap: () {
               Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => const SupportScreen(),
-  ),
-);
+                context,
+                MaterialPageRoute(builder: (_) => const SupportScreen()),
+              );
               widget.onOpenContact?.call(); // Thêm chữ widget.
             },
           ),
