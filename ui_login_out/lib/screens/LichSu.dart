@@ -1,78 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 
-class ConsultationResult {
-  final int id;
-  final String date;
-  final String major;
-  final double score;
-  final List<String> schools;
-
-  ConsultationResult({
-    required this.id,
-    required this.date,
-    required this.major,
-    required this.score,
-    required this.schools,
-  });
-}
-
-class LichSuScreen extends StatefulWidget {
-  const LichSuScreen({super.key});
-
-  @override
-  State<LichSuScreen> createState() => _LichSuScreenState();
-}
-
-class _LichSuScreenState extends State<LichSuScreen> {
-  String _userName = "Đang tải...";
-  String _currentUid = ""; 
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserSession();
-  }
-  void _loadUserSession() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      setState(() {
-        // Lấy Tên thật hoặc Email
-        _userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
-        _currentUid = user.uid; // Lưu lại ID để sau này dùng lọc Lịch sử
-      });
-    } else {
-      setState(() {
-        _userName = "Chưa đăng nhập";
-      });
-    }
-  }
+class LichSuScreen extends StatelessWidget {
+  final String userName;
+  const LichSuScreen({super.key, this.userName = 'Bạn'});
 
   @override
   Widget build(BuildContext context) {
-    final List<ConsultationResult> historyData = [
-      ConsultationResult(
-        id: 3,
-        date: '15/5/2024 8:30',
-        major: 'Công nghệ thông tin - Tin học',
-        score: 26.5,
-        schools: ['ĐH Bách Khoa', 'ĐH Công Nghệ', 'ĐH FPT'],
-      ),
-      ConsultationResult(
-        id: 2,
-        date: '12/5/2024 14:20',
-        major: 'Kinh tế - Quản trị kinh doanh',
-        score: 25.0,
-        schools: ['ĐH Kinh tế Quốc dân', 'ĐH Ngoại thương'],
-      ),
-      ConsultationResult(
-        id: 1,
-        date: '10/5/2024 9:15',
-        major: 'Truyền thông đa phương tiện',
-        score: 24.0,
-        schools: ['Học viện Báo chí', 'ĐH KHXH&NV'],
-      ),
-    ];
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
@@ -80,7 +17,12 @@ class _LichSuScreenState extends State<LichSuScreen> {
         children: [
           // Header
           Container(
-            padding: const EdgeInsets.only(top: 60, bottom: 40, left: 20, right: 20),
+            padding: const EdgeInsets.only(
+              top: 60,
+              bottom: 40,
+              left: 20,
+              right: 20,
+            ),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 colors: [Color(0xFF1B3B86), Color(0xFF381B85)],
@@ -97,7 +39,11 @@ class _LichSuScreenState extends State<LichSuScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
-                    Icon(Icons.access_time_filled, color: Colors.yellowAccent, size: 24),
+                    Icon(
+                      Icons.access_time_filled,
+                      color: Colors.yellowAccent,
+                      size: 24,
+                    ),
                     SizedBox(width: 8),
                     Text(
                       'Lịch Sử Tư Vấn',
@@ -110,39 +56,160 @@ class _LichSuScreenState extends State<LichSuScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
-                    children: [
-                      const TextSpan(text: 'Hồ sơ của tài khoản: '),
-                      TextSpan(
-                        text: _userName, // ĐÃ THAY BIẾN TÊN VÀO ĐÂY
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(uid)
+                      .get(),
+                  builder: (context, userSnapshot) {
+                    String dynamicName = userName;
+                    if (userSnapshot.hasData && userSnapshot.data!.exists) {
+                      final userData =
+                          userSnapshot.data!.data() as Map<String, dynamic>?;
+                      if (userData != null && userData['name'] != null) {
+                        dynamicName = userData['name'].toString();
+                      }
+                    }
+
+                    return RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                        children: [
+                          const TextSpan(text: 'Hồ sơ của tài khoản: '),
+                          TextSpan(
+                            text: dynamicName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
+
+          // Danh sách lịch sử từ Firestore
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 100),
-              itemCount: historyData.length,
-              itemBuilder: (context, index) {
-                return HistoryCard(data: historyData[index]);
-              },
-            ),
+            child: uid.isEmpty
+                ? const Center(child: Text('Chưa đăng nhập'))
+                : StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('predictions')
+                        .doc(uid)
+                        .collection('history')
+                        .orderBy('created_at', descending: true)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (snapshot.hasError) {
+                        return const Center(child: Text('Lỗi tải dữ liệu'));
+                      }
+
+                      final docs = snapshot.data?.docs ?? [];
+
+                      if (docs.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.history, size: 64, color: Colors.grey),
+                              SizedBox(height: 16),
+                              Text(
+                                'Chưa có lịch sử tư vấn',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Hãy thử phân tích ngành học ngay!',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.only(
+                          left: 16,
+                          right: 16,
+                          top: 10,
+                          bottom: 100,
+                        ),
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          final data =
+                              docs[index].data() as Map<String, dynamic>;
+                          final major =
+                              data['predicted_major'] as String? ?? 'Không rõ';
+                          final recommendations =
+                              (data['recommendations'] as List<dynamic>? ?? []);
+                          final schools = recommendations
+                              .map((r) => r['ten_truong']?.toString() ?? '')
+                              .where((s) => s.isNotEmpty)
+                              .take(3)
+                              .toList();
+
+                          // LẤY TỔNG ĐIỂM 3 MÔN (đã lưu khi gọi API)
+                          final totalScore =
+                              (data['total_score'] as num?)?.toDouble() ?? 0.0;
+
+                          String dateStr = '';
+                          final ts = data['created_at'];
+                          if (ts is Timestamp) {
+                            dateStr = DateFormat(
+                              'dd/MM/yyyy HH:mm',
+                            ).format(ts.toDate());
+                          }
+
+                          return HistoryCard(
+                            index: docs.length - index,
+                            date: dateStr,
+                            major: major,
+                            totalScore: totalScore,
+                            schools: schools,
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 }
-class HistoryCard extends StatelessWidget {
-  final ConsultationResult data;
 
-  const HistoryCard({super.key, required this.data});
+class HistoryCard extends StatelessWidget {
+  final int index;
+  final String date;
+  final String major;
+  final double totalScore;
+  final List<String> schools;
+
+  const HistoryCard({
+    super.key,
+    required this.index,
+    required this.date,
+    required this.major,
+    required this.totalScore,
+    required this.schools,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +246,7 @@ class HistoryCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'LẦN TƯ VẤN #${data.id}',
+                        'LẦN TƯ VẤN #$index',
                         style: const TextStyle(
                           color: Colors.grey,
                           fontSize: 12,
@@ -187,21 +254,27 @@ class HistoryCard extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          data.date,
-                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          date,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    data.major,
+                    major,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -218,7 +291,7 @@ class HistoryCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'ĐIỂM HỒ SƠ',
+                              'ĐIỂM CỦA BẠN',
                               style: TextStyle(
                                 color: Colors.grey,
                                 fontSize: 11,
@@ -226,12 +299,36 @@ class HistoryCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              data.score.toString().replaceAll('.0', ''),
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFE11D48),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(24),
+                                color: const Color(0xFFFEF2F2),
+                                border: Border.all(
+                                  color: const Color(0xFFFECACA),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.stars_rounded,
+                                    color: Color(0xFFFFE66D),
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    totalScore.toStringAsFixed(2),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFE11D48),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -251,27 +348,40 @@ class HistoryCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: data.schools.map((school) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEEF2FF),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    school,
-                                    style: const TextStyle(
-                                      color: Color(0xFF4A65FF),
+                            schools.isEmpty
+                                ? const Text(
+                                    'Không có dữ liệu',
+                                    style: TextStyle(
+                                      color: Colors.grey,
                                       fontSize: 12,
-                                      fontWeight: FontWeight.w600,
                                     ),
+                                  )
+                                : Wrap(
+                                    spacing: 6,
+                                    runSpacing: 6,
+                                    children: schools.map((school) {
+                                      return Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFEEF2FF),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          school,
+                                          style: const TextStyle(
+                                            color: Color(0xFF4A65FF),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
                                   ),
-                                );
-                              }).toList(),
-                            ),
                           ],
                         ),
                       ),

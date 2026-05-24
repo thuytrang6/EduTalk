@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:ui_login_out/screens/free_usage_store.dart';
 import 'Premium_screen.dart';
 
 class DuLieuScreen extends StatefulWidget {
   final ValueChanged<int>? onChangeTab;
-  final Function(double totalScore)? onOPenPhanTich; // ← nhận totalScore
+  final Function(
+    double totalScore,
+    List<String> subjects,
+    List<double> scoresDetail,
+  )?
+  onOPenPhanTich;
   const DuLieuScreen({super.key, this.onChangeTab, this.onOPenPhanTich});
 
   @override
@@ -14,6 +20,7 @@ class DuLieuScreen extends StatefulWidget {
 class DuLieuScreenState extends State<DuLieuScreen> {
   String region = "Cả nước";
   String group = "A00";
+  bool _showScoreError = false;
 
   final Map<String, List<String>> subjectsMap = {
     "A00": ["Toán", "Lý", "Hóa"],
@@ -42,6 +49,10 @@ class DuLieuScreenState extends State<DuLieuScreen> {
   double get _totalScore => scores.fold(
     0.0,
     (sum, c) => sum + (double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0),
+  );
+
+  bool get _hasValidScores => scores.every(
+    (c) => (double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0) > 0.0,
   );
 
   void changeGroup(String value) {
@@ -87,6 +98,15 @@ class DuLieuScreenState extends State<DuLieuScreen> {
   }
 
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _scoreRowKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    for (final c in scores) {
+      c.addListener(() => setState(() {}));
+    }
+  }
 
   @override
   void dispose() {
@@ -103,7 +123,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           controller: _scrollController,
-          physics: const BouncingScrollPhysics(),
+          physics: const ClampingScrollPhysics(),
           child: Column(
             children: [
               SizedBox(
@@ -171,35 +191,6 @@ class DuLieuScreenState extends State<DuLieuScreen> {
   Widget _buildTopBar() {
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.14)),
-          ),
-          child: Row(
-            children: const [
-              CircleAvatar(
-                radius: 11,
-                backgroundColor: Color(0x1A22D3EE),
-                child: Icon(
-                  Icons.person_outline,
-                  size: 14,
-                  color: Color.fromARGB(255, 34, 235, 238),
-                ),
-              ),
-              SizedBox(width: 8),
-              Text(
-                "Name",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
         const Spacer(),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -231,14 +222,19 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       ),
       child: Row(
         children: [
-          const Expanded(
-            child: Text(
-              "Còn 3/3 lượt dùng thử",
-              style: TextStyle(
-                color: Color(0xffffe08a),
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+          Expanded(
+            child: ValueListenableBuilder<int>(
+              valueListenable: freeUsageCount,
+              builder: (context, value, _) {
+                return Text(
+                  "Còn $value/3 lượt dùng thử",
+                  style: const TextStyle(
+                    color: Color(0xffffe08a),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                );
+              },
             ),
           ),
           InkWell(
@@ -310,7 +306,28 @@ class DuLieuScreenState extends State<DuLieuScreen> {
           const SizedBox(height: 12),
           _buildGroupDropdown(),
           const SizedBox(height: 28),
-          _buildScoreRow(),
+          _buildScoreRow(key: _scoreRowKey),
+          if (_showScoreError && !_hasValidScores) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: const [
+                Icon(
+                  Icons.error_outline_rounded,
+                  size: 14,
+                  color: Color(0xffef4444),
+                ),
+                SizedBox(width: 6),
+                Text(
+                  "Bạn phải nhập điểm cho tất cả môn",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xffef4444),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -339,14 +356,13 @@ class DuLieuScreenState extends State<DuLieuScreen> {
   }
 
   Widget _buildRegionDropdown() {
+    const regionItems = ["Cả nước", "Miền Bắc", "Miền Trung", "Miền Nam"];
     return DropdownButtonFormField<String>(
       value: region,
       isExpanded: true,
       onChanged: (value) {
         if (value == null) return;
-        setState(() {
-          region = value;
-        });
+        setState(() => region = value);
       },
       icon: const Icon(
         Icons.keyboard_arrow_down_rounded,
@@ -355,7 +371,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.all(10),
+        contentPadding: const EdgeInsets.all(5),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: Color(0xffd6dbe7), width: 1.4),
@@ -372,12 +388,48 @@ class DuLieuScreenState extends State<DuLieuScreen> {
         fontWeight: FontWeight.w700,
         color: Colors.black87,
       ),
-      items: const [
-        DropdownMenuItem(value: "Cả nước", child: Text("Cả nước")),
-        DropdownMenuItem(value: "Miền Bắc", child: Text("Miền Bắc")),
-        DropdownMenuItem(value: "Miền Trung", child: Text("Miền Trung")),
-        DropdownMenuItem(value: "Miền Nam", child: Text("Miền Nam")),
-      ],
+      items: regionItems.map((val) {
+        return DropdownMenuItem<String>(
+          value: val,
+          child: StatefulBuilder(
+            builder: (context, setItemState) {
+              bool isHovered = false;
+              return StatefulBuilder(
+                builder: (context, setHover) {
+                  return MouseRegion(
+                    onEnter: (_) => setHover(() => isHovered = true),
+                    onExit: (_) => setHover(() => isHovered = false),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 3,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isHovered
+                            ? const Color(0xffeff6ff)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        val,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: isHovered
+                              ? const Color(0xff2563eb)
+                              : Colors.black87,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -424,7 +476,43 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       items: groupTitleMap.entries.map((entry) {
         return DropdownMenuItem<String>(
           value: entry.key,
-          child: Text(entry.value),
+          child: StatefulBuilder(
+            builder: (context, setHover) {
+              bool isHovered = false;
+              return StatefulBuilder(
+                builder: (context, setH) {
+                  return MouseRegion(
+                    onEnter: (_) => setH(() => isHovered = true),
+                    onExit: (_) => setH(() => isHovered = false),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isHovered
+                            ? const Color(0xffeef4ff)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        entry.value,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: isHovered
+                              ? const Color(0xff2563eb)
+                              : const Color(0xff1e40af),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         );
       }).toList(),
     );
@@ -439,18 +527,19 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       fillColor: fillColor,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         borderSide: BorderSide(color: borderColor, width: 1.6),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         borderSide: BorderSide(color: borderColor, width: 2),
       ),
     );
   }
 
-  Widget _buildScoreRow() {
+  Widget _buildScoreRow({Key? key}) {
     return Row(
+      key: key,
       children: List.generate(subjects.length, (index) {
         return Expanded(
           child: Padding(
@@ -473,116 +562,132 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     required TextEditingController controller,
     required int index,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xfff8fafc),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xffeef2f7)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: Color(0xff1d4ed8),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xffe5e7eb)),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: controller,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    textAlign: TextAlign.center,
-                    onTap: () {
-                      controller.selection = TextSelection(
-                        baseOffset: 0,
-                        extentOffset: controller.text.length,
-                      );
-                    },
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                      _ScoreInputFormatter(),
-                    ],
-                    onFieldSubmitted: (_) => _normalizeScore(index),
-                    onEditingComplete: () => _normalizeScore(index),
+    final bool hasError =
+        _showScoreError &&
+        (double.tryParse(controller.text.replaceAll(',', '.')) ?? 0.0) <= 0.0;
 
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xff6b7280),
-                    ),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 10),
-                    ),
-                  ),
-                ),
-                Container(
-                  width: 28,
-                  margin: const EdgeInsets.only(right: 6),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      InkWell(
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: () => _changeScore(index, 0.1),
-                        child: const Padding(
-                          padding: EdgeInsets.all(1),
-                          child: Icon(
-                            Icons.keyboard_arrow_up_rounded,
-                            size: 18,
-                            color: Color(0xff9ca3af),
-                          ),
-                        ),
-                      ),
-                      InkWell(
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: () => _changeScore(index, -0.1),
-                        child: const Padding(
-                          padding: EdgeInsets.all(1),
-                          child: Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            size: 18,
-                            color: Color(0xff9ca3af),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+    return Column(
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: BoxDecoration(
+            color: hasError ? const Color(0xfffff5f5) : const Color(0xfff8fafc),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: hasError
+                  ? const Color(0xffef4444)
+                  : const Color(0xffeef2f7),
+              width: hasError ? 1.6 : 1.0,
             ),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x08000000),
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
+          child: Column(
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: hasError
+                      ? const Color(0xffef4444)
+                      : const Color(0xff1d4ed8),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xffe5e7eb)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: controller,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        textAlign: TextAlign.center,
+                        onTap: () {
+                          controller.selection = TextSelection(
+                            baseOffset: 0,
+                            extentOffset: controller.text.length,
+                          );
+                        },
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                          _ScoreInputFormatter(),
+                        ],
+                        onFieldSubmitted: (_) => _normalizeScore(index),
+                        onEditingComplete: () => _normalizeScore(index),
+
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xff6b7280),
+                        ),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 28,
+                      margin: const EdgeInsets.only(right: 6),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          InkWell(
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => _changeScore(index, 0.1),
+                            child: const Padding(
+                              padding: EdgeInsets.all(1),
+                              child: Icon(
+                                Icons.keyboard_arrow_up_rounded,
+                                size: 18,
+                                color: Color(0xff9ca3af),
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => _changeScore(index, -0.1),
+                            child: const Padding(
+                              padding: EdgeInsets.all(1),
+                              child: Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 18,
+                                color: Color(0xff9ca3af),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -593,8 +698,24 @@ class DuLieuScreenState extends State<DuLieuScreen> {
         width: double.infinity,
         child: ElevatedButton(
           onPressed: () {
-            // ← Tính tổng điểm và truyền sang home
-            widget.onOPenPhanTich?.call(_totalScore);
+            if (!_hasValidScores) {
+              setState(() => _showScoreError = true);
+              final ctx = _scoreRowKey.currentContext;
+              if (ctx != null) {
+                Scrollable.ensureVisible(
+                  ctx,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOut,
+                  alignment: 0.3,
+                );
+              }
+              return;
+            }
+            setState(() => _showScoreError = false);
+            final List<double> scoresDetail = scores
+                .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
+                .toList();
+            widget.onOPenPhanTich?.call(_totalScore, subjects, scoresDetail);
           },
           style: ElevatedButton.styleFrom(
             elevation: 8,
@@ -621,9 +742,9 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       ),
     );
   }
-}
+} // ← Đóng class DuLieuScreenState
 
-// ── FORMATTER: giới hạn điểm 0.0 → 10.0, nhập 99 → 9.9 ─────────────────────
+// ── FORMATTER ────────────────────────────────────────────────────────────────
 class _ScoreInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -633,16 +754,13 @@ class _ScoreInputFormatter extends TextInputFormatter {
     final text = newValue.text.replaceAll(',', '.');
     if (text.isEmpty) return newValue.copyWith(text: '');
 
-    // Chỉ cho phép 1 dấu chấm
     final dotCount = text.split('').where((c) => c == '.').length;
     if (dotCount > 1) return oldValue;
 
-    // Nếu nhập 2 chữ số liền không có dấu chấm (vd: 99, 78) → chèn dấu chấm vào giữa (9.9, 7.8)
     if (!text.contains('.') && text.length == 2) {
       final auto = '${text[0]}.${text[1]}';
       final parsed = double.tryParse(auto) ?? 0.0;
       if (parsed > 10.0) {
-        // vd: nhập "99" → "9.9", nhập "19" → không hợp lệ → giữ "1"
         return TextEditingValue(
           text: '9.9',
           selection: const TextSelection.collapsed(offset: 3),
@@ -654,7 +772,6 @@ class _ScoreInputFormatter extends TextInputFormatter {
       );
     }
 
-    // Kiểm tra giá trị > 10
     final parsed = double.tryParse(text);
     if (parsed != null && parsed > 10.0) {
       return oldValue;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:ui_login_out/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PhanTichScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -11,11 +12,17 @@ class PhanTichScreen extends StatefulWidget {
     List<int> majorRequirements,
   )
   onShowKetQua;
+  final double totalScore; // ← THÊM
+  final List<String> subjects; // ← THÊM
+  final List<double> scoresDetail; // ← THÊM
 
   const PhanTichScreen({
     super.key,
     required this.onBack,
     required this.onShowKetQua,
+    required this.totalScore,
+    required this.subjects,
+    required this.scoresDetail,
   });
 
   @override
@@ -54,6 +61,35 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
             (e) => (e as num).round(),
           ),
         );
+
+        // ← LƯU KẾT QUẢ LÊN FIRESTORE (THÊM total_score, subjects, scores_detail)
+        if (uid.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('predictions')
+              .doc(uid)
+              .collection('history')
+              .add({
+                'predicted_major': major,
+                'user_scores': userScores,
+                'major_requirements': majorReqs,
+                'recommendations': unis
+                    .map(
+                      (u) => {
+                        'ten_truong': u['ten_truong'] ?? '',
+                        'ma_truong': u['ma_truong'] ?? '',
+                        'diem_chuan_2024': u['diem_chuan_2024'] ?? '',
+                        'website': u['website'] ?? '',
+                      },
+                    )
+                    .toList(),
+                'input_scores': inItems.map((item) => item.value).toList(),
+                'total_score': widget.totalScore, // ← THÊM DÒNG NÀY
+                'subjects': widget.subjects, // ← THÊM DÒNG NÀY
+                'scores_detail': widget.scoresDetail, // ← THÊM DÒNG NÀY
+                'created_at': FieldValue.serverTimestamp(),
+              });
+        }
+
         widget.onShowKetQua(major, unis, userScores, majorReqs);
       } else {
         _showError('Dự đoán thất bại: ${result['error'] ?? ''}');

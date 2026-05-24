@@ -1,9 +1,44 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'Setting.dart';
 import 'Premium_screen.dart';
+
+// ── CUSTOM FORMATTER CHUẨN: KHÔNG BỊ THỤT SỐ KHI NHẬP NGÀY SINH ──
+class DateTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Lấy chuỗi mới và loại bỏ toàn bộ ký tự không phải là số
+    String newText = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    // Giới hạn tối đa 8 chữ số (DDMMYYYY)
+    if (newText.length > 8) {
+      newText = newText.substring(0, 8);
+    }
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < newText.length; i++) {
+      buffer.write(newText[i]);
+      // Chèn dấu '/' sau vị trí số thứ 2 (ngày) và số thứ 4 (tháng)
+      if ((i == 1 || i == 3) && i != newText.length - 1) {
+        buffer.write('/');
+      }
+    }
+
+    final resultText = buffer.toString();
+
+    return TextEditingValue(
+      text: resultText,
+      selection: TextSelection.collapsed(offset: resultText.length),
+    );
+  }
+}
 
 class ProfileScreen extends StatefulWidget {
   final String username;
@@ -22,7 +57,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   late final TextEditingController _dobController;
 
   final ImagePicker _picker = ImagePicker();
-  File? _imageFile; // Lưu trữ file ảnh đã chọn
+  File? _imageFile;
+
+  String _displayName = "";
+  bool _isUpdating = false;
 
   // Premium Palette
   static const Color primaryNavy = Color(0xFF001C3D);
@@ -35,24 +73,157 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     String userEmail = user?.email ?? "Chưa có email";
     String displayName = user?.displayName ?? "";
+
     if (displayName.isEmpty && userEmail.contains('@')) {
       displayName = userEmail.split('@')[0];
     } else if (displayName.isEmpty) {
       displayName = widget.username;
     }
+
+    _displayName = displayName;
+
     _nameController = TextEditingController(text: displayName);
     _emailController = TextEditingController(text: userEmail);
-    _phoneController = TextEditingController(text: "0123456789");
-    _dobController = TextEditingController(text: "01/01/2000");
+    _phoneController = TextEditingController(text: "");
+    _dobController = TextEditingController(text: "");
+
+    _loadUserData();
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _dobController.dispose();
-    super.dispose();
+  void _showTopNotification({
+    required String message,
+    required Color backgroundColor,
+    IconData icon = Icons.info_outline,
+  }) {
+    final overlay = Overlay.of(context);
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).padding.top + 10,
+        left: 20,
+        right: 20,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: Colors.white, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 3), () {
+      overlayEntry.remove();
+    });
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        setState(() {
+          _phoneController.text = data['phone'] ?? "";
+          _dobController.text = data['dob'] ?? "";
+          if ((data['name'] ?? "").toString().isNotEmpty) {
+            _displayName = data['name'];
+            _nameController.text = _displayName;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Lỗi load dữ liệu: $e");
+    }
+  }
+
+  Future<void> _handleUpdate() async {
+    final phone = _phoneController.text.trim();
+    final dob = _dobController.text.trim();
+
+    if (phone.isEmpty && dob.isEmpty) {
+      _showTopNotification(
+        message: "Vui lòng nhập số điện thoại hoặc ngày sinh!",
+        backgroundColor: Colors.orange,
+        icon: Icons.warning_amber_rounded,
+      );
+      return;
+    }
+
+    if (dob.isNotEmpty && dob.length < 10) {
+      _showTopNotification(
+        message: "Ngày sinh chưa đúng định dạng DD/MM/YYYY",
+        backgroundColor: Colors.orange,
+        icon: Icons.date_range_outlined,
+      );
+      return;
+    }
+
+    setState(() => _isUpdating = true);
+
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) throw Exception("Chưa đăng nhập");
+
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'phone': phone,
+        'dob': dob,
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (mounted) {
+        _showTopNotification(
+          message: "Cập nhật thông tin thành công!",
+          backgroundColor: const Color.fromARGB(255, 190, 193, 190),
+          icon: Icons.check_circle_outline_rounded,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showTopNotification(
+          message: "Lỗi cập nhật: $e",
+          backgroundColor: Colors.redAccent,
+          icon: Icons.error_outline_rounded,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -64,21 +235,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         imageQuality: 80,
       );
       if (image != null) {
-        setState(() {
-          _imageFile = File(image.path);
-        });
+        setState(() => _imageFile = File(image.path));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Đã cập nhật ảnh đại diện mới!")),
+          _showTopNotification(
+            message: "Đã cập nhật ảnh đại diện mới!",
+            backgroundColor: const Color.fromARGB(255, 180, 180, 181),
+            icon: Icons.add_a_photo_outlined,
           );
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Lỗi khi chọn ảnh. Vui lòng cấp quyền!"),
-          ),
+        _showTopNotification(
+          message: "Lỗi khi chọn ảnh. Vui lòng cấp quyền!",
+          backgroundColor: Colors.redAccent,
+          icon: Icons.lock_open_outlined,
         );
       }
     }
@@ -102,7 +273,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color.fromARGB(255, 255, 255, 255),
+                  color: Color.fromARGB(255, 0, 0, 0),
                 ),
               ),
               const SizedBox(height: 20),
@@ -151,15 +322,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.4),
+                color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.4),
                 shape: BoxShape.circle,
-                //border: Border.all(color: Colors.white, width: 2),
               ),
-              child: Icon(
-                icon,
-                color: const Color.fromARGB(255, 255, 255, 255),
-                size: 28,
-              ),
+              child: Icon(icon, color: Colors.white, size: 28),
             ),
             const SizedBox(height: 8),
             Text(
@@ -177,7 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xfff6f7fb),
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: const ClampingScrollPhysics(),
         child: Stack(
           children: [
             _buildHeaderBackground(),
@@ -283,9 +449,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     : null,
                 child: _imageFile == null
                     ? Text(
-                        widget.username.isNotEmpty
-                            ? widget.username[0].toUpperCase()
-                            : "Q",
+                        _displayName.isNotEmpty
+                            ? _displayName[0].toUpperCase()
+                            : "?",
                         style: const TextStyle(
                           fontSize: 60,
                           fontWeight: FontWeight.bold,
@@ -322,7 +488,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       children: [
         Text(
-          widget.username,
+          _displayName,
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 28,
@@ -332,22 +498,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            "Thành viên D30",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -483,8 +633,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               builder: (_) => PremiumScreen(onTabChange: widget.onChangeTab),
             ),
           );
-          if (targetTab != null && widget.onChangeTab != null)
+          if (targetTab != null && widget.onChangeTab != null) {
             widget.onChangeTab!(targetTab);
+          }
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
@@ -539,29 +690,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
           const SizedBox(height: 24),
+
           _buildTextField(
             "Họ và tên",
             "Nhập tên của bạn",
             Icons.person_outline,
             _nameController,
+            readOnly: true,
           ),
           _buildTextField(
             "Email",
             "example@email.com",
             Icons.email_outlined,
             _emailController,
+            readOnly: true,
           ),
           _buildTextField(
             "Số điện thoại",
-            "0385xxxxxxx",
+            "Nhập số điện thoại...",
             Icons.phone_outlined,
             _phoneController,
+            keyboardType: TextInputType.phone,
           ),
+
+          // Ô nhập Ngày sinh đã fix hoàn toàn lỗi thụt ký tự
           _buildTextField(
             "Ngày sinh",
             "DD/MM/YYYY",
             Icons.calendar_today_outlined,
             _dobController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [DateTextFormatter()],
+          ),
+
+          const SizedBox(height: 8),
+
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              onPressed: _isUpdating ? null : _handleUpdate,
+              icon: _isUpdating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.5,
+                      ),
+                    )
+                  : const Icon(Icons.save_rounded, color: Colors.white),
+              label: Text(
+                _isUpdating ? "Đang lưu..." : "Cập nhật thông tin",
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                disabledBackgroundColor: const Color(0xFF93C5FD),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+            ),
           ),
         ],
       ),
@@ -572,8 +767,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String label,
     String hint,
     IconData icon,
-    TextEditingController controller,
-  ) {
+    TextEditingController controller, {
+    bool readOnly = false,
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -590,19 +788,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: controller,
-            // ĐÂY LÀ PHẦN CHỈNH MÀU CHỮ KHI ĐANG NHẬP
-            style: const TextStyle(
-              color: Colors.black, // Chữ khi nhập sẽ có màu đen
+            readOnly: readOnly,
+            keyboardType: keyboardType,
+            inputFormatters: inputFormatters,
+            style: TextStyle(
+              color: readOnly ? const Color(0xff94a3b8) : Colors.black,
               fontWeight: FontWeight.w500,
               fontSize: 15,
             ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: const TextStyle(color: Color(0xff94a3b8)),
-              // Chữ gợi ý vẫn màu xám
               prefixIcon: Icon(icon, size: 22, color: const Color(0xff94a3b8)),
               filled: true,
-              fillColor: const Color(0xfff8fafc),
+              fillColor: readOnly
+                  ? const Color(0xfff1f5f9)
+                  : const Color(0xfff8fafc),
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 14,
@@ -617,8 +818,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(
-                  color: Color(0xFF2563EB),
+                borderSide: BorderSide(
+                  color: readOnly
+                      ? const Color(0xffe2e8f0)
+                      : const Color(0xFF2563EB),
                   width: 1.5,
                 ),
               ),

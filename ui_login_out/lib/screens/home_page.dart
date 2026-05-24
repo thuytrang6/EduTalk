@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       setState(() {
-        _userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
+        userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
       });
     }
   }
@@ -46,7 +46,7 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xfff6f7fb),
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(), // hiệu ứng cuộn mượt mà
+          physics: const ClampingScrollPhysics(), // hiệu ứng cuộn mượt mà
           child: Column(
             children: [
               Stack(
@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 5),
                         // ĐÃ THAY CHỮ "BẠN" BẰNG BIẾN _userName
                         Text(
-                          "$_userName 👋",
+                          "$userName 👋",
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -211,7 +211,7 @@ class _HomePageState extends State<HomePage> {
             iconColor: const Color(0xff9333ea),
             iconBackground: const Color(0xfff5f3ff),
             title: "Về chúng tôi",
-            subtitle: "Giới thiệu về D30 AI",
+            subtitle: "Giới thiệu về EduTalk",
             onTap: () {
               Navigator.push(
   context,
