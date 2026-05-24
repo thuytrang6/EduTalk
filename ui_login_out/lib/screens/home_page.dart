@@ -23,7 +23,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String userName = "Bạn";
+  String _userName = "Bạn";
 
   @override
   void initState() {
@@ -214,9 +214,11 @@ class _HomePageState extends State<HomePage> {
             subtitle: "Giới thiệu về EduTalk",
             onTap: () {
               Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AboutScreen()),
-              );
+  context,
+  MaterialPageRoute(
+    builder: (_) => const AboutScreen(),
+  ),
+);
               widget.onOpenAbout?.call(); // Thêm chữ widget.
             },
           ),
@@ -230,9 +232,11 @@ class _HomePageState extends State<HomePage> {
             subtitle: "Gửi câu hỏi cho chúng tôi",
             onTap: () {
               Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SupportScreen()),
-              );
+  context,
+  MaterialPageRoute(
+    builder: (_) => const SupportScreen(),
+  ),
+);
               widget.onOpenContact?.call(); // Thêm chữ widget.
             },
           ),
