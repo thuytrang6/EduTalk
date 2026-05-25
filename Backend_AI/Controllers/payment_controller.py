@@ -16,19 +16,19 @@ MOMO_CONFIG = {
     "secretKey": "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa",
     "endpoint": "https://test-payment.momo.vn/v2/gateway/api/create",
     "redirectUrl": "edutalk://payment-result",
-    "ipnUrl": "https://edutalk-7ndf.onrender.com/api/payment/callback",
+    "ipnUrl": "https://edutalk-7ndf.onrender.com/payment-callback",
     "requestType": "captureWallet"
 }
 
-def create_momo_signature(data):
-    raw_signature = f"accessKey={MOMO_CONFIG['accessKey']}&amount={data['amount']}&extraData={data['extraData']}&ipnUrl={MOMO_CONFIG['ipnUrl']}&orderId={data['orderId']}&orderInfo={data['orderInfo']}&partnerCode={MOMO_CONFIG['partnerCode']}&redirectUrl={MOMO_CONFIG['redirectUrl']}&requestId={data['requestId']}&requestType={MOMO_CONFIG['requestType']}"
+def create_momo_signature(payload):
+    # MoMo yêu cầu data theo thứ tự bảng chữ cái hoặc đúng list tham số quy định
+    raw_signature = f"accessKey={MOMO_CONFIG['accessKey']}&amount={payload['amount']}&extraData={payload['extraData']}&ipnUrl={MOMO_CONFIG['ipnUrl']}&orderId={payload['orderId']}&orderInfo={payload['orderInfo']}&partnerCode={MOMO_CONFIG['partnerCode']}&redirectUrl={MOMO_CONFIG['redirectUrl']}&requestId={payload['requestId']}&requestType={MOMO_CONFIG['requestType']}"
     h = hmac.new(MOMO_CONFIG['secretKey'].encode('utf-8'), raw_signature.encode('utf-8'), digestmod=hashlib.sha256)
     return h.hexdigest()
 
-@payment_bp.route('/create-momo-payment', methods=['POST'])
+@payment_bp.route('/momo-payment', methods=['POST'])
 def create_momo_payment():
     try:
-        db = firestore.client()
         data = request.get_json()
         amount = data.get("amount")
         order_info = data.get("orderInfo")
@@ -47,7 +47,7 @@ def create_momo_payment():
             "redirectUrl": MOMO_CONFIG["redirectUrl"],
             "ipnUrl": MOMO_CONFIG["ipnUrl"],
             "requestType": MOMO_CONFIG["requestType"],
-            "extraData": user_id,
+            "extraData": user_id, # Lưu userId vào extraData để nhận lại ở callback
             "lang": "vi"
         }
         
@@ -65,13 +65,14 @@ def create_momo_payment():
         logging.error(f"Error creating MoMo payment: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@payment_bp.route('/callback', methods=['POST'])
+@payment_bp.route('/payment-callback', methods=['POST'])
 def payment_callback():
     try:
         db = firestore.client()
         data = request.get_json()
         logging.info(f"MoMo Callback: {data}")
         
+        # resultCode 0 là thành công
         if data.get("resultCode") == 0:
             user_id = data.get("extraData")
             if user_id:
@@ -80,6 +81,7 @@ def payment_callback():
                     "subscriptionStatus": "active",
                     "premiumSince": firestore.SERVER_TIMESTAMP
                 }, merge=True)
+                logging.info(f"User {user_id} upgraded to Premium")
         return jsonify({"status": "ok"})
     except Exception as e:
         logging.error(f"Error processing callback: {str(e)}")

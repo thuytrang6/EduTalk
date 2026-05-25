@@ -14,7 +14,7 @@ class PaymentService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse("$_baseUrl/api/payment/create-momo-payment"),
+        Uri.parse("$_baseUrl/momo-payment"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "amount": amount,

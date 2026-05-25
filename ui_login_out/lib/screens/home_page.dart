@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       setState(() {
-        userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
+        userName = user.displayName ?? user.email?.split('@').first ?? "Bạn";
       });
     }
   }
