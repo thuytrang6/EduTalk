@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'payment_selection_screen.dart';
 
 class PremiumScreen extends StatelessWidget {
@@ -368,13 +369,21 @@ class PremiumScreen extends StatelessWidget {
   }
 
   void _onBuyPressed(BuildContext context, String planName, int price) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng đăng nhập để thực hiện thanh toán")),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => PaymentSelectionScreen(
         planName: planName,
-        userId: "USER123456",
+        userId: user.uid,
         planPrice: price.toDouble(),
       ),
     );

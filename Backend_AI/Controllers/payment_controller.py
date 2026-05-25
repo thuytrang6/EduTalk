@@ -1,75 +1,75 @@
 import hmac
 import hashlib
 import uuid
-import json
 import requests
 import logging
-from fastapi import APIRouter, Request, HTTPException
+from flask import Blueprint, request, jsonify
 from firebase_admin import firestore
-from datetime import datetime
 
-router = APIRouter()
-db = firestore.client()
+# Khởi tạo Blueprint cho Payment
+payment_bp = Blueprint('payment', __name__)
 
-# MoMo Configuration
-CONFIG = {
+# Cấu hình MoMo (Nên đưa vào biến môi trường trong thực tế)
+MOMO_CONFIG = {
     "partnerCode": "MOMOBKUN20180529",
     "accessKey": "klm05TvNBzhg7h7j",
     "secretKey": "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa",
     "endpoint": "https://test-payment.momo.vn/v2/gateway/api/create",
     "redirectUrl": "edutalk://payment-result",
-    "ipnUrl": "https://edutalk-7ndf.onrender.com/payment-callback",
+    "ipnUrl": "https://edutalk-7ndf.onrender.com/api/payment/callback",
     "requestType": "captureWallet"
 }
 
-def create_signature(data):
-    raw_signature = f"accessKey={CONFIG['accessKey']}&amount={data['amount']}&extraData={data['extraData']}&ipnUrl={CONFIG['ipnUrl']}&orderId={data['orderId']}&orderInfo={data['orderInfo']}&partnerCode={CONFIG['partnerCode']}&redirectUrl={CONFIG['redirectUrl']}&requestId={data['requestId']}&requestType={CONFIG['requestType']}"
-    h = hmac.new(CONFIG['secretKey'].encode('utf-8'), raw_signature.encode('utf-8'), digestmod=hashlib.sha256)
+def create_momo_signature(data):
+    raw_signature = f"accessKey={MOMO_CONFIG['accessKey']}&amount={data['amount']}&extraData={data['extraData']}&ipnUrl={MOMO_CONFIG['ipnUrl']}&orderId={data['orderId']}&orderInfo={data['orderInfo']}&partnerCode={MOMO_CONFIG['partnerCode']}&redirectUrl={MOMO_CONFIG['redirectUrl']}&requestId={data['requestId']}&requestType={MOMO_CONFIG['requestType']}"
+    h = hmac.new(MOMO_CONFIG['secretKey'].encode('utf-8'), raw_signature.encode('utf-8'), digestmod=hashlib.sha256)
     return h.hexdigest()
 
-@router.post("/create-momo-payment")
-async def create_momo_payment(request: Request):
+@payment_bp.route('/create-momo-payment', methods=['POST'])
+def create_momo_payment():
     try:
-        body = await request.json()
-        amount = body.get("amount")
-        order_info = body.get("orderInfo")
-        user_id = body.get("userId")
+        db = firestore.client()
+        data = request.get_json()
+        amount = data.get("amount")
+        order_info = data.get("orderInfo")
+        user_id = data.get("userId")
         
         order_id = str(uuid.uuid4())
         request_id = str(uuid.uuid4())
         
         payload = {
-            "partnerCode": CONFIG["partnerCode"],
-            "accessKey": CONFIG["accessKey"],
+            "partnerCode": MOMO_CONFIG["partnerCode"],
+            "accessKey": MOMO_CONFIG["accessKey"],
             "requestId": request_id,
             "amount": str(amount),
             "orderId": order_id,
             "orderInfo": order_info,
-            "redirectUrl": CONFIG["redirectUrl"],
-            "ipnUrl": CONFIG["ipnUrl"],
-            "requestType": CONFIG["requestType"],
+            "redirectUrl": MOMO_CONFIG["redirectUrl"],
+            "ipnUrl": MOMO_CONFIG["ipnUrl"],
+            "requestType": MOMO_CONFIG["requestType"],
             "extraData": user_id,
             "lang": "vi"
         }
         
-        payload["signature"] = create_signature({**payload, "orderId": order_id, "requestId": request_id})
+        payload["signature"] = create_momo_signature(payload)
         
-        response = requests.post(CONFIG["endpoint"], json=payload)
+        response = requests.post(MOMO_CONFIG["endpoint"], json=payload)
         response_data = response.json()
         
         if response.status_code == 200 and response_data.get("resultCode") == 0:
-            return {"payUrl": response_data["payUrl"], "orderId": order_id}
+            return jsonify({"payUrl": response_data["payUrl"], "orderId": order_id})
         else:
-            raise HTTPException(status_code=400, detail=response_data.get("message", "Error from MoMo"))
+            return jsonify({"success": False, "error": response_data.get("message", "Error from MoMo")}), 400
             
     except Exception as e:
         logging.error(f"Error creating MoMo payment: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
 
-@router.post("/payment-callback")
-async def payment_callback(request: Request):
+@payment_bp.route('/callback', methods=['POST'])
+def payment_callback():
     try:
-        data = await request.json()
+        db = firestore.client()
+        data = request.get_json()
         logging.info(f"MoMo Callback: {data}")
         
         if data.get("resultCode") == 0:
@@ -80,7 +80,7 @@ async def payment_callback(request: Request):
                     "subscriptionStatus": "active",
                     "premiumSince": firestore.SERVER_TIMESTAMP
                 }, merge=True)
-        return {"status": "ok"}
+        return jsonify({"status": "ok"})
     except Exception as e:
         logging.error(f"Error processing callback: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
