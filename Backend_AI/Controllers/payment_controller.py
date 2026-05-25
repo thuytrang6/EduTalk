@@ -133,13 +133,31 @@ def payment_callback():
                 
                 if user_id:
                     db = firestore.client()
+                    
+                    # Cập nhật thông tin Premium cho User
                     db.collection("users").document(user_id).set({
                         "isPremium": True,
                         "subscriptionStatus": "active",
                         "currentPlan": plan,
                         "premiumSince": firestore.SERVER_TIMESTAMP
                     }, merge=True)
-                    logging.info(f"Successfully upgraded user {user_id} to {plan} Premium")
+                    
+                    # TẠO GIAO DỊCH TRONG FIREBASE (Transactions)
+                    db.collection("transactions").add({
+                        "userId": user_id,
+                        "amount": data.get("amount"),
+                        "plan": plan,
+                        "status": "success",
+                        "transId": data.get("transId"),
+                        "orderId": data.get("orderId"),
+                        "message": data.get("message"),
+                        "method": "momo",
+                        "timestamp": firestore.SERVER_TIMESTAMP
+                    })
+                    
+                    logging.info(f"Successfully upgraded user {user_id} and recorded transaction")
+        else:
+            logging.warning(f"Payment failed with resultCode: {data.get('resultCode')}")
         
         # Phản hồi lại cho MoMo để xác nhận đã nhận IPN
         return jsonify({"status": "ok"}), 200
