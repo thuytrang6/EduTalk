@@ -11,6 +11,7 @@ class PaymentService {
     required String userId,
     required int amount,
     required String orderInfo,
+    required String planName,
   }) async {
     try {
       final response = await http.post(
@@ -20,6 +21,7 @@ class PaymentService {
           "amount": amount,
           "orderInfo": orderInfo,
           "userId": userId,
+          "plan": planName,
         }),
       ).timeout(const Duration(seconds: 15));
 

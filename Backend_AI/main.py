@@ -27,6 +27,7 @@ if not firebase_admin._apps:
 app.register_blueprint(payment_bp, url_prefix='/')
 app.register_blueprint(prediction_bp, url_prefix='/api/prediction')
 
+
 @app.route('/', methods=['GET'])
 def health_check():
     return "EduTalk AI Server is running!"

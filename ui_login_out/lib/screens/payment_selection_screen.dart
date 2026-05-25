@@ -33,6 +33,7 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
           userId: widget.userId,
           amount: widget.planPrice.toInt(),
           orderInfo: "EduTalk Premium ${widget.planName}",
+          planName: widget.planName,
         );
         if (res.payUrl != null) {
           await PaymentService().openMomoPayment(res.payUrl!);

@@ -3,13 +3,14 @@ import hashlib
 import uuid
 import requests
 import logging
+import json
 from flask import Blueprint, request, jsonify
 from firebase_admin import firestore
 
 # Khởi tạo Blueprint cho Payment
 payment_bp = Blueprint('payment', __name__)
 
-# Cấu hình MoMo (Nên đưa vào biến môi trường trong thực tế)
+# Cấu hình MoMo
 MOMO_CONFIG = {
     "partnerCode": "MOMOBKUN20180529",
     "accessKey": "klm05TvNBzhg7h7j",
@@ -21,10 +22,47 @@ MOMO_CONFIG = {
 }
 
 def create_momo_signature(payload):
-    # MoMo yêu cầu data theo thứ tự bảng chữ cái hoặc đúng list tham số quy định
-    raw_signature = f"accessKey={MOMO_CONFIG['accessKey']}&amount={payload['amount']}&extraData={payload['extraData']}&ipnUrl={MOMO_CONFIG['ipnUrl']}&orderId={payload['orderId']}&orderInfo={payload['orderInfo']}&partnerCode={MOMO_CONFIG['partnerCode']}&redirectUrl={MOMO_CONFIG['redirectUrl']}&requestId={payload['requestId']}&requestType={MOMO_CONFIG['requestType']}"
-    h = hmac.new(MOMO_CONFIG['secretKey'].encode('utf-8'), raw_signature.encode('utf-8'), digestmod=hashlib.sha256)
+    raw_signature = (
+        f"accessKey={MOMO_CONFIG['accessKey']}&"
+        f"amount={payload['amount']}&"
+        f"extraData={payload['extraData']}&"
+        f"ipnUrl={MOMO_CONFIG['ipnUrl']}&"
+        f"orderId={payload['orderId']}&"
+        f"orderInfo={payload['orderInfo']}&"
+        f"partnerCode={MOMO_CONFIG['partnerCode']}&"
+        f"redirectUrl={MOMO_CONFIG['redirectUrl']}&"
+        f"requestId={payload['requestId']}&"
+        f"requestType={MOMO_CONFIG['requestType']}"
+    )
+    h = hmac.new(MOMO_CONFIG['secretKey'].encode('utf-8'),
+                 raw_signature.encode('utf-8'), digestmod=hashlib.sha256)
     return h.hexdigest()
+
+def verify_momo_signature(data):
+    # Các trường để tạo chữ ký callback MoMo (IPN)
+    # Thứ tự: accessKey, amount, extraData, message, orderId, orderInfo, orderType, partnerCode, payType, requestId, responseTime, resultCode, transId
+    try:
+        raw_signature = (
+            f"accessKey={MOMO_CONFIG['accessKey']}&"
+            f"amount={data['amount']}&"
+            f"extraData={data['extraData']}&"
+            f"message={data['message']}&"
+            f"orderId={data['orderId']}&"
+            f"orderInfo={data['orderInfo']}&"
+            f"orderType={data['orderType']}&"
+            f"partnerCode={data['partnerCode']}&"
+            f"payType={data['payType']}&"
+            f"requestId={data['requestId']}&"
+            f"responseTime={data['responseTime']}&"
+            f"resultCode={data['resultCode']}&"
+            f"transId={data['transId']}"
+        )
+        h = hmac.new(MOMO_CONFIG['secretKey'].encode('utf-8'),
+                     raw_signature.encode('utf-8'), digestmod=hashlib.sha256)
+        return h.hexdigest() == data.get('signature')
+    except Exception as e:
+        logging.error(f"Error verifying signature: {str(e)}")
+        return False
 
 @payment_bp.route('/momo-payment', methods=['POST'])
 def create_momo_payment():
@@ -33,10 +71,14 @@ def create_momo_payment():
         amount = data.get("amount")
         order_info = data.get("orderInfo")
         user_id = data.get("userId")
-        
+        plan = data.get("plan") # Lấy plan từ frontend
+
         order_id = str(uuid.uuid4())
         request_id = str(uuid.uuid4())
         
+        # Đóng gói extraData thành JSON string
+        extra_data = json.dumps({"user_id": user_id, "plan": plan})
+
         payload = {
             "partnerCode": MOMO_CONFIG["partnerCode"],
             "accessKey": MOMO_CONFIG["accessKey"],
@@ -47,7 +89,7 @@ def create_momo_payment():
             "redirectUrl": MOMO_CONFIG["redirectUrl"],
             "ipnUrl": MOMO_CONFIG["ipnUrl"],
             "requestType": MOMO_CONFIG["requestType"],
-            "extraData": user_id, # Lưu userId vào extraData để nhận lại ở callback
+            "extraData": extra_data,
             "lang": "vi"
         }
         
@@ -68,21 +110,36 @@ def create_momo_payment():
 @payment_bp.route('/payment-callback', methods=['POST'])
 def payment_callback():
     try:
-        db = firestore.client()
         data = request.get_json()
-        logging.info(f"MoMo Callback: {data}")
+        logging.info(f"MoMo Callback received: {data}")
         
-        # resultCode 0 là thành công
-        if data.get("resultCode") == 0:
-            user_id = data.get("extraData")
-            if user_id:
-                db.collection("users").document(user_id).set({
-                    "isPremium": True,
-                    "subscriptionStatus": "active",
-                    "premiumSince": firestore.SERVER_TIMESTAMP
-                }, merge=True)
-                logging.info(f"User {user_id} upgraded to Premium")
-        return jsonify({"status": "ok"})
+        # 1. Xác thực chữ ký từ MoMo
+        if not verify_momo_signature(data):
+            logging.error("Invalid MoMo signature!")
+            return jsonify({"status": "error", "message": "Invalid signature"}), 400
+
+        # 2. Kiểm tra resultCode (0 là thành công)
+        if str(data.get("resultCode")) == "0":
+            extra_data_str = data.get("extraData")
+            if extra_data_str:
+                # Parse JSON từ extraData
+                extra_data = json.loads(extra_data_str)
+                user_id = extra_data.get("user_id")
+                plan = extra_data.get("plan")
+                
+                if user_id:
+                    db = firestore.client()
+                    db.collection("users").document(user_id).set({
+                        "isPremium": True,
+                        "subscriptionStatus": "active",
+                        "currentPlan": plan,
+                        "premiumSince": firestore.SERVER_TIMESTAMP
+                    }, merge=True)
+                    logging.info(f"Successfully upgraded user {user_id} to {plan} Premium")
+        
+        # Phản hồi lại cho MoMo để xác nhận đã nhận IPN
+        return jsonify({"status": "ok"}), 200
+        
     except Exception as e:
-        logging.error(f"Error processing callback: {str(e)}")
+        logging.error(f"Error processing MoMo callback: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
