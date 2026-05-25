@@ -139,20 +139,20 @@ def payment_callback():
                         "isPremium": True,
                         "subscriptionStatus": "active",
                         "currentPlan": plan,
-                        "premiumSince": firestore.SERVER_TIMESTAMP
+                        "premiumAt": firestore.SERVER_TIMESTAMP
                     }, merge=True)
                     
-                    # TẠO GIAO DỊCH TRONG FIREBASE (Transactions)
+                    # TẠO GIAO DỊCH TRONG FIREBASE (Transactions) - Khớp mẫu của bạn
                     db.collection("transactions").add({
-                        "userId": user_id,
-                        "amount": data.get("amount"),
-                        "plan": plan,
-                        "status": "success",
-                        "transId": data.get("transId"),
-                        "orderId": data.get("orderId"),
+                        "amount": int(data.get("amount")),
                         "message": data.get("message"),
                         "method": "momo",
-                        "timestamp": firestore.SERVER_TIMESTAMP
+                        "orderId": data.get("orderId"),
+                        "plan": plan,
+                        "status": "success",
+                        "timestamp": firestore.SERVER_TIMESTAMP,
+                        "transId": int(data.get("transId")),
+                        "userId": user_id
                     })
                     
                     logging.info(f"Successfully upgraded user {user_id} and recorded transaction")
