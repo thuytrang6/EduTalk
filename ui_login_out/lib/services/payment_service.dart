@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -26,7 +27,8 @@ class PaymentService {
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
-        return MomoPaymentResponse.fromJson(jsonDecode(response.body));
+        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        return MomoPaymentResponse.fromJson(data);
       } else {
         throw Exception("Failed to create payment: ${response.statusCode}");
       }
@@ -90,6 +92,9 @@ class PaymentService {
         .collection('users')
         .doc(userId)
         .snapshots()
-        .map((snapshot) => snapshot.data()?['isPremium'] ?? false);
+        .map((snapshot) {
+          final data = snapshot.data() as Map<String, dynamic>?;
+          return data?['isPremium'] ?? false;
+        });
   }
 }
