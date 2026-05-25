@@ -99,7 +99,11 @@ def create_momo_payment():
         response_data = response.json()
         
         if response.status_code == 200 and response_data.get("resultCode") == 0:
-            return jsonify({"payUrl": response_data["payUrl"], "orderId": order_id})
+            return jsonify({
+                "deeplink": response_data.get("deeplink"),
+                "payUrl": response_data.get("payUrl"),
+                "orderId": order_id
+            })
         else:
             return jsonify({"success": False, "error": response_data.get("message", "Error from MoMo")}), 400
             

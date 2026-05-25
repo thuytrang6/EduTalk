@@ -35,23 +35,37 @@ class PaymentService {
     }
   }
 
-  Future<void> openMomoPayment(String payUrl) async {
-    final Uri uri = Uri.parse(payUrl);
+  Future<void> openMomoPayment(String payUrl, {String? deeplink}) async {
+    // 1. Ưu tiên mở bằng Deep Link (momo://) nếu có
+    if (deeplink != null && deeplink.isNotEmpty) {
+      try {
+        final Uri deepUri = Uri.parse(deeplink);
+        bool launched = await launchUrl(
+          deepUri,
+          mode: LaunchMode.externalNonBrowserApplication,
+        );
+        if (launched) return;
+      } catch (e) {
+        debugPrint("Lỗi khi mở deeplink: $e");
+      }
+    }
 
+    // 2. Fallback: Mở bằng payUrl (https://)
+    final Uri webUri = Uri.parse(payUrl);
     try {
-      // 1. Thử mở bằng App MoMo trực tiếp (Deep Link)
+      // Thử mở HTTPS link bằng App trước (Universal Link)
       bool launched = await launchUrl(
-        uri,
+        webUri,
         mode: LaunchMode.externalNonBrowserApplication,
       );
       if (launched) return;
     } catch (e) {
-      // Bắt lỗi nếu không tìm thấy App phù hợp trên máy
+      // Bắt lỗi nếu không tìm thấy App phù hợp
     }
 
-    // 2. Nếu không mở được App (do chưa cài hoặc lỗi), thử mở bằng trình duyệt
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    // 3. Cuối cùng: Mở bằng trình duyệt
+    if (await canLaunchUrl(webUri)) {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
     } else {
       throw Exception("Could not launch $payUrl");
     }

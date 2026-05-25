@@ -38,15 +38,17 @@ class PlanInfo {
 
 class MomoPaymentResponse {
   final String? payUrl;
+  final String? deeplink;
   final String? orderId;
   final String? message;
   final int? resultCode;
 
-  MomoPaymentResponse({this.payUrl, this.orderId, this.message, this.resultCode});
+  MomoPaymentResponse({this.payUrl, this.deeplink, this.orderId, this.message, this.resultCode});
 
   factory MomoPaymentResponse.fromJson(Map<String, dynamic> json) {
     return MomoPaymentResponse(
       payUrl: json['payUrl'],
+      deeplink: json['deeplink'],
       orderId: json['orderId'],
       message: json['message'],
       resultCode: json['resultCode'],

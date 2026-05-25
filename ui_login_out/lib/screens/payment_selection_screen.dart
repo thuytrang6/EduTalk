@@ -36,7 +36,7 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
           planName: widget.planName,
         );
         if (res.payUrl != null) {
-          await PaymentService().openMomoPayment(res.payUrl!);
+          await PaymentService().openMomoPayment(res.payUrl!, deeplink: res.deeplink);
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
