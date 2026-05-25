@@ -37,10 +37,21 @@ class PaymentService {
 
   Future<void> openMomoPayment(String payUrl) async {
     final Uri uri = Uri.parse(payUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      throw Exception("Could not launch $payUrl");
+
+    // 1. Thử mở bằng App MoMo trực tiếp (Deep Link)
+    // externalNonBrowserApplication sẽ trả về false nếu không tìm thấy App phù hợp
+    bool launched = await launchUrl(
+      uri,
+      mode: LaunchMode.externalNonBrowserApplication,
+    );
+
+    // 2. Nếu không mở được App (do chưa cài hoặc lỗi), thử mở bằng trình duyệt
+    if (!launched) {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception("Could not launch $payUrl");
+      }
     }
   }
 
