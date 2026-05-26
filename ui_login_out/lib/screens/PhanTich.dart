@@ -41,6 +41,8 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
 
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      
+      // Thêm Timeout để tránh đợi quá lâu khi server Render đang khởi động
       final result = await _apiService.predict(
         scores: inItems.map((item) => item.value.toDouble()).toList(),
         userId: uid,
