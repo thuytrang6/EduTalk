@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
 import 'Premium_screen.dart';
+import '../models/user_model.dart';
+import '../widgets/premium_upgrade_dialog.dart';
 
 class DuLieuScreen extends StatefulWidget {
   final ValueChanged<int>? onChangeTab;
@@ -114,6 +118,29 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _handleAnalyze() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (!doc.exists) return;
+    final userData = UserModel.fromDocument(doc);
+    
+    if (!userData.isPremium && userData.usageCount >= 3) {
+      if (mounted) showDialog(context: context, builder: (_) => const PremiumUpgradeDialog());
+    } else {
+      if (!userData.isPremium) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+          'usageCount': FieldValue.increment(1)
+        });
+      }
+      final List<double> scoresDetail = scores
+          .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
+          .toList();
+      widget.onOPenPhanTich?.call(_totalScore, subjects, scoresDetail);
+    }
   }
 
   @override
@@ -697,7 +724,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             if (!_hasValidScores) {
               setState(() => _showScoreError = true);
               final ctx = _scoreRowKey.currentContext;
@@ -712,10 +739,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
               return;
             }
             setState(() => _showScoreError = false);
-            final List<double> scoresDetail = scores
-                .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
-                .toList();
-            widget.onOPenPhanTich?.call(_totalScore, subjects, scoresDetail);
+            await _handleAnalyze();
           },
           style: ElevatedButton.styleFrom(
             elevation: 8,
@@ -742,9 +766,8 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       ),
     );
   }
-} // ← Đóng class DuLieuScreenState
+}
 
-// ── FORMATTER ────────────────────────────────────────────────────────────────
 class _ScoreInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
