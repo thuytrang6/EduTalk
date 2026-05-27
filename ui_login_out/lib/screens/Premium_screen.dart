@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ui_login_out/screens/free_usage_store.dart';
+import 'package:ui_login_out/services/premium_theme_helper.dart';
+import '../models/user_model.dart';
 import 'payment_selection_screen.dart';
 
 class PremiumScreen extends StatelessWidget {
@@ -9,8 +12,6 @@ class PremiumScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const int remainingTrials = 3;
-
     return Scaffold(
       backgroundColor: const Color(0xfff6f7fb),
       extendBodyBehindAppBar: true,
@@ -31,7 +32,7 @@ class PremiumScreen extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            _buildHeader(remainingTrials),
+            _buildHeader(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -162,96 +163,108 @@ class PremiumScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(int trials) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 100, 24, 40),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFF8F00), Color(0xFFFF5D00), Color(0xFFE6007E)],
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1.5,
+  Widget _buildHeader() {
+    return ValueListenableBuilder<UserModel?>(
+      valueListenable: currentUserNotifier,
+      builder: (context, user, _) {
+        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final bool isPremium = user?.isPremium ?? false;
+        final int remaining = (3 - (user?.usageCount ?? 0)).clamp(0, 3);
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(24, 100, 24, 40),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isPremium 
+                ? theme.gradientColors 
+                : [const Color(0xFFFF8F00), const Color(0xFFFF5D00), const Color(0xFFE6007E)],
+            ),
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  isPremium ? theme.icon : Icons.workspace_premium_rounded,
+                  color: const Color(0xFFFFD700),
+                  size: 40,
+                ),
               ),
-            ),
-            child: const Icon(
-              Icons.workspace_premium_rounded,
-              color: Color(0xFFFFD700),
-              size: 40,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            "Nâng cấp Premium",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Trải nghiệm đầy đủ tính năng của EduTalk",
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 30),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFCC5500).withOpacity(0.4),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Column(
-              children: const [
-                Text(
-                  "Lượt dùng thử còn lại",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+              const SizedBox(height: 20),
+              Text(
+                isPremium ? theme.title : "Nâng cấp Premium",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
                 ),
-                SizedBox(height: 10),
-                Text(
-                  "3 / 3",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 48,
-                    fontWeight: FontWeight.w900,
-                  ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isPremium ? "Cảm ơn bạn đã đồng hành cùng EduTalk!" : "Trải nghiệm đầy đủ tính năng của EduTalk",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                 ),
-                SizedBox(height: 4),
-                Text(
-                  "...",
-                  style: TextStyle(
-                    color: Color(0xFFFFD700),
-                    fontSize: 30,
-                    height: 0.5,
-                  ),
+              ),
+              const SizedBox(height: 30),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
                 ),
-              ],
-            ),
+                child: Column(
+                  children: [
+                    Text(
+                      isPremium ? "Trạng thái tài khoản" : "Lượt dùng thử còn lại",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      isPremium ? "KHÔNG GIỚI HẠN" : "$remaining / 3",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isPremium ? 32 : 48,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      "...",
+                      style: TextStyle(
+                        color: Color(0xFFFFD700),
+                        fontSize: 30,
+                        height: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -326,11 +339,11 @@ class PremiumScreen extends StatelessWidget {
         _buildPlanCard(
           context: context,
           title: "Gói Tháng",
-          subtitle: "Linh hoạt, thử nghiệm",
+          subtitle: "Linh hoạt, chuyên nghiệp",
           price: "29.000",
           unit: "đ/tháng",
           details: "Tự động gia hạn hàng tháng",
-          color: const Color(0xFF2563EB),
+          color: const Color(0xFF2563EB), // Blue cũ
           icon: Icons.flash_on_rounded,
           buttonIcon: Icons.auto_awesome_rounded,
           buttonText: "Mua gói Tháng",
@@ -343,7 +356,7 @@ class PremiumScreen extends StatelessWidget {
           price: "216.000",
           unit: "đ/năm",
           details: "Chỉ ~18.000đ/tháng",
-          color: const Color(0xFFFF8000),
+          color: const Color(0xFFFF8000), // Orange cũ
           icon: Icons.shield_rounded,
           buttonIcon: Icons.workspace_premium_rounded,
           buttonText: "Mua gói Năm",
@@ -359,7 +372,7 @@ class PremiumScreen extends StatelessWidget {
           price: "499.000",
           unit: "đ",
           details: "Thanh toán một lần, không cần gia hạn",
-          color: const Color(0xFF8B5CF6),
+          color: const Color(0xFF8B5CF6), // Purple cũ
           icon: Icons.workspace_premium_rounded,
           buttonIcon: Icons.workspace_premium_rounded,
           buttonText: "Mua gói Trọn đời",

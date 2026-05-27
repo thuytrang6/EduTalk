@@ -4,6 +4,9 @@ import uuid
 import requests
 import logging
 import json
+import random
+import string
+import re
 from flask import Blueprint, request, jsonify
 from firebase_admin import firestore
 
@@ -17,8 +20,14 @@ MOMO_CONFIG = {
     "secretKey": "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa",
     "endpoint": "https://test-payment.momo.vn/v2/gateway/api/create",
     "redirectUrl": "edutalk://payment-result",
-    "ipnUrl": "https://edutalk-7ndf.onrender.com/payment-callback",
+    "ipnUrl": "https://edutalk-7ndf.onrender.com/payment/payment-callback",
     "requestType": "captureWallet"
+}
+
+# Cấu hình SePay (Thanh toán Ngân hàng)
+SEPAY_CONFIG = {
+    "apiKey": "EduTalk2025SecretKey", # Token đặt tại cấu hình Webhook trên SePay
+    "prefix": "EDUTALK"
 }
 
 def create_momo_signature(payload):
@@ -164,4 +173,113 @@ def payment_callback():
         
     except Exception as e:
         logging.error(f"Error processing MoMo callback: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@payment_bp.route('/create-bank-payment', methods=['POST'])
+def create_bank_payment():
+    try:
+        data = request.get_json()
+        user_id = data.get("userId")
+        amount = data.get("amount")
+        plan = data.get("plan")
+        
+        # Tạo mã 6 số ngẫu nhiên cho nội dung chuyển khoản
+        payment_code = ''.join(random.choices(string.digits, k=6))
+        
+        db = firestore.client()
+        
+        # Lưu vào transactions với trạng thái pending
+        # Dùng payment_code làm document ID để dễ tìm kiếm khi Webhook gọi về
+        db.collection("transactions").document(payment_code).set({
+            "amount": int(amount),
+            "method": "bank",
+            "plan": plan,
+            "status": "pending",
+            "userId": user_id,
+            "paymentCode": payment_code,
+            "timestamp": firestore.SERVER_TIMESTAMP
+        })
+        
+        return jsonify({
+            "success": True,
+            "paymentCode": f"{SEPAY_CONFIG['prefix']} {payment_code}",
+            "amount": amount,
+            "orderId": payment_code
+        })
+    except Exception as e:
+        logging.error(f"Error creating bank payment: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@payment_bp.route('/sepay-webhook', methods=['POST'])
+def sepay_webhook():
+    try:
+        # 1. Xác thực API Key từ Header (X-Api-Key)
+        api_key = request.headers.get("X-Api-Key")
+        if api_key != SEPAY_CONFIG["apiKey"]:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+            
+        data = request.get_json()
+        logging.info(f"SePay Webhook received: {data}")
+        
+        content = data.get("content", "")
+        amount_received = float(data.get("amount", 0))
+        
+        # 2. Phân tích nội dung để tìm paymentCode (Ví dụ: EDUTALK 123456)
+        if SEPAY_CONFIG['prefix'].upper() not in content.upper():
+             return jsonify({"status": "ignored", "message": "Invalid prefix"}), 200
+             
+        # Tìm 6 chữ số trong nội dung chuyển khoản
+        match = re.search(r'\d{6}', content)
+        if not match:
+            return jsonify({"status": "ignored", "message": "Payment code not found"}), 200
+            
+        payment_code = match.group(0)
+        
+        # 3. Tìm giao dịch trong Firestore
+        db = firestore.client()
+        transaction_ref = db.collection("transactions").document(payment_code)
+        transaction_doc = transaction_ref.get()
+        
+        if not transaction_doc.exists:
+            return jsonify({"status": "error", "message": "Transaction not found"}), 404
+            
+        transaction_data = transaction_doc.to_dict()
+        
+        # Nếu đã xử lý rồi thì bỏ qua
+        if transaction_data['status'] == 'success':
+            return jsonify({"status": "ok", "message": "Already processed"}), 200
+            
+        # 4. Kiểm tra số tiền (Có thể cho phép sai số nhỏ hoặc >= số tiền quy định)
+        if amount_received < transaction_data['amount']:
+             return jsonify({"status": "error", "message": "Amount mismatch"}), 400
+             
+        user_id = transaction_data['userId']
+        plan = transaction_data['plan']
+        
+        # 5. Cập nhật User và Transaction (Dùng Batch để đảm bảo tính toàn vẹn)
+        batch = db.batch()
+        
+        # Cập nhật User lên Premium
+        user_ref = db.collection("users").document(user_id)
+        batch.set(user_ref, {
+            "isPremium": True,
+            "subscriptionStatus": "active",
+            "currentPlan": plan,
+            "premiumAt": firestore.SERVER_TIMESTAMP
+        }, merge=True)
+        
+        # Cập nhật Transaction thành công
+        batch.update(transaction_ref, {
+            "status": "success",
+            "timestamp": firestore.SERVER_TIMESTAMP,
+            "sepayData": data # Lưu lại toàn bộ log từ SePay
+        })
+        
+        batch.commit()
+        
+        logging.info(f"Successfully upgraded user {user_id} via Bank Transfer (SePay)")
+        return jsonify({"status": "ok"}), 200
+        
+    except Exception as e:
+        logging.error(f"Error processing SePay webhook: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
+import '../models/user_model.dart';
 import 'PhanTich.dart';
 import 'DuLieu.dart';
 import 'ThaoLuan.dart';
@@ -38,6 +41,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double _aiIconRight = 16;
   double _aiIconBottom = 90;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToUsageCount();
+  }
+
+  void _listenToUsageCount() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((snapshot) {
+            if (snapshot.exists && mounted) {
+              final userData = UserModel.fromDocument(snapshot);
+              // Đồng bộ giá trị từ Firestore sang ValueNotifier global
+              freeUsageCount.value = (3 - userData.usageCount).clamp(0, 3);
+              
+              // Đồng bộ toàn bộ thông tin User để xử lý Theme Premium
+              currentUserNotifier.value = userData;
+            }
+          });
+    }
+  }
 
   List<Widget> get pages => [
     HomePage(
@@ -103,13 +132,10 @@ class _HomeScreenState extends State<HomeScreen> {
     List<int> userScores,
     List<int> majorRequirements,
   ) {
-    // Trừ 1 lượt free
-    final currentCount = freeUsageCount.value;
-    if (currentCount > 0) {
-      freeUsageCount.value = currentCount - 1;
-    }
+    // Không cần trừ lượt ở đây nữa vì DuLieuScreen đã xử lý trên Firestore
+    // và HomeScreen đã có listener để đồng bộ ValueNotifier freeUsageCount.
 
-    // Nếu sau khi trừ còn 0 lượt → hiện thông báo hết lượt
+    // Nếu sau khi Firestore cập nhật mà còn 0 lượt → hiện thông báo hết lượt
     if (freeUsageCount.value == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(

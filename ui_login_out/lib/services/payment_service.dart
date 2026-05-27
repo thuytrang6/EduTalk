@@ -73,18 +73,30 @@ class PaymentService {
     }
   }
 
-  Future<void> submitBankTransfer({
+  Future<Map<String, dynamic>> createBankPayment({
     required String userId,
     required int amount,
+    required String planName,
   }) async {
-    await FirebaseFirestore.instance.collection('users').doc(userId).update({
-      'pendingPayment': {
-        'method': 'bank_transfer',
-        'amount': amount,
-        'status': 'pending',
-        'createdAt': FieldValue.serverTimestamp(),
+    try {
+      final response = await http.post(
+        Uri.parse("$_baseUrl/create-bank-payment"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "amount": amount,
+          "userId": userId,
+          "plan": planName,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        throw Exception("Failed to create bank payment: ${response.statusCode}");
       }
-    });
+    } catch (e) {
+      throw Exception("Network error: $e");
+    }
   }
 
   Stream<bool> listenPremiumStatus(String userId) {

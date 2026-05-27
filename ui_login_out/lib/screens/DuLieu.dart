@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
+import 'package:ui_login_out/services/premium_theme_helper.dart';
 import 'Premium_screen.dart';
 import '../models/user_model.dart';
 import '../widgets/premium_upgrade_dialog.dart';
@@ -131,11 +132,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     if (!userData.isPremium && userData.usageCount >= 3) {
       if (mounted) showDialog(context: context, builder: (_) => const PremiumUpgradeDialog());
     } else {
-      if (!userData.isPremium) {
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-          'usageCount': FieldValue.increment(1)
-        });
-      }
+      // KHÔNG TĂNG usageCount Ở ĐÂY NỮA
       final List<double> scoresDetail = scores
           .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
           .toList();
@@ -236,68 +233,75 @@ class DuLieuScreenState extends State<DuLieuScreen> {
   }
 
   Widget _buildTrialCard() {
-    return Container(
-      width: double.infinity,
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 211, 121, 3).withOpacity(0.16),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color.fromARGB(255, 223, 146, 30).withOpacity(0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ValueListenableBuilder<int>(
-              valueListenable: freeUsageCount,
-              builder: (context, value, _) {
-                return Text(
-                  "Còn $value/3 lượt dùng thử",
-                  style: const TextStyle(
-                    color: Color(0xffffe08a),
+    return ValueListenableBuilder<UserModel?>(
+      valueListenable: currentUserNotifier,
+      builder: (context, user, _) {
+        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final bool isPremium = user?.isPremium ?? false;
+        final int remaining = (3 - (user?.usageCount ?? 0)).clamp(0, 3);
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          decoration: BoxDecoration(
+            color: theme.bgColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: theme.accentColor.withOpacity(0.6),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  isPremium ? theme.title : "Còn $remaining/3 lượt dùng thử",
+                  style: TextStyle(
+                    color: isPremium ? Colors.white : const Color(0xffffe08a),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
-                );
-              },
-            ),
-          ),
-          InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const PremiumScreen()),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xffffb82e), Color(0xffff991f)],
                 ),
-                borderRadius: BorderRadius.circular(16),
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.workspace_premium, color: Colors.white, size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    "Nâng cấp",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+              Container(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: theme.gradientColors,
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PremiumScreen(),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(theme.icon, color: Colors.white, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        isPremium ? "Chi tiết" : "Nâng cấp",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
