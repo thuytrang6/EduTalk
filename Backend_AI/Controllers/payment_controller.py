@@ -26,8 +26,8 @@ MOMO_CONFIG = {
 
 # Cấu hình SePay (Thanh toán Ngân hàng)
 SEPAY_CONFIG = {
-    "apiKey": "LDSZGQNVYJM1JPTQIHVYOO3VF60PASWP4JKVXZE3R7ST9EEPJXGFHWKGMO81AICB", # API Key thật từ SePay
-    "prefix": "EDUTALK"
+    "apiKey": "EduTalk2025SecretKey", # Mã bảo mật đã đặt trên SePay
+    "prefix": "ET"
 }
 
 def create_momo_signature(payload):
@@ -185,7 +185,7 @@ def create_bank_payment():
         
         return jsonify({
             "success": True,
-            "paymentCode": f"{SEPAY_CONFIG['prefix']} {payment_code}",
+            "paymentCode": f"{SEPAY_CONFIG['prefix']}{payment_code}",
             "amount": amount,
             "orderId": payment_code
         })
@@ -210,12 +210,12 @@ def sepay_webhook():
         content = data.get("content", "")
         amount_received = float(data.get("amount", 0))
         
-        # 2. Phân tích nội dung để tìm paymentCode (Ví dụ: EDUTALK 123456)
+        # 2. Phân tích nội dung để tìm paymentCode (Ví dụ: ET123456)
         if SEPAY_CONFIG['prefix'].upper() not in content.upper():
              return jsonify({"status": "ignored", "message": "Invalid prefix"}), 200
              
-        # Tìm chính xác 6 chữ số trong nội dung chuyển khoản
-        match = re.search(r'\d{6}', content)
+        # Tìm chính xác 6-8 chữ số trong nội dung chuyển khoản
+        match = re.search(r'\d{6,8}', content)
         if not match:
             return jsonify({"status": "ignored", "message": "Payment code not found"}), 200
             

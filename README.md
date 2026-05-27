@@ -14,7 +14,7 @@ Các thông tin xác thực và thiết lập sau đây được sử dụng cho
 ## Các API Endpoints
 - **Test Endpoint (Tạo thanh toán)**: `https://test-payment.momo.vn/v2/gateway/api/create`
 - **Redirect URL (App)**: `edutalk://payment-result`
-- **IPN URL (Callback)**: `https://edutalk-7ndf.onrender.com/payment-callback`
+- **IPN URL (Callback)**: `https://edutalk-7ndf.onrender.com/payment/payment-callback`
 
 ## Luồng Thanh toán (Payment Flow)
 1. **Yêu cầu từ Frontend**: Ứng dụng Flutter (`PaymentSelectionScreen`) gọi `PaymentService` để bắt đầu giao dịch thông qua route `/momo-payment` của Backend.
