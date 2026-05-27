@@ -14,7 +14,7 @@ import 'Profile.dart';
 import 'KetQua.dart';
 import 'About.dart';
 import 'ContactPage.dart';
-
+import 'Premium_screen.dart';
 class HomeScreen extends StatefulWidget {
   final String userName;
   HomeScreen({super.key, required this.userName});
