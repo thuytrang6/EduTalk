@@ -26,7 +26,7 @@ MOMO_CONFIG = {
 
 # Cấu hình SePay (Thanh toán Ngân hàng)
 SEPAY_CONFIG = {
-    "apiKey": "EduTalk2025SecretKey", # Token đặt tại cấu hình Webhook trên SePay
+    "apiKey": "LDSZGQNVYJM1JPTQIHVYOO3VF60PASWP4JKVXZE3R7ST9EEPJXGFHWKGMO81AICB", # API Key thật từ SePay
     "prefix": "EDUTALK"
 }
 
@@ -48,8 +48,6 @@ def create_momo_signature(payload):
     return h.hexdigest()
 
 def verify_momo_signature(data):
-    # Các trường để tạo chữ ký callback MoMo (IPN)
-    # Thứ tự: accessKey, amount, extraData, message, orderId, orderInfo, orderType, partnerCode, payType, requestId, responseTime, resultCode, transId
     try:
         raw_signature = (
             f"accessKey={MOMO_CONFIG['accessKey']}&"
@@ -80,12 +78,11 @@ def create_momo_payment():
         amount = data.get("amount")
         order_info = data.get("orderInfo")
         user_id = data.get("userId")
-        plan = data.get("plan") # Lấy plan từ frontend
+        plan = data.get("plan")
 
         order_id = str(uuid.uuid4())
         request_id = str(uuid.uuid4())
         
-        # Đóng gói extraData thành JSON string
         extra_data = json.dumps({"user_id": user_id, "plan": plan})
 
         payload = {
@@ -126,24 +123,19 @@ def payment_callback():
         data = request.get_json()
         logging.info(f"MoMo Callback received: {data}")
         
-        # 1. Xác thực chữ ký từ MoMo
         if not verify_momo_signature(data):
             logging.error("Invalid MoMo signature!")
             return jsonify({"status": "error", "message": "Invalid signature"}), 400
 
-        # 2. Kiểm tra resultCode (0 là thành công)
         if str(data.get("resultCode")) == "0":
             extra_data_str = data.get("extraData")
             if extra_data_str:
-                # Parse JSON từ extraData
                 extra_data = json.loads(extra_data_str)
                 user_id = extra_data.get("user_id")
                 plan = extra_data.get("plan")
                 
                 if user_id:
                     db = firestore.client()
-                    
-                    # Cập nhật thông tin Premium cho User
                     db.collection("users").document(user_id).set({
                         "isPremium": True,
                         "subscriptionStatus": "active",
@@ -151,7 +143,6 @@ def payment_callback():
                         "premiumAt": firestore.SERVER_TIMESTAMP
                     }, merge=True)
                     
-                    # TẠO GIAO DỊCH TRONG FIREBASE (Transactions) - Khớp mẫu của bạn
                     db.collection("transactions").add({
                         "amount": int(data.get("amount")),
                         "message": data.get("message"),
@@ -163,12 +154,8 @@ def payment_callback():
                         "transId": int(data.get("transId")),
                         "userId": user_id
                     })
-                    
                     logging.info(f"Successfully upgraded user {user_id} and recorded transaction")
-        else:
-            logging.warning(f"Payment failed with resultCode: {data.get('resultCode')}")
         
-        # Phản hồi lại cho MoMo để xác nhận đã nhận IPN
         return jsonify({"status": "ok"}), 200
         
     except Exception as e:
@@ -183,13 +170,9 @@ def create_bank_payment():
         amount = data.get("amount")
         plan = data.get("plan")
         
-        # Tạo mã 6 số ngẫu nhiên cho nội dung chuyển khoản
         payment_code = ''.join(random.choices(string.digits, k=6))
         
         db = firestore.client()
-        
-        # Lưu vào transactions với trạng thái pending
-        # Dùng payment_code làm document ID để dễ tìm kiếm khi Webhook gọi về
         db.collection("transactions").document(payment_code).set({
             "amount": int(amount),
             "method": "bank",
@@ -213,9 +196,12 @@ def create_bank_payment():
 @payment_bp.route('/sepay-webhook', methods=['POST'])
 def sepay_webhook():
     try:
-        # 1. Xác thực API Key từ Header (X-Api-Key)
-        api_key = request.headers.get("X-Api-Key")
+        # 1. Xác thực API Key từ Header Authorization (SePay gửi dưới dạng "Apikey LDSZGQ...")
+        auth_header = request.headers.get("Authorization", "")
+        api_key = auth_header.replace("Apikey ", "").strip()
+        
         if api_key != SEPAY_CONFIG["apiKey"]:
+            logging.warning(f"Unauthorized Webhook attempt with key: {api_key}")
             return jsonify({"status": "error", "message": "Unauthorized"}), 403
             
         data = request.get_json()
@@ -228,14 +214,13 @@ def sepay_webhook():
         if SEPAY_CONFIG['prefix'].upper() not in content.upper():
              return jsonify({"status": "ignored", "message": "Invalid prefix"}), 200
              
-        # Tìm 6 chữ số trong nội dung chuyển khoản
+        # Tìm chính xác 6 chữ số trong nội dung chuyển khoản
         match = re.search(r'\d{6}', content)
         if not match:
             return jsonify({"status": "ignored", "message": "Payment code not found"}), 200
             
         payment_code = match.group(0)
         
-        # 3. Tìm giao dịch trong Firestore
         db = firestore.client()
         transaction_ref = db.collection("transactions").document(payment_code)
         transaction_doc = transaction_ref.get()
@@ -245,21 +230,16 @@ def sepay_webhook():
             
         transaction_data = transaction_doc.to_dict()
         
-        # Nếu đã xử lý rồi thì bỏ qua
         if transaction_data['status'] == 'success':
             return jsonify({"status": "ok", "message": "Already processed"}), 200
             
-        # 4. Kiểm tra số tiền (Có thể cho phép sai số nhỏ hoặc >= số tiền quy định)
         if amount_received < transaction_data['amount']:
              return jsonify({"status": "error", "message": "Amount mismatch"}), 400
              
         user_id = transaction_data['userId']
         plan = transaction_data['plan']
         
-        # 5. Cập nhật User và Transaction (Dùng Batch để đảm bảo tính toàn vẹn)
         batch = db.batch()
-        
-        # Cập nhật User lên Premium
         user_ref = db.collection("users").document(user_id)
         batch.set(user_ref, {
             "isPremium": True,
@@ -268,11 +248,10 @@ def sepay_webhook():
             "premiumAt": firestore.SERVER_TIMESTAMP
         }, merge=True)
         
-        # Cập nhật Transaction thành công
         batch.update(transaction_ref, {
             "status": "success",
             "timestamp": firestore.SERVER_TIMESTAMP,
-            "sepayData": data # Lưu lại toàn bộ log từ SePay
+            "sepayData": data
         })
         
         batch.commit()
