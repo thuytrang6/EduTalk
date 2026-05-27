@@ -212,12 +212,12 @@ def sepay_webhook():
         
         # 2. Phân tích nội dung để tìm paymentCode (Ví dụ: ET123456)
         if SEPAY_CONFIG['prefix'].upper() not in content.upper():
-             return jsonify({"status": "ignored", "message": "Invalid prefix"}), 200
+             return jsonify({"success": True, "status": "ignored", "message": "Invalid prefix"}), 200
              
         # Tìm chính xác 6-8 chữ số trong nội dung chuyển khoản
         match = re.search(r'\d{6,8}', content)
         if not match:
-            return jsonify({"status": "ignored", "message": "Payment code not found"}), 200
+            return jsonify({"success": True, "status": "ignored", "message": "Payment code not found"}), 200
             
         payment_code = match.group(0)
         
@@ -226,15 +226,15 @@ def sepay_webhook():
         transaction_doc = transaction_ref.get()
         
         if not transaction_doc.exists:
-            return jsonify({"status": "error", "message": "Transaction not found"}), 404
+            return jsonify({"success": False, "status": "error", "message": "Transaction not found"}), 404
             
         transaction_data = transaction_doc.to_dict()
         
         if transaction_data['status'] == 'success':
-            return jsonify({"status": "ok", "message": "Already processed"}), 200
+            return jsonify({"success": True, "status": "ok", "message": "Already processed"}), 200
             
         if amount_received < transaction_data['amount']:
-             return jsonify({"status": "error", "message": "Amount mismatch"}), 400
+             return jsonify({"success": False, "status": "error", "message": "Amount mismatch"}), 400
              
         user_id = transaction_data['userId']
         plan = transaction_data['plan']
@@ -257,7 +257,7 @@ def sepay_webhook():
         batch.commit()
         
         logging.info(f"Successfully upgraded user {user_id} via Bank Transfer (SePay)")
-        return jsonify({"status": "ok"}), 200
+        return jsonify({"success": True, "status": "ok"}), 200
         
     except Exception as e:
         logging.error(f"Error processing SePay webhook: {str(e)}")
