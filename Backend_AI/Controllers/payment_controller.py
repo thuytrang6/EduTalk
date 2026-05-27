@@ -71,6 +71,53 @@ def verify_momo_signature(data):
         logging.error(f"Error verifying signature: {str(e)}")
         return False
 
+from datetime import datetime, timedelta, timezone
+
+def calculate_expiry(plan_type, current_expiry=None):
+    now = datetime.now(timezone.utc)
+    # Nếu đang còn hạn, cộng thêm vào ngày hết hạn hiện tại
+    start_date = now
+    if current_expiry and current_expiry > now:
+        start_date = current_expiry
+        
+    if plan_type == 'monthly':
+        return start_date + timedelta(days=30)
+    elif plan_type == 'yearly':
+        return start_date + timedelta(days=365)
+    elif plan_type == 'lifetime':
+        return None  # Vĩnh viễn
+    return now + timedelta(days=30) # Default
+
+def upgrade_user_premium(db, user_id, plan_name):
+    # Map tên gói sang mã gói
+    plan_map = {
+        'Gói Tháng': 'monthly',
+        'Gói Năm': 'yearly',
+        'Gói Trọn Đời': 'lifetime'
+    }
+    plan_type = plan_map.get(plan_name, 'monthly')
+    
+    user_ref = db.collection("users").document(user_id)
+    user_doc = user_ref.get()
+    
+    current_expiry = None
+    if user_doc.exists:
+        data = user_doc.to_dict()
+        current_expiry = data.get("premiumExpiry")
+        
+    new_expiry = calculate_expiry(plan_type, current_expiry)
+    
+    user_ref.set({
+        "isPremium": True,
+        "subscriptionStatus": "active",
+        "plan": plan_type,
+        "currentPlan": plan_name,
+        "premiumAt": firestore.SERVER_TIMESTAMP,
+        "premiumStart": firestore.SERVER_TIMESTAMP,
+        "premiumExpiry": new_expiry
+    }, merge=True)
+    return True
+
 @payment_bp.route('/momo-payment', methods=['POST'])
 def create_momo_payment():
     try:
@@ -136,12 +183,7 @@ def payment_callback():
                 
                 if user_id:
                     db = firestore.client()
-                    db.collection("users").document(user_id).set({
-                        "isPremium": True,
-                        "subscriptionStatus": "active",
-                        "currentPlan": plan,
-                        "premiumAt": firestore.SERVER_TIMESTAMP
-                    }, merge=True)
+                    upgrade_user_premium(db, user_id, plan)
                     
                     db.collection("transactions").add({
                         "amount": int(data.get("amount")),
@@ -193,6 +235,58 @@ def create_bank_payment():
         logging.error(f"Error creating bank payment: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+@payment_bp.route('/check-status/<user_id>', methods=['GET'])
+def check_premium_status(user_id):
+    try:
+        db = firestore.client()
+        user_ref = db.collection("users").document(user_id)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            return jsonify({"success": False, "error": "User not found"}), 404
+            
+        user_data = user_doc.to_dict()
+        is_premium = user_data.get("isPremium", False)
+        plan = user_data.get("plan")
+        expiry = user_data.get("premiumExpiry")
+        
+        # Nếu đang là premium và không phải trọn đời, kiểm tra hết hạn
+        if is_premium and plan != 'lifetime' and expiry:
+            # Convert Firestore timestamp to datetime
+            if hasattr(expiry, 'timestamp'):
+                expiry_dt = expiry
+            else:
+                # Handle potential other formats if any
+                expiry_dt = expiry
+                
+            from datetime import datetime, timezone
+            now = datetime.now(timezone.utc)
+            
+            if expiry_dt <= now:
+                # Hết hạn -> Cập nhật Firestore
+                user_ref.update({
+                    "isPremium": False,
+                    "plan": None,
+                    "currentPlan": None
+                })
+                return jsonify({
+                    "success": True, 
+                    "isPremium": False, 
+                    "message": "Premium expired",
+                    "expired": True
+                })
+        
+        return jsonify({
+            "success": True, 
+            "isPremium": is_premium,
+            "plan": plan,
+            "expiry": expiry.isoformat() if expiry and hasattr(expiry, 'isoformat') else None
+        })
+        
+    except Exception as e:
+        logging.error(f"Error checking premium status: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @payment_bp.route('/sepay-webhook', methods=['POST'])
 def sepay_webhook():
     try:
@@ -238,24 +332,16 @@ def sepay_webhook():
              return jsonify({"success": False, "status": "error", "message": "Amount mismatch"}), 400
              
         user_id = transaction_data['userId']
-        plan = transaction_data['plan']
+        plan_name = transaction_data['plan'] # Trong transaction lưu planName như 'Gói Tháng'
         
-        batch = db.batch()
-        user_ref = db.collection("users").document(user_id)
-        batch.set(user_ref, {
-            "isPremium": True,
-            "subscriptionStatus": "active",
-            "currentPlan": plan,
-            "premiumAt": firestore.SERVER_TIMESTAMP
-        }, merge=True)
+        db = firestore.client()
+        upgrade_user_premium(db, user_id, plan_name)
         
-        batch.update(transaction_ref, {
+        transaction_ref.update({
             "status": "success",
             "timestamp": firestore.SERVER_TIMESTAMP,
             "sepayData": data
         })
-        
-        batch.commit()
         
         logging.info(f"Successfully upgraded user {user_id} via Bank Transfer (SePay)")
         return jsonify({"success": True, "status": "ok"}), 200

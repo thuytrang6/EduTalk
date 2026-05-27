@@ -109,4 +109,19 @@ class PaymentService {
           return data?['isPremium'] ?? false;
         });
   }
+
+  Future<Map<String, dynamic>?> checkPremiumStatus(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/payment/check-status/$userId"),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint("Lỗi kiểm tra trạng thái Premium: $e");
+    }
+    return null;
+  }
 }

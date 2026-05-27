@@ -128,9 +128,9 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
     if (!doc.exists) return;
     final userData = UserModel.fromDocument(doc);
-    
-    if (!userData.isPremium && userData.usageCount >= 3) {
-      if (mounted) showDialog(context: context, builder: (_) => const PremiumUpgradeDialog());
+
+    if (!userData.isPremiumActive && userData.usageCount >= userData.freeLimit) {
+      if (mounted) _showUpgradeBottomSheet();
     } else {
       // KHÔNG TĂNG usageCount Ở ĐÂY NỮA
       final List<double> scoresDetail = scores
@@ -140,6 +140,70 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     }
   }
 
+  void _showUpgradeBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 24),
+            Lottie.network(
+              'https://assets9.lottiefiles.com/packages/lf20_m6cuL6.json', // Premium/Upgrade animation
+              height: 180,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Bạn đã dùng hết lượt miễn phí",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Để tiếp tục sử dụng tính năng AI phân tích chuyên sâu và không giới hạn lượt dùng, hãy nâng cấp lên gói Premium ngay nhé!",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 15),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PremiumScreen()));
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff2563eb),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text("Nâng cấp Premium 👑", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Để sau", style: TextStyle(color: Colors.grey)),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
