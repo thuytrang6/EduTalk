@@ -24,7 +24,7 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 
 # ── ĐĂNG KÝ BLUEPRINTS ────────────────────────────────────────────────────────
-app.register_blueprint(payment_bp, url_prefix='/')
+app.register_blueprint(payment_bp, url_prefix='/payment')
 app.register_blueprint(prediction_bp, url_prefix='/api/prediction')
 
 
