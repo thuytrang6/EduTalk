@@ -208,7 +208,8 @@ def sepay_webhook():
         logging.info(f"SePay Webhook received: {data}")
         
         content = data.get("content", "")
-        amount_received = float(data.get("amount", 0))
+        # SePay dùng trường 'transferAmount' cho số tiền nhận được
+        amount_received = float(data.get("transferAmount", 0))
         
         # 2. Phân tích nội dung để tìm paymentCode (Ví dụ: ET123456)
         if SEPAY_CONFIG['prefix'].upper() not in content.upper():
