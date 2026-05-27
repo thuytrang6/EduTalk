@@ -81,13 +81,24 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SizedBox(height: 20),
+            
             Lottie.network(
-              'https://assets10.lottiefiles.com/packages/lf20_kz9pjcjt.json', // Success checkmark animation
-              height: 180,
+              'https://lottie.host/825f385c-1971-463e-862d-94b79148d45e/v2t4VqE5xT.json', // Chúc mừng thành công (Education style)
+              height: 160,
               repeat: false,
+              errorBuilder: (context, error, stackTrace) {
+                // Nếu lỗi mạng, hiện Icon dự phòng để không bị văng bảng đỏ
+                return Container(
+                  height: 160,
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.school_rounded, color: Color(0xFF22C55E), size: 90),
+                );
+              },
             ),
+            const SizedBox(height: 24),
             const Text(
-              "Thành công!",
+              "Nâng cấp thành công!",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
             ),
             const SizedBox(height: 12),

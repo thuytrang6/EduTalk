@@ -540,7 +540,7 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
                 ...widget.recommendations.map((uni) => pw.Container(
                   margin: const pw.EdgeInsets.only(bottom: 12),
                   child: pw.Column(
-                    cross: pw.CrossAxisAlignment.start,
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       pw.Text("- ${uni['ten_truong']}", style: pw.TextStyle(font: fontBold, fontSize: 14)),
                       pw.Text("  Ngành: ${uni['ten_nganh']}", style: pw.TextStyle(font: font, fontSize: 12)),
@@ -703,7 +703,7 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
           child: OutlinedButton.icon(
             onPressed: _exportToPdf,
             icon: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFE11D48)),
-            label: const Text("Xuất báo cáo PDF chuyên nghiệp", style: TextStyle(color: Color(0xFF1E293B), fontWeight: FontWeight.bold)),
+            label: const Text("Xuất báo cáo PDF", style: TextStyle(color: Color(0xFF1E293B), fontWeight: FontWeight.bold)),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
