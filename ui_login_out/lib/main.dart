@@ -112,6 +112,11 @@ class _AuthGateState extends State<AuthGate> {
                       'name': user.displayName ?? '',
                       'email': user.email ?? '',
                       'role': 'user',
+                      'isPremium': false,
+                      'usageCount': 0,
+                      'freeLimit': 3,
+                      'plan': null,
+                      'currentPlan': null,
                       'created_at': FieldValue.serverTimestamp(),
                     });
 

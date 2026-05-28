@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/user_model.dart';
+import 'Premium_screen.dart';
 
 class KetQuaScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -474,148 +481,236 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  Widget buildUniversityCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.school_rounded, color: Color(0xFF0EA5A4), size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Top Trường Gợi Ý',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                ),
+  Future<void> _exportToPdf() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // Check Premium before exporting
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final user = UserModel.fromDocument(userDoc);
+
+    if (!user.isPremiumActive) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Tính năng Premium"),
+            content: const Text("Bạn cần nâng cấp gói Premium để sử dụng tính năng xuất báo cáo chuyên nghiệp."),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Để sau")),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const PremiumScreen()));
+                },
+                child: const Text("Nâng cấp ngay"),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          if (widget.recommendations.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  'Không có trường nào được gợi ý',
-                  style: TextStyle(color: Color(0xFF94A3B8)),
-                ),
+        );
+      }
+      return;
+    }
+
+    final pdf = pw.Document();
+    
+    // Tải font hỗ trợ Tiếng Việt (Roboto là font mặc định phổ biến)
+    final font = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(32),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Center(child: pw.Text("BÁO CÁO TƯ VẤN NGHỀ NGHIỆP EDUTALK", style: pw.TextStyle(font: fontBold, fontSize: 24, color: PdfColors.blue900))),
+                pw.SizedBox(height: 10),
+                pw.Divider(),
+                pw.SizedBox(height: 20),
+                pw.Text("Kết quả dự đoán: ${widget.predictedMajor}", style: pw.TextStyle(font: fontBold, fontSize: 18)),
+                pw.SizedBox(height: 10),
+                pw.Text("Tổng điểm xét tuyển: ${widget.totalScore.toStringAsFixed(2)}", style: pw.TextStyle(font: font, fontSize: 14)),
+                pw.SizedBox(height: 30),
+                pw.Text("DANH SÁCH TRƯỜNG ĐỀ XUẤT:", style: pw.TextStyle(font: fontBold, fontSize: 16)),
+                pw.SizedBox(height: 10),
+                ...widget.recommendations.map((uni) => pw.Container(
+                  margin: const pw.EdgeInsets.only(bottom: 12),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text("- ${uni['ten_truong']}", style: pw.TextStyle(font: fontBold, fontSize: 14)),
+                      pw.Text("  Ngành: ${uni['ten_nganh']}", style: pw.TextStyle(font: font, fontSize: 12)),
+                      pw.Text("  Điểm chuẩn: ${uni['diem_chuan_2024']}", style: pw.TextStyle(font: font, fontSize: 12, color: PdfColors.green900)),
+                    ],
+                  ),
+                )),
+                pw.Spacer(),
+                pw.Center(child: pw.Text("Cảm ơn bạn đã sử dụng dịch vụ của EduTalk Premium", style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.grey700))),
+                pw.Center(child: pw.Text("Website: edutalk-premium.id.vn", style: pw.TextStyle(font: font, fontSize: 10, color: PdfColors.blue700))),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
+  }
+
+  Widget buildUniversityCard() {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
               ),
-            )
-          else
-            ...widget.recommendations.asMap().entries.map((entry) {
-              final index = entry.key;
-              final uni = entry.value as Map<String, dynamic>;
-              final isLast = index == widget.recommendations.length - 1;
-              return Container(
-                padding: const EdgeInsets.only(top: 8, bottom: 14),
-                decoration: BoxDecoration(
-                  border: isLast
-                      ? null
-                      : const Border(
-                          bottom: BorderSide(
-                            color: Color(0xFFE9EDF3),
-                            width: 1,
-                          ),
-                        ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F0FE),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${index + 1}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF3B82F6),
-                          ),
-                        ),
-                      ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.school_rounded, color: Color(0xFF0EA5A4), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Top Trường Gợi Ý',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            uni['ten_truong']?.toString() ?? '',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF143B8F),
-                              height: 1.3,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            uni['ten_nganh']?.toString() ?? '',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8F7EE),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              'Điểm chuẩn 2024: ${uni['diem_chuan_2024'] ?? '-'}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF16A34A),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if (widget.recommendations.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      'Không có trường nào được gợi ý',
+                      style: TextStyle(color: Color(0xFF94A3B8)),
+                    ),
+                  ),
+                )
+              else
+                ...widget.recommendations.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final uni = entry.value as Map<String, dynamic>;
+                  final isLast = index == widget.recommendations.length - 1;
+                  return Container(
+                    padding: const EdgeInsets.only(top: 8, bottom: 14),
+                    decoration: BoxDecoration(
+                      border: isLast
+                          ? null
+                          : const Border(
+                              bottom: BorderSide(
+                                color: Color(0xFFE9EDF3),
+                                width: 1,
                               ),
                             ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F0FE),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          if (uni['website'] != null &&
-                              uni['website'].toString().isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              uni['website'].toString(),
+                          child: Center(
+                            child: Text(
+                              '${index + 1}',
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
                                 color: Color(0xFF3B82F6),
                               ),
                             ),
-                          ],
-                        ],
-                      ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                uni['ten_truong']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF143B8F),
+                                  height: 1.3,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                uni['ten_nganh']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F7EE),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'Điểm chuẩn 2024: ${uni['diem_chuan_2024'] ?? '-'}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF16A34A),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            }).toList(),
-        ],
-      ),
+                  );
+                }).toList(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Nút Xuất PDF
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: OutlinedButton.icon(
+            onPressed: _exportToPdf,
+            icon: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFE11D48)),
+            label: const Text("Xuất báo cáo PDF", style: TextStyle(color: Color(0xFF1E293B), fontWeight: FontWeight.bold)),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

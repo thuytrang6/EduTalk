@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ui_login_out/screens/free_usage_store.dart';
+import 'package:ui_login_out/services/premium_theme_helper.dart';
+import '../models/user_model.dart';
+import 'payment_selection_screen.dart';
 
 class PremiumScreen extends StatelessWidget {
   final ValueChanged<int>? onTabChange;
@@ -7,8 +12,6 @@ class PremiumScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const int remainingTrials = 3;
-
     return Scaffold(
       backgroundColor: const Color(0xfff6f7fb),
       extendBodyBehindAppBar: true,
@@ -29,7 +32,7 @@ class PremiumScreen extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            _buildHeader(remainingTrials),
+            _buildHeader(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -37,7 +40,7 @@ class PremiumScreen extends StatelessWidget {
                   const SizedBox(height: 20),
                   _buildComparisonCard(),
                   const SizedBox(height: 20),
-                  _buildPricingPlans(),
+                  _buildPricingPlans(context),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -121,12 +124,12 @@ class PremiumScreen extends StatelessWidget {
   }
 
   Widget _navItem(
-    BuildContext context,
-    IconData icon,
-    String label,
-    bool active,
-    int index,
-  ) {
+      BuildContext context,
+      IconData icon,
+      String label,
+      bool active,
+      int index,
+      ) {
     return InkWell(
       onTap: () {
         if (!active) {
@@ -160,96 +163,108 @@ class PremiumScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(int trials) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(24, 100, 24, 40),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFF8F00), Color(0xFFFF5D00), Color(0xFFE6007E)],
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withOpacity(0.2),
-                width: 1.5,
+  Widget _buildHeader() {
+    return ValueListenableBuilder<UserModel?>(
+      valueListenable: currentUserNotifier,
+      builder: (context, user, _) {
+        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final bool isPremium = user?.isPremium ?? false;
+        final int remaining = (3 - (user?.usageCount ?? 0)).clamp(0, 3);
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(24, 100, 24, 40),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isPremium 
+                ? theme.gradientColors 
+                : [const Color(0xFFFF8F00), const Color(0xFFFF5D00), const Color(0xFFE6007E)],
+            ),
+            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1.5,
+                  ),
+                ),
+                child: Icon(
+                  isPremium ? theme.icon : Icons.workspace_premium_rounded,
+                  color: const Color(0xFFFFD700),
+                  size: 40,
+                ),
               ),
-            ),
-            child: const Icon(
-              Icons.workspace_premium_rounded,
-              color: Color(0xFFFFD700),
-              size: 40,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            "Nâng cấp Premium",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Trải nghiệm đầy đủ tính năng của EduTalk",
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 30),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFCC5500).withOpacity(0.4),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Column(
-              children: const [
-                Text(
-                  "Lượt dùng thử còn lại",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+              const SizedBox(height: 20),
+              Text(
+                isPremium ? theme.title : "Nâng cấp Premium",
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
                 ),
-                SizedBox(height: 10),
-                Text(
-                  "3 / 3",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 48,
-                    fontWeight: FontWeight.w900,
-                  ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isPremium ? "Cảm ơn bạn đã đồng hành cùng EduTalk!" : "Trải nghiệm đầy đủ tính năng của EduTalk",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
                 ),
-                SizedBox(height: 4),
-                Text(
-                  "...",
-                  style: TextStyle(
-                    color: Color(0xFFFFD700),
-                    fontSize: 30,
-                    height: 0.5,
-                  ),
+              ),
+              const SizedBox(height: 30),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
                 ),
-              ],
-            ),
+                child: Column(
+                  children: [
+                    Text(
+                      isPremium ? "Trạng thái tài khoản" : "Lượt dùng thử còn lại",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      isPremium ? "KHÔNG GIỚI HẠN" : "$remaining / 3",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isPremium ? 32 : 48,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      "...",
+                      style: TextStyle(
+                        color: Color(0xFFFFD700),
+                        fontSize: 30,
+                        height: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -318,52 +333,157 @@ class PremiumScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPricingPlans() {
-    return Column(
-      children: [
-        _buildPlanCard(
-          title: "Gói Tháng",
-          subtitle: "Linh hoạt, thử nghiệm",
-          price: "29.000",
-          unit: "đ/tháng",
-          details: "Tự động gia hạn hàng tháng",
-          color: const Color(0xFF2563EB),
-          icon: Icons.flash_on_rounded,
-          buttonIcon: Icons.auto_awesome_rounded,
-          buttonText: "Mua gói Tháng",
-        ),
-        const SizedBox(height: 16),
-        _buildPlanCard(
-          title: "Gói Năm",
-          subtitle: "Tiết kiệm 40% - Tốt nhất",
-          price: "216.000",
-          unit: "đ/năm",
-          details: "Chỉ ~18.000đ/tháng",
-          color: const Color(0xFFFF8000),
-          icon: Icons.shield_rounded,
-          buttonIcon: Icons.workspace_premium_rounded,
-          buttonText: "Mua gói Năm",
-          isBestValue: true,
-          oldPrice: "348.000đ",
-          savings: "Tiết kiệm 132.000đ",
-        ),
-        const SizedBox(height: 16),
-        _buildPlanCard(
-          title: "Gói Trọn Đời",
-          subtitle: "Một lần thanh toán, sử dụng mãi mãi",
-          price: "499.000",
-          unit: "đ",
-          details: "Thanh toán một lần, không cần gia hạn",
-          color: const Color(0xFF8B5CF6),
-          icon: Icons.workspace_premium_rounded,
-          buttonIcon: Icons.workspace_premium_rounded,
-          buttonText: "Mua gói Trọn đời",
-        ),
-      ],
+  Widget _buildPricingPlans(BuildContext context) {
+    return ValueListenableBuilder<UserModel?>(
+      valueListenable: currentUserNotifier,
+      builder: (context, user, _) {
+        final bool isPremium = user?.isPremiumActive ?? false;
+        final String? currentPlan = user?.plan;
+        
+        // Tính tiền dư nếu có gói cũ
+        int refundAmount = 0;
+        if (isPremium && user?.premiumExpiry != null && user?.plan != 'lifetime') {
+          final remainingDays = user!.premiumExpiry!.toDate().difference(DateTime.now()).inDays;
+          if (remainingDays > 0) {
+            if (user.plan == 'monthly') {
+              refundAmount = (remainingDays / 30 * 29000).round();
+            } else if (user.plan == 'yearly') {
+              refundAmount = (remainingDays * (216000 / 365)).round();
+            }
+          }
+        }
+
+        return Column(
+          children: [
+            if (current_plan_info(user)) _buildCurrentPlanStatus(user!),
+            
+            _buildPlanCard(
+              context: context,
+              title: "Gói Tháng",
+              subtitle: "Linh hoạt, chuyên nghiệp",
+              price: "29.000",
+              unit: "đ/tháng",
+              details: "Tự động gia hạn hàng tháng",
+              color: const Color(0xFF2563EB),
+              icon: Icons.flash_on_rounded,
+              buttonIcon: Icons.auto_awesome_rounded,
+              buttonText: currentPlan == 'monthly' ? "Đang sử dụng" : "Mua gói Tháng",
+              isActive: currentPlan == 'monthly',
+              isLocked: currentPlan == 'yearly' || currentPlan == 'lifetime',
+            ),
+            const SizedBox(height: 16),
+            _buildPlanCard(
+              context: context,
+              title: "Gói Năm",
+              subtitle: "Tiết kiệm 40% - Tốt nhất",
+              price: "216.000",
+              unit: "đ/năm",
+              details: "Chỉ ~18.000đ/tháng",
+              color: const Color(0xFFFF8000),
+              icon: Icons.shield_rounded,
+              buttonIcon: Icons.workspace_premium_rounded,
+              buttonText: currentPlan == 'yearly' ? "Đang sử dụng" : (currentPlan == 'monthly' ? "Nâng cấp gói Năm" : "Mua gói Năm"),
+              isActive: currentPlan == 'yearly',
+              isLocked: currentPlan == 'lifetime',
+              isBestValue: true,
+              oldPrice: "348.000đ",
+              savings: "Tiết kiệm 132.000đ",
+              refundAmount: currentPlan == 'monthly' ? refundAmount : 0,
+            ),
+            const SizedBox(height: 16),
+            _buildPlanCard(
+              context: context,
+              title: "Gói Trọn Đời",
+              subtitle: "Một lần thanh toán, sử dụng mãi mãi",
+              price: "499.000",
+              unit: "đ",
+              details: "Thanh toán một lần, không cần gia hạn",
+              color: const Color(0xFF8B5CF6),
+              icon: Icons.workspace_premium_rounded,
+              buttonIcon: Icons.workspace_premium_rounded,
+              buttonText: currentPlan == 'lifetime' ? "Đang sử dụng" : "Mua gói Trọn đời",
+              isActive: currentPlan == 'lifetime',
+              refundAmount: (currentPlan == 'monthly' || currentPlan == 'yearly') ? refundAmount : 0,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  bool current_plan_info(UserModel? user) {
+    return user != null && user.isPremiumActive;
+  }
+
+  Widget _buildCurrentPlanStatus(UserModel user) {
+    final expiryStr = user.plan == 'lifetime' 
+        ? "Vĩnh viễn" 
+        : (user.premiumExpiry != null ? "Hết hạn vào: ${user.premiumExpiry!.toDate().day}/${user.premiumExpiry!.toDate().month}/${user.premiumExpiry!.toDate().year}" : "");
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFDCFCE7),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF22C55E).withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF166534)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Bạn đang sở hữu ${user.currentPlan}",
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF166534)),
+                ),
+                Text(
+                  expiryStr,
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF166534)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onBuyPressed(BuildContext context, String planName, int price, bool isLocked, bool isActive) {
+    if (isLocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bạn không thể hạ cấp gói dịch vụ")),
+      );
+      return;
+    }
+    if (isActive) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng đăng nhập để thực hiện thanh toán")),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (_) => PaymentSelectionScreen(
+        planName: planName,
+        userId: user.uid,
+        planPrice: price.toDouble(),
+      ),
     );
   }
 
   Widget _buildPlanCard({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required String price,
@@ -376,14 +496,20 @@ class PremiumScreen extends StatelessWidget {
     bool isBestValue = false,
     String? oldPrice,
     String? savings,
+    bool isActive = false,
+    bool isLocked = false,
+    int refundAmount = 0,
   }) {
+    int basePrice = int.parse(price.replaceAll('.', ''));
+    int finalPrice = (basePrice - refundAmount).clamp(1000, basePrice); // Tối thiểu 1000đ
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(32),
         border: isBestValue
             ? Border.all(color: const Color(0xFFFFD700), width: 2)
-            : null,
+            : (isActive ? Border.all(color: color, width: 2) : null),
         boxShadow: [
           BoxShadow(
             color: color.withOpacity(isBestValue ? 0.15 : 0.05),
@@ -392,187 +518,209 @@ class PremiumScreen extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [color, color.withOpacity(0.8)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      child: Opacity(
+        opacity: isLocked ? 0.5 : 1.0,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [color, color.withOpacity(0.8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (isBestValue)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade400,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: const [
+                            Icon(
+                              Icons.workspace_premium_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              "Ưu đãi nhất",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Icon(icon, color: Colors.white.withOpacity(0.5), size: 28),
+                  ],
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                        ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (refundAmount > 0) ...[
+                       Text(
+                        "Giá cũ: ${basePrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ",
+                        style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 14),
                       ),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                      const SizedBox(height: 4),
+                    ],
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          finalPrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.'),
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFF1E293B),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          unit,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (refundAmount > 0) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(8)),
+                        child: Text(
+                          "Đã trừ ${refundAmount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ từ gói cũ",
+                          style: const TextStyle(color: Color(0xFF4338CA), fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
-                  ),
-                  if (isBestValue)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade400,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(
-                            Icons.workspace_premium_rounded,
-                            color: Colors.white,
-                            size: 14,
-                          ),
-                          SizedBox(width: 4),
+                    if (oldPrice != null && refundAmount == 0) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
                           Text(
-                            "Ưu đãi nhất",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                            oldPrice,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              savings!,
+                              style: const TextStyle(
+                                color: Color(0xFF166534),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    )
-                  else
-                    Icon(icon, color: Colors.white.withOpacity(0.5), size: 28),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        price,
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        unit,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
-                        ),
-                      ),
                     ],
-                  ),
-                  if (oldPrice != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          oldPrice,
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            decoration: TextDecoration.lineThrough,
-                          ),
+                    const SizedBox(height: 10),
+                    Text(
+                      details,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      width: double.infinity,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isActive ? [Colors.grey, Colors.grey] : [color, color.withOpacity(0.9)],
                         ),
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            savings!,
-                            style: const TextStyle(
-                              color: Color(0xFF166534),
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          if (!isActive)
+                            BoxShadow(
+                              color: color.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
                             ),
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () => _onBuyPressed(context, title, finalPrice, isLocked, isActive),
+                        icon: Icon(isActive ? Icons.check_circle_rounded : buttonIcon, color: Colors.white, size: 20),
+                        label: Text(
+                          buttonText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                      ],
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
-                  const SizedBox(height: 10),
-                  Text(
-                    details,
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    width: double.infinity,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [color, color.withOpacity(0.9)],
-                      ),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
-                      onPressed: () {},
-                      icon: Icon(buttonIcon, color: Colors.white, size: 20),
-                      label: Text(
-                        buttonText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
