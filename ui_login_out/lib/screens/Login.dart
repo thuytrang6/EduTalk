@@ -13,7 +13,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
+  
   bool _isLoading = false;
+  bool _isObscure = true;
 
   @override
   void dispose() {
@@ -161,12 +163,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 10),
                           TextField(
                             controller: _passwordController,
-                            obscureText: true,
+                            obscureText: _isObscure, 
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               prefixIcon: const Icon(
                                 Icons.lock_outline,
                                 color: Colors.white70,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _isObscure ? Icons.visibility_off : Icons.visibility,
+                                  color: Colors.white70,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isObscure = !_isObscure; // Đổi trạng thái khi bấm
+                                  });
+                                },
                               ),
                               hintText: '........',
                               hintStyle: const TextStyle(color: Colors.white38),

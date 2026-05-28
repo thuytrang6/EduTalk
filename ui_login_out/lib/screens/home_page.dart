@@ -25,7 +25,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String userName = "Bạn";
+  String _userName = "Bạn";
 
   @override
   void initState() {
@@ -37,7 +37,7 @@ class _HomePageState extends State<HomePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       setState(() {
-        userName = user.displayName ?? user.email?.split('@').first ?? "Bạn";
+        _userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
       });
     }
   }
@@ -78,7 +78,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          "$userName 👋",
+                          "$_userName 👋",
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
