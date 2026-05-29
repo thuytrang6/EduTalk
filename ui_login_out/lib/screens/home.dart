@@ -196,11 +196,10 @@ class _HomeScreenState extends State<HomeScreen> {
     List<int> userScores,
     List<int> majorRequirements,
   ) {
-    // Không cần trừ lượt ở đây nữa vì DuLieuScreen đã xử lý trên Firestore
-    // và HomeScreen đã có listener để đồng bộ ValueNotifier freeUsageCount.
+    // Ưu tiên Premium: Nếu là Premium Active, không bao giờ hiện SnackBar hết lượt.
+    final bool isPremium = currentUserNotifier.value?.isPremiumActive ?? false;
 
-    // Nếu sau khi Firestore cập nhật mà còn 0 lượt → hiện thông báo hết lượt
-    if (freeUsageCount.value == 0) {
+    if (!isPremium && freeUsageCount.value == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

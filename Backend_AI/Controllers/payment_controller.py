@@ -402,11 +402,11 @@ def sepay_webhook():
         content = data.get("content", "")
         amount_received = float(data.get("transferAmount", 0))
         
-        match = re.search(rf"{SEPAY_CONFIG['prefix']}(\d{{6,8}})", content.upper())
+        match = re.search(rf"({SEPAY_CONFIG['prefix']}\d{{6,8}})", content.upper())
         if not match:
             return jsonify({"success": True, "status": "ignored"}), 200
             
-        payment_code = match.group(1)
+        payment_code = match.group(1) # Lấy toàn bộ mã ETxxxxxx
         db = firestore.client()
         trans_ref  = db.collection("transactions").document(payment_code)
         trans_doc  = trans_ref.get()
@@ -505,3 +505,4 @@ def check_premium_status(user_id):
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+s": False, "error": str(e)}), 500
