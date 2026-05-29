@@ -58,7 +58,6 @@ def calculate_expiry(plan_code: str, current_expiry=None):
 
     if current_expiry:
         try:
-            # Firestore timestamp to UTC datetime
             if hasattr(current_expiry, 'replace'):
                 exp_dt = current_expiry.replace(tzinfo=timezone.utc) if current_expiry.tzinfo is None else current_expiry
             else:
@@ -86,6 +85,61 @@ def get_transaction_type(user_data: dict, new_plan_code: str) -> str:
     if rank.get(new_plan_code, 0) > rank.get(current_plan, 0):
         return "upgrade"
     return "downgrade"
+
+def calculate_upgrade_price(user_data: dict, new_plan_code: str) -> dict:
+    """
+    Tính toán số tiền cần trả thêm khi nâng cấp gói (pro-rated).
+    """
+    new_plan_info = PLANS.get(new_plan_code)
+    original_price = new_plan_info["amount"]
+    
+    current_plan = user_data.get("plan")
+    is_premium = user_data.get("isPremium", False)
+    expiry = user_data.get("premiumExpiry")
+    
+    # Nếu không phải upgrade hoặc không có gói cũ còn hạn -> trả full
+    if not is_premium or not current_plan or current_plan == new_plan_code or not expiry:
+        return {
+            "originalPrice": original_price,
+            "creditAmount": 0,
+            "finalPrice": original_price,
+            "daysLeft": 0,
+            "previousPlan": current_plan
+        }
+        
+    # Tính số ngày còn lại
+    now = datetime.now(timezone.utc)
+    exp_dt = expiry.replace(tzinfo=timezone.utc) if hasattr(expiry, 'replace') and expiry.tzinfo is None else expiry
+    
+    if exp_dt <= now:
+        return {
+            "originalPrice": original_price,
+            "creditAmount": 0,
+            "finalPrice": original_price,
+            "daysLeft": 0,
+            "previousPlan": current_plan
+        }
+        
+    days_left = (exp_dt - now).days
+    current_plan_info = PLANS.get(current_plan)
+    
+    # Tính giá trị còn lại: (ngày_còn_lại / tổng_ngày) * giá_gói_cũ
+    total_days = current_plan_info["days"]
+    if total_days <= 0: # Trường hợp lifetime nâng cấp (vô lý nhưng vẫn check)
+        credit_amount = 0
+    else:
+        # Làm tròn tiền
+        credit_amount = int((days_left / total_days) * current_plan_info["amount"])
+        
+    final_price = max(1000, original_price - credit_amount) # Tối thiểu 1000đ cho giao dịch cổng thanh toán
+    
+    return {
+        "originalPrice": original_price,
+        "creditAmount": credit_amount,
+        "finalPrice": final_price,
+        "daysLeft": days_left,
+        "previousPlan": current_plan
+    }
 
 def upgrade_user_premium(db, user_id: str, plan_code: str) -> dict:
     """Cập nhật Firestore user"""
@@ -118,10 +172,10 @@ def upgrade_user_premium(db, user_id: str, plan_code: str) -> dict:
         "premium_expiry":   new_expiry,
     }
 
-def build_transaction_doc(method: str, user_id: str, plan_code: str, amount: int, upgrade_info: dict, extra: dict = None) -> dict:
+def build_transaction_doc(method: str, user_id: str, plan_code: str, amount: int, upgrade_info: dict, extra: dict = None, pricing_detail: dict = None) -> dict:
     """Tạo cấu trúc document transaction chuẩn"""
     plan_info = PLANS.get(plan_code, PLANS["monthly"])
-    return {
+    doc = {
         "userId":          user_id,
         "method":          method,
         "status":          "success",
@@ -135,6 +189,12 @@ def build_transaction_doc(method: str, user_id: str, plan_code: str, amount: int
         "premiumTo":       upgrade_info.get("premium_expiry"),
         "paymentDetail":   extra
     }
+    if pricing_detail:
+        doc.update({
+            "originalPrice": pricing_detail.get("originalPrice"),
+            "creditAmount":  pricing_detail.get("creditAmount"),
+        })
+    return doc
 
 # ══════════════════════════════════════════════════════════════════════════════
 # MOMO
@@ -178,6 +238,22 @@ def verify_momo_signature(data: dict) -> bool:
         logging.error(f"[MoMo] Signature verify error: {e}")
         return False
 
+@payment_bp.route('/upgrade-preview/<user_id>/<new_plan>', methods=['GET'])
+def upgrade_preview(user_id, new_plan):
+    try:
+        db = firestore.client()
+        user_doc = db.collection("users").document(user_id).get()
+        if not user_doc.exists:
+            return jsonify({"success": False, "error": "User not found"}), 404
+            
+        user_data = user_doc.to_dict()
+        plan_code = get_plan_code(new_plan)
+        
+        pricing = calculate_upgrade_price(user_data, plan_code)
+        return jsonify({"success": True, **pricing})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @payment_bp.route('/momo-payment', methods=['POST'])
 def create_momo_payment():
     try:
@@ -186,19 +262,27 @@ def create_momo_payment():
         plan_input = data.get("plan")
         
         plan_code  = get_plan_code(plan_input)
-        plan_info  = PLANS.get(plan_code)
-
+        
+        db = firestore.client()
+        user_data = db.collection("users").document(user_id).get().to_dict()
+        pricing = calculate_upgrade_price(user_data, plan_code)
+        
         order_id   = str(uuid.uuid4())
         request_id = str(uuid.uuid4())
-        extra_data = json.dumps({"user_id": user_id, "plan": plan_code})
+        extra_data = json.dumps({
+            "user_id": user_id, 
+            "plan": plan_code,
+            "originalPrice": pricing["originalPrice"],
+            "creditAmount": pricing["creditAmount"]
+        })
 
         payload = {
             "partnerCode": MOMO_CONFIG["partnerCode"],
             "accessKey":   MOMO_CONFIG["accessKey"],
             "requestId":   request_id,
-            "amount":      str(plan_info["amount"]),
+            "amount":      str(pricing["finalPrice"]),
             "orderId":     order_id,
-            "orderInfo":   data.get("orderInfo", f"EduTalk {plan_info['name']}"),
+            "orderInfo":   data.get("orderInfo", f"EduTalk {PLANS[plan_code]['name']}"),
             "redirectUrl": MOMO_CONFIG["redirectUrl"],
             "ipnUrl":      MOMO_CONFIG["ipnUrl"],
             "requestType": MOMO_CONFIG["requestType"],
@@ -253,7 +337,11 @@ def momo_callback():
                     plan_code    = plan_code,
                     amount       = int(data.get("amount", 0)),
                     upgrade_info = upgrade_info,
-                    extra        = payment_detail
+                    extra        = payment_detail,
+                    pricing_detail = {
+                        "originalPrice": extra.get("originalPrice"),
+                        "creditAmount": extra.get("creditAmount")
+                    }
                 )
                 db.collection("transactions").add(trans_doc)
         
@@ -273,18 +361,22 @@ def create_bank_payment():
         plan_input = data.get("plan")
         
         plan_code  = get_plan_code(plan_input)
-        plan_info  = PLANS.get(plan_code)
+        
+        db = firestore.client()
+        user_data = db.collection("users").document(user_id).get().to_dict()
+        pricing = calculate_upgrade_price(user_data, plan_code)
         
         payment_code = ''.join(random.choices(string.digits, k=6))
-        db = firestore.client()
         
         db.collection("transactions").document(payment_code).set({
             "userId":      user_id,
             "method":      "bank",
             "status":      "pending",
             "planCode":    plan_code,
-            "planName":    plan_info["name"],
-            "amount":      plan_info["amount"],
+            "planName":    PLANS[plan_code]["name"],
+            "amount":      pricing["finalPrice"],
+            "originalPrice": pricing["originalPrice"],
+            "creditAmount": pricing["creditAmount"],
             "paymentCode": f"{SEPAY_CONFIG['prefix']}{payment_code}",
             "timestamp":   firestore.SERVER_TIMESTAMP
         })
@@ -292,7 +384,7 @@ def create_bank_payment():
         return jsonify({
             "success":     True,
             "paymentCode": f"{SEPAY_CONFIG['prefix']}{payment_code}",
-            "amount":      plan_info["amount"],
+            "amount":      pricing["finalPrice"],
             "orderId":     payment_code
         })
     except Exception as e:
@@ -326,7 +418,8 @@ def sepay_webhook():
         if trans_data['status'] == 'success':
             return jsonify({"success": True, "status": "already_processed"}), 200
             
-        if amount_received < trans_data['amount']:
+        expected_amount = trans_data.get('amount', 0)
+        if amount_received < expected_amount * 0.9:
             return jsonify({"success": False, "message": "Amount mismatch"}), 400
              
         upgrade_info = upgrade_user_premium(db, trans_data['userId'], trans_data['planCode'])

@@ -132,6 +132,22 @@ class PaymentService {
         });
   }
 
+  /// Xem trước giá nâng cấp (Pro-rated)
+  Future<Map<String, dynamic>?> getUpgradePreview(String userId, String planCode) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/payment/upgrade-preview/$userId/$planCode"),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint("Lỗi preview nâng cấp: $e");
+    }
+    return null;
+  }
+
   /// Kiểm tra trạng thái Premium từ Backend (Đồng bộ logic)
   Future<Map<String, dynamic>?> checkPremiumStatus(String userId) async {
     try {

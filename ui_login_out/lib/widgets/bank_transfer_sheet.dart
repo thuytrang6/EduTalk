@@ -9,6 +9,7 @@ class BankTransferSheet extends StatefulWidget {
   final String planCode;
   final String userId;
   final int price;
+  final String paymentCode;
 
   const BankTransferSheet({
     Key? key,
@@ -16,6 +17,7 @@ class BankTransferSheet extends StatefulWidget {
     required this.planCode,
     required this.userId,
     required this.price,
+    required this.paymentCode,
   }) : super(key: key);
 
   @override
@@ -23,8 +25,6 @@ class BankTransferSheet extends StatefulWidget {
 }
 
 class _BankTransferSheetState extends State<BankTransferSheet> {
-  String? paymentCode;
-  bool isLoading = true;
   StreamSubscription? _subscription;
   final Set<String> _copiedFields = {};
 
@@ -35,33 +35,11 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
   @override
   void initState() {
     super.initState();
-    _initPayment();
-    _listenToPremiumStatus();
-  }
-
-  Future<void> _initPayment() async {
-    try {
-      final res = await PaymentService().createBankPayment(
-        userId: widget.userId,
-        planCode: widget.planCode,
-      );
-      if (mounted) {
-        setState(() {
-          paymentCode = res.paymentCode;
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Lỗi khởi tạo thanh toán: $e")),
-        );
-        Navigator.pop(context);
-      }
-    }
+    _listenToTransactionStatus();
   }
 
   void _listenToTransactionStatus() {
+    // Lắng nghe trực tiếp trạng thái của document giao dịch này
     _subscription = PaymentService()
         .listenTransactionStatus(widget.paymentCode)
         .listen((status) {
@@ -404,18 +382,6 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                             color: _copiedFields.contains(fieldId) ? Colors.green : const Color(0xFF2563EB),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-          ),
                       ),
                     ),
                   ),

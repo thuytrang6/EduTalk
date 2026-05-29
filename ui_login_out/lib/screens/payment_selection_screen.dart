@@ -35,9 +35,21 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
   void _onConfirm() async {
     if (_selectedMethod == null) return;
 
-    if (_selectedMethod == PaymentMethod.momo) {
-      setState(() => _isLoading = true);
-      try {
+    setState(() => _isLoading = true);
+    
+    try {
+      // 1. Lấy thông tin giá nâng cấp (Preview)
+      final preview = await PaymentService().getUpgradePreview(widget.userId, _planCode);
+      
+      if (mounted && preview != null && (preview['creditAmount'] ?? 0) > 0) {
+        setState(() => _isLoading = false);
+        // Hiện thông báo chi tiết nâng cấp
+        final bool? confirm = await _showUpgradeConfirmation(preview);
+        if (confirm != true) return;
+        setState(() => _isLoading = true);
+      }
+
+      if (_selectedMethod == PaymentMethod.momo) {
         final res = await PaymentService().createMomoPayment(
           userId: widget.userId,
           planCode: _planCode,
@@ -46,19 +58,7 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
         if (res.payUrl != null) {
           await PaymentService().openMomoPayment(res.payUrl!, deeplink: res.deeplink);
         }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Lỗi thanh toán: $e")),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
-        if (mounted) Navigator.pop(context);
-      }
-    } else {
-      setState(() => _isLoading = true);
-      try {
+      } else {
         final res = await PaymentService().createBankPayment(
           userId: widget.userId,
           planCode: _planCode,
@@ -73,21 +73,75 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
               planName: widget.planName,
               planCode: _planCode,
               userId: widget.userId,
-              price: widget.planPrice.toInt(),
+              price: res.amount ?? widget.planPrice.toInt(),
               paymentCode: res.paymentCode ?? "",
             ),
           );
         }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Lỗi khởi tạo ngân hàng: $e")),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Lỗi: $e")),
+        );
+      }
+    } finally {
+      if (mounted && _selectedMethod == PaymentMethod.momo) {
+        setState(() => _isLoading = false);
+        Navigator.pop(context);
+      } else if (mounted && _selectedMethod != PaymentMethod.bankTransfer) {
+        // Với bank transfer loading đã được xử lý khi mở Sheet
+        setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<bool?> _showUpgradeConfirmation(Map<String, dynamic> preview) {
+    final int original = preview['originalPrice'];
+    final int credit = preview['creditAmount'];
+    final int finalPrice = preview['finalPrice'];
+    final int days = preview['daysLeft'];
+
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text("Xác nhận nâng cấp", style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Bạn còn $days ngày của gói cũ."),
+            const SizedBox(height: 8),
+            _rowInfo("Giá trị còn lại:", "- ${credit}đ", color: Colors.green),
+            _rowInfo("Giá gói mới:", "${original}đ"),
+            const Divider(),
+            _rowInfo("Cần thanh toán:", "${finalPrice}đ", isBold: true, color: const Color(0xFF2563EB)),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Hủy", style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: const Text("Xác nhận thanh toán", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rowInfo(String label, String value, {Color? color, bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 14)),
+          Text(value, style: TextStyle(fontSize: 14, fontWeight: isBold ? FontWeight.bold : FontWeight.w600, color: color)),
+        ],
+      ),
+    );
   }
 
   @override
