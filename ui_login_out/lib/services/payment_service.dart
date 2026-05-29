@@ -97,6 +97,19 @@ class PaymentService {
     }
   }
 
+  /// Lắng nghe trạng thái một giao dịch cụ thể (Realtime)
+  Stream<String> listenTransactionStatus(String paymentCode) {
+    return FirebaseFirestore.instance
+        .collection('transactions')
+        .doc(paymentCode)
+        .snapshots()
+        .map((snapshot) {
+          final data = snapshot.data();
+          if (data == null) return "pending";
+          return data['status'] ?? "pending";
+        });
+  }
+
   /// Lắng nghe trạng thái Premium qua Firestore (Realtime)
   Stream<bool> listenPremiumStatus(String userId) {
     return FirebaseFirestore.instance

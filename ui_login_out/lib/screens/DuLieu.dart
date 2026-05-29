@@ -161,8 +161,8 @@ class DuLieuScreenState extends State<DuLieuScreen> {
               decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 24),
-            Lottie.network(
-              'https://assets9.lottiefiles.com/packages/lf20_m6cuL6.json', // Premium/Upgrade animation
+            Lottie.asset(
+              'assets/Live chatbot.json', // Local Robot animation
               height: 180,
             ),
             const SizedBox(height: 24),

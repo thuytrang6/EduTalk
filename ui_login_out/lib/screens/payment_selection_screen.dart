@@ -57,18 +57,36 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
         if (mounted) Navigator.pop(context);
       }
     } else {
-      Navigator.pop(context);
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-        builder: (_) => BankTransferSheet(
-          planName: widget.planName,
-          planCode: _planCode,
+      setState(() => _isLoading = true);
+      try {
+        final res = await PaymentService().createBankPayment(
           userId: widget.userId,
-          price: widget.planPrice.toInt(),
-        ),
-      );
+          planCode: _planCode,
+        );
+        if (mounted) {
+          Navigator.pop(context);
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+            builder: (_) => BankTransferSheet(
+              planName: widget.planName,
+              planCode: _planCode,
+              userId: widget.userId,
+              price: widget.planPrice.toInt(),
+              paymentCode: res.paymentCode ?? "",
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Lỗi khởi tạo ngân hàng: $e")),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 

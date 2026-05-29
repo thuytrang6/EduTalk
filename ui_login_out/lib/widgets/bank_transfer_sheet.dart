@@ -61,9 +61,11 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
     }
   }
 
-  void _listenToPremiumStatus() {
-    _subscription = PaymentService().listenPremiumStatus(widget.userId).listen((isPremium) {
-      if (isPremium && mounted) {
+  void _listenToTransactionStatus() {
+    _subscription = PaymentService()
+        .listenTransactionStatus(widget.paymentCode)
+        .listen((status) {
+      if (status == "success" && mounted) {
         _subscription?.cancel();
         Navigator.pop(context);
         _showSuccessDialog();
@@ -147,18 +149,7 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return Container(
-        height: 400,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB))),
-      );
-    }
-
-    final String qrUrl = "https://img.vietqr.io/image/$bankId-$accountNo-qr_only.png?amount=${widget.price}&addInfo=$paymentCode&accountName=$accountName";
+    final String qrUrl = "https://img.vietqr.io/image/$bankId-$accountNo-qr_only.png?amount=${widget.price}&addInfo=${widget.paymentCode}&accountName=$accountName";
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -284,7 +275,7 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
             _buildInfoRow("Số tài khoản", accountNo, isMono: true, canCopy: true, fieldId: "stk"),
             _buildInfoRow("Chủ tài khoản", accountName),
             _buildInfoRow("Số tiền", "${widget.price}đ", isRed: true, isLarge: true),
-            _buildInfoRow("Nội dung CK", paymentCode ?? "", isMono: true, canCopy: true, fieldId: "content", isBold: true),
+            _buildInfoRow("Nội dung CK", widget.paymentCode, isMono: true, canCopy: true, fieldId: "content", isBold: true),
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),
@@ -413,6 +404,18 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                             color: _copiedFields.contains(fieldId) ? Colors.green : const Color(0xFF2563EB),
                           ),
                         ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+          ),
                       ),
                     ),
                   ),
