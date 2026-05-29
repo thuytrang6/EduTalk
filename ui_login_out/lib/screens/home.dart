@@ -138,7 +138,13 @@ class _HomeScreenState extends State<HomeScreen> {
                    (_lastPremiumAt == null || userData.premiumAt!.isAfter(_lastPremiumAt!))) {
                   
                   _lastPremiumAt = userData.premiumAt; // Cập nhật mốc mới nhất
-                  _showUpgradeSuccessDialog(userData.currentPlan ?? "Premium");
+                  
+                  // Đợi 800ms để các sheet (MoMo/Bank) đóng lời hẳn rồi mới hiện Dialog
+                  Future.delayed(const Duration(milliseconds: 800), () {
+                    if (mounted) {
+                      _showUpgradeSuccessDialog(userData.currentPlan ?? "Premium");
+                    }
+                  });
                 }
               }
 
@@ -163,9 +169,10 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 20),
-            Lottie.network(
-              'https://lottie.host/825f385c-1971-463e-862d-94b79148d45e/v2t4VqE5xT.json', // Crown/Success animation
-              height: 160,
+            Lottie.asset(
+              'assets/Live chatbot.json', // Local Robot animation
+              width: 150,
+              height: 150,
               repeat: false,
             ),
             const SizedBox(height: 24),
