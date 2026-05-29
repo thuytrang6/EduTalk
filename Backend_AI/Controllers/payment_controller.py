@@ -505,4 +505,3 @@ def check_premium_status(user_id):
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-s": False, "error": str(e)}), 500
