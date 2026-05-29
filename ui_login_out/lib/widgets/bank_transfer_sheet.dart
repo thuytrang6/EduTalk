@@ -28,6 +28,8 @@ class BankTransferSheet extends StatefulWidget {
 
 class _BankTransferSheetState extends State<BankTransferSheet> {
   StreamSubscription? _subscription;
+  Timer? _pollingTimer;
+  DateTime? _startTime;
   final Set<String> _copiedFields = {};
 
   final String bankId = "OCB";
@@ -37,7 +39,34 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
   @override
   void initState() {
     super.initState();
+    _startTime = DateTime.now();
+    _startPolling();
     _listenToTransactionStatus();
+  }
+
+  void _startPolling() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      // 1. Kiểm tra timeout (5 phút)
+      if (DateTime.now().difference(_startTime!).inMinutes >= 5) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Giao dịch đang được xử lý, vui lòng kiên nhẫn chờ trong giây lát...")),
+          );
+        }
+        _pollingTimer?.cancel();
+        return;
+      }
+
+      // 2. Gọi API check status từ server
+      final status = await PaymentService().checkPremiumStatus(widget.userId);
+      if (status != null && status['isPremium'] == true && mounted) {
+        _pollingTimer?.cancel();
+        _subscription?.cancel();
+        
+        // Đóng Sheet để quay về Premium_screen
+        Navigator.pop(context);
+      }
+    });
   }
 
   void _listenToTransactionStatus() {
@@ -46,64 +75,18 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
         .listenTransactionStatus(widget.orderId)
         .listen((status) {
       if (status == "success" && mounted) {
+        _pollingTimer?.cancel();
         _subscription?.cancel();
+        // Đóng Sheet để quay về Premium_screen
         Navigator.pop(context);
-        // Không hiện dialog ở đây nữa, home.dart sẽ tự hiện
       }
     });
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 20),
-            Lottie.asset(
-              'assets/Live chatbot.json', // Local Robot animation
-              width: 150,
-              height: 150,
-              repeat: false,
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              "Nâng cấp thành công!",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Giao dịch của bạn đã được xác nhận. Chào mừng bạn đến với cộng đồng EduTalk Premium!",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF22C55E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 0,
-                ),
-                child: const Text("Bắt đầu trải nghiệm ngay 🚀", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
+    _pollingTimer?.cancel();
     super.dispose();
   }
 
