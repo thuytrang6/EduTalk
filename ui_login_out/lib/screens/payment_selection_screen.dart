@@ -67,7 +67,7 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
           planCode: _planCode,
         );
         if (mounted) {
-          // KHÔNG pop Navigator ở đây, để BankTransferSheet tự quản lý context
+          Navigator.pop(context);
           showModalBottomSheet(
             context: context,
             isScrollControlled: true,
@@ -90,10 +90,7 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
         );
       }
     } finally {
-      // Logic confirm/loading cho MoMo được xử lý bởi Navigator và Listener
       if (mounted && _selectedMethod == PaymentMethod.momo) {
-        setState(() => _isLoading = false);
-      } else if (mounted) {
         setState(() => _isLoading = false);
       }
     }
@@ -104,59 +101,9 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
     PaymentService().listenTransactionStatus(orderId).listen((status) {
       if (status == "success" && mounted) {
         // Tự động đóng màn hình chọn khi thành công
-        // home.dart sẽ chịu trách nhiệm hiện Dialog chúc mừng
         Navigator.pop(context);
       }
     });
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 20),
-            Lottie.network(
-              'https://lottie.host/825f385c-1971-463e-862d-94b79148d45e/v2t4VqE5xT.json',
-              height: 160,
-              repeat: false,
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              "Thanh toán thành công!",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Gói Premium của bạn đã được kích hoạt. Chúc bạn có những trải nghiệm tuyệt vời cùng EduTalk!",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Đóng Dialog
-                  Navigator.pop(context); // Đóng Screen chọn phương thức
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF22C55E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: const Text("Bắt đầu ngay 🚀", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<bool?> _showUpgradeConfirmation(Map<String, dynamic> preview) {

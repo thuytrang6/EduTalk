@@ -28,8 +28,6 @@ class BankTransferSheet extends StatefulWidget {
 
 class _BankTransferSheetState extends State<BankTransferSheet> {
   StreamSubscription? _subscription;
-  Timer? _pollingTimer;
-  DateTime? _startTime;
   final Set<String> _copiedFields = {};
 
   final String bankId = "OCB";
@@ -39,46 +37,17 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
   @override
   void initState() {
     super.initState();
-    _startTime = DateTime.now();
-    _startPolling();
     _listenToTransactionStatus();
   }
 
-  void _startPolling() {
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
-      // 1. Kiểm tra timeout (5 phút)
-      if (DateTime.now().difference(_startTime!).inMinutes >= 5) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Giao dịch đang được xử lý, vui lòng kiên nhẫn chờ trong giây lát...")),
-          );
-        }
-        _pollingTimer?.cancel();
-        return;
-      }
-
-      // 2. Gọi API check status từ server
-      final status = await PaymentService().checkPremiumStatus(widget.userId);
-      if (status != null && status['isPremium'] == true && mounted) {
-        _pollingTimer?.cancel();
-        _subscription?.cancel();
-        
-        // Đóng Sheet để quay về Premium_screen
-        Navigator.pop(context);
-      }
-    });
-  }
-
   void _listenToTransactionStatus() {
-    // Lắng nghe trực tiếp trạng thái của document giao dịch này qua orderId (số)
+    // CHỈ lắng nghe trạng thái của ĐÚNG đơn hàng này
     _subscription = PaymentService()
         .listenTransactionStatus(widget.orderId)
         .listen((status) {
       if (status == "success" && mounted) {
-        _pollingTimer?.cancel();
         _subscription?.cancel();
-        // Đóng Sheet để quay về Premium_screen
-        Navigator.pop(context);
+        Navigator.pop(context); // Đóng Sheet khi đúng đơn này thành công
       }
     });
   }
@@ -86,7 +55,6 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
   @override
   void dispose() {
     _subscription?.cancel();
-    _pollingTimer?.cancel();
     super.dispose();
   }
 
