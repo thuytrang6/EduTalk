@@ -67,7 +67,7 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
           planCode: _planCode,
         );
         if (mounted) {
-          Navigator.pop(context);
+          // KHÔNG pop Navigator ở đây, để BankTransferSheet tự quản lý context
           showModalBottomSheet(
             context: context,
             isScrollControlled: true,
@@ -92,6 +92,8 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
     } finally {
       // Logic confirm/loading cho MoMo được xử lý bởi Navigator và Listener
       if (mounted && _selectedMethod == PaymentMethod.momo) {
+        setState(() => _isLoading = false);
+      } else if (mounted) {
         setState(() => _isLoading = false);
       }
     }

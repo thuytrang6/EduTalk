@@ -64,17 +64,11 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 20),
-            Lottie.network(
-              'https://lottie.host/825f385c-1971-463e-862d-94b79148d45e/v2t4VqE5xT.json',
-              height: 160,
+            Lottie.asset(
+              'assets/Live chatbot.json', // Local Robot animation
+              width: 150,
+              height: 150,
               repeat: false,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  height: 160,
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.school_rounded, color: Color(0xFF22C55E), size: 90),
-                );
-              },
             ),
             const SizedBox(height: 24),
             const Text(
