@@ -9,7 +9,8 @@ class BankTransferSheet extends StatefulWidget {
   final String planCode;
   final String userId;
   final int price;
-  final String paymentCode;
+  final String paymentCode; // ETxxxxxx
+  final String orderId;     // Numeric ID
 
   const BankTransferSheet({
     Key? key,
@@ -18,6 +19,7 @@ class BankTransferSheet extends StatefulWidget {
     required this.userId,
     required this.price,
     required this.paymentCode,
+    required this.orderId,
   }) : super(key: key);
 
   @override
@@ -29,7 +31,7 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
   final Set<String> _copiedFields = {};
 
   final String bankId = "OCB";
-  final String accountNo = "SEPEDUTALKVN26";
+  final String accountNo = "0385274441";
   final String accountName = "NGUYEN ANH QUAN";
 
   @override
@@ -39,9 +41,9 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
   }
 
   void _listenToTransactionStatus() {
-    // Lắng nghe trực tiếp trạng thái của document giao dịch này
+    // Lắng nghe trực tiếp trạng thái của document giao dịch này qua orderId (số)
     _subscription = PaymentService()
-        .listenTransactionStatus(widget.paymentCode)
+        .listenTransactionStatus(widget.orderId)
         .listen((status) {
       if (status == "success" && mounted) {
         _subscription?.cancel();

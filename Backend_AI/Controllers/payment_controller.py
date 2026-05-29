@@ -58,6 +58,7 @@ def calculate_expiry(plan_code: str, current_expiry=None):
 
     if current_expiry:
         try:
+            # Firestore timestamp to UTC datetime
             if hasattr(current_expiry, 'replace'):
                 exp_dt = current_expiry.replace(tzinfo=timezone.utc) if current_expiry.tzinfo is None else current_expiry
             else:
@@ -366,9 +367,9 @@ def create_bank_payment():
         user_data = db.collection("users").document(user_id).get().to_dict()
         pricing = calculate_upgrade_price(user_data, plan_code)
         
-        payment_code = ''.join(random.choices(string.digits, k=6))
+        payment_code_numeric = ''.join(random.choices(string.digits, k=6))
         
-        db.collection("transactions").document(payment_code).set({
+        db.collection("transactions").document(payment_code_numeric).set({
             "userId":      user_id,
             "method":      "bank",
             "status":      "pending",
@@ -377,15 +378,15 @@ def create_bank_payment():
             "amount":      pricing["finalPrice"],
             "originalPrice": pricing["originalPrice"],
             "creditAmount": pricing["creditAmount"],
-            "paymentCode": f"{SEPAY_CONFIG['prefix']}{payment_code}",
+            "paymentCode": f"{SEPAY_CONFIG['prefix']}{payment_code_numeric}",
             "timestamp":   firestore.SERVER_TIMESTAMP
         })
         
         return jsonify({
             "success":     True,
-            "paymentCode": f"{SEPAY_CONFIG['prefix']}{payment_code}",
+            "paymentCode": f"{SEPAY_CONFIG['prefix']}{payment_code_numeric}",
             "amount":      pricing["finalPrice"],
-            "orderId":     payment_code
+            "orderId":     payment_code_numeric
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
@@ -402,13 +403,14 @@ def sepay_webhook():
         content = data.get("content", "")
         amount_received = float(data.get("transferAmount", 0))
         
-        match = re.search(rf"({SEPAY_CONFIG['prefix']}\d{{6,8}})", content.upper())
+        # Bóc tách lấy phần SỐ từ nội dung ETxxxxxx
+        match = re.search(rf"{SEPAY_CONFIG['prefix']}(\d{{6,8}})", content.upper())
         if not match:
             return jsonify({"success": True, "status": "ignored"}), 200
             
-        payment_code = match.group(1) # Lấy toàn bộ mã ETxxxxxx
+        payment_id = match.group(1) 
         db = firestore.client()
-        trans_ref  = db.collection("transactions").document(payment_code)
+        trans_ref  = db.collection("transactions").document(payment_id)
         trans_doc  = trans_ref.get()
         
         if not trans_doc.exists:
@@ -481,10 +483,10 @@ def check_premium_status(user_id):
                     "subscriptionStatus": "expired"
                 })
                 return jsonify({
-                    "success":   True,
-                    "isPremium": False,
-                    "expired":   True,
-                    "message":   "Premium expired"
+                    "success":    True,
+                    "isPremium":  False,
+                    "expired":    True,
+                    "message":    "Premium expired"
                 })
         
         days_left = None

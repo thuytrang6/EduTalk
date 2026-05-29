@@ -77,7 +77,8 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
               planCode: _planCode,
               userId: widget.userId,
               price: res.amount ?? widget.planPrice.toInt(),
-              paymentCode: res.paymentCode ?? "", // res.paymentCode đã là ETxxxxxx
+              paymentCode: res.paymentCode ?? "", // Hiện ETxxxxxx
+              orderId: res.orderId ?? "",        // Lắng nghe Firestore ID (số)
             ),
           );
         }
