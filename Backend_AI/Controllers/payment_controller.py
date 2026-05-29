@@ -344,7 +344,7 @@ def momo_callback():
                         "creditAmount": extra.get("creditAmount")
                     }
                 )
-                db.collection("transactions").add(trans_doc)
+                db.collection("transactions").document(data.get("orderId")).set(trans_doc)
         
         return jsonify({"status": "ok"}), 200
     except Exception as e:
