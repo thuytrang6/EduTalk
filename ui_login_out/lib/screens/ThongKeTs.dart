@@ -13,7 +13,7 @@ class ThongKeTs extends StatelessWidget {
       extendBody: true,
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics: const ClampingScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 110),
           child: Column(
             children: [

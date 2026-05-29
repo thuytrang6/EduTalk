@@ -39,7 +39,7 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics: const ClampingScrollPhysics(),
           child: Column(
             children: [
               buildTopSection(),
