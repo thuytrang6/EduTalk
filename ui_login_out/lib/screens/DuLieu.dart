@@ -130,10 +130,19 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     if (!doc.exists) return;
     final userData = UserModel.fromDocument(doc);
 
-    if (!userData.isPremiumActive && userData.usageCount >= userData.freeLimit) {
+    // Ưu tiên check Premium trước. Nếu là Premium Active thì cho qua luôn, không check lượt.
+    if (userData.isPremiumActive) {
+      final List<double> scoresDetail = scores
+          .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
+          .toList();
+      widget.onOPenPhanTich?.call(_totalScore, subjects, scoresDetail);
+    } 
+    // Nếu KHÔNG phải Premium, lúc này mới check lượt dùng thử.
+    else if (userData.usageCount >= userData.freeLimit) {
       if (mounted) _showUpgradeBottomSheet();
-    } else {
-      // KHÔNG TĂNG usageCount Ở ĐÂY NỮA
+    } 
+    // Trường hợp chưa hết lượt dùng thử.
+    else {
       final List<double> scoresDetail = scores
           .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
           .toList();
@@ -161,8 +170,8 @@ class DuLieuScreenState extends State<DuLieuScreen> {
               decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
             ),
             const SizedBox(height: 24),
-            Lottie.network(
-              'https://assets9.lottiefiles.com/packages/lf20_m6cuL6.json', // Premium/Upgrade animation
+            Lottie.asset(
+              'assets/Live chatbot.json', // Local Robot animation
               height: 180,
             ),
             const SizedBox(height: 24),
@@ -302,7 +311,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
         final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
-        final bool isPremium = user?.isPremium ?? false;
+        final bool isPremium = user?.isPremiumActive ?? false;
         final int remaining = (3 - (user?.usageCount ?? 0)).clamp(0, 3);
 
         return Container(

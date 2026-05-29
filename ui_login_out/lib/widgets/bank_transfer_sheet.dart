@@ -6,14 +6,20 @@ import '../services/payment_service.dart';
 
 class BankTransferSheet extends StatefulWidget {
   final String planName;
+  final String planCode;
   final String userId;
   final int price;
+  final String paymentCode; // ETxxxxxx
+  final String orderId;     // Numeric ID
 
   const BankTransferSheet({
     Key? key,
     required this.planName,
+    required this.planCode,
     required this.userId,
     required this.price,
+    required this.paymentCode,
+    required this.orderId,
   }) : super(key: key);
 
   @override
@@ -21,110 +27,31 @@ class BankTransferSheet extends StatefulWidget {
 }
 
 class _BankTransferSheetState extends State<BankTransferSheet> {
-  String? paymentCode;
-  bool isLoading = true;
   StreamSubscription? _subscription;
   final Set<String> _copiedFields = {};
 
-  // Cấu hình ngân hàng OCB của bạn
   final String bankId = "OCB";
-  final String accountNo = "SEPEDUTALKVN26";
+  final String accountNo = "0385274441";
   final String accountName = "NGUYEN ANH QUAN";
 
   @override
   void initState() {
     super.initState();
-    _initPayment();
-    _listenToPremiumStatus();
+    _listenToTransactionStatus();
   }
 
-  Future<void> _initPayment() async {
-    try {
-      final res = await PaymentService().createBankPayment(
-        userId: widget.userId,
-        amount: widget.price,
-        planName: widget.planName,
-      );
-      if (mounted) {
-        setState(() {
-          paymentCode = res['paymentCode'];
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Lỗi khởi tạo thanh toán: $e")),
-        );
-        Navigator.pop(context);
-      }
-    }
-  }
-
-  void _listenToPremiumStatus() {
-    _subscription = PaymentService().listenPremiumStatus(widget.userId).listen((isPremium) {
-      if (isPremium && mounted) {
+  void _listenToTransactionStatus() {
+    // CHỈ lắng nghe trạng thái của ĐÚNG đơn hàng này
+    _subscription = PaymentService()
+        .listenTransactionStatus(widget.orderId)
+        .listen((status) {
+      if (status == "success" && mounted) {
         _subscription?.cancel();
-        Navigator.pop(context);
-        _showSuccessDialog();
+        // Pop 2 lần để đóng cả BankTransferSheet và PaymentSelectionScreen
+        Navigator.pop(context); // Đóng Sheet hiện tại
+        Navigator.pop(context); // Đóng màn hình PaymentSelectionScreen bên dưới
       }
     });
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 20),
-            
-            Lottie.network(
-              'https://lottie.host/825f385c-1971-463e-862d-94b79148d45e/v2t4VqE5xT.json', // Chúc mừng thành công (Education style)
-              height: 160,
-              repeat: false,
-              errorBuilder: (context, error, stackTrace) {
-                // Nếu lỗi mạng, hiện Icon dự phòng để không bị văng bảng đỏ
-                return Container(
-                  height: 160,
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.school_rounded, color: Color(0xFF22C55E), size: 90),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              "Nâng cấp thành công!",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              "Giao dịch của bạn đã được xác nhận. Chào mừng bạn đến với cộng đồng EduTalk Premium!",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF22C55E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 0,
-                ),
-                child: const Text("Bắt đầu trải nghiệm ngay 🚀", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -149,18 +76,7 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return Container(
-        height: 400,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: const Center(child: CircularProgressIndicator(color: Color(0xFF2563EB))),
-      );
-    }
-
-    final String qrUrl = "https://img.vietqr.io/image/$bankId-$accountNo-qr_only.png?amount=${widget.price}&addInfo=$paymentCode&accountName=$accountName";
+    final String qrUrl = "https://img.vietqr.io/image/$bankId-$accountNo-qr_only.png?amount=${widget.price}&addInfo=${widget.paymentCode}&accountName=$accountName";
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -172,7 +88,6 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle bar
             Container(
               width: 40,
               height: 4,
@@ -182,8 +97,6 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Header Section
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -212,8 +125,6 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
               ],
             ),
             const SizedBox(height: 24),
-
-            // QR Code Section
             Center(
               child: Container(
                 padding: const EdgeInsets.all(16),
@@ -269,12 +180,9 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                 ),
               ),
             ),
-
             const SizedBox(height: 32),
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
             const SizedBox(height: 24),
-
-            // Bank Info Section
             _buildInfoRow(
               "Ngân hàng",
               "OCB - Ngân hàng Phương Đông",
@@ -294,11 +202,8 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
             _buildInfoRow("Số tài khoản", accountNo, isMono: true, canCopy: true, fieldId: "stk"),
             _buildInfoRow("Chủ tài khoản", accountName),
             _buildInfoRow("Số tiền", "${widget.price}đ", isRed: true, isLarge: true),
-            _buildInfoRow("Nội dung CK", paymentCode ?? "", isMono: true, canCopy: true, fieldId: "content", isBold: true),
-
+            _buildInfoRow("Nội dung CK", widget.paymentCode, isMono: true, canCopy: true, fieldId: "content", isBold: true),
             const SizedBox(height: 24),
-
-            // Yellow Banner
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -319,10 +224,7 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                 ],
               ),
             ),
-
             const SizedBox(height: 32),
-
-            // Actions
             Column(
               children: [
                 Container(
@@ -345,7 +247,6 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                   ),
                   child: ElevatedButton(
                     onPressed: () {
-                      // Logic button "Tôi đã chuyển khoản" - thường là đóng sheet và chờ polling
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Hệ thống đang kiểm tra giao dịch của bạn!")),
