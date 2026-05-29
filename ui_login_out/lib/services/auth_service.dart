@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../models/user_model.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -19,13 +20,16 @@ class AuthService {
       await userCredential.user!.sendEmailVerification();
 
       String uid = userCredential.user!.uid;
-      await _firestore.collection('users').doc(uid).set({
-        'uid': uid,
-        'name': name,
-        'email': email,
-        'role': 'user',
-        'created_at': FieldValue.serverTimestamp(),
-      });
+      UserModel newUser = UserModel(
+        uid: uid,
+        name: name,
+        email: email,
+        role: 'user',
+        createdAt: Timestamp.now(),
+        isPremium: false,
+        usageCount: 0,
+      );
+      await _firestore.collection('users').doc(uid).set(newUser.toMap());
 
       print("Register OK — uid: $uid");
       return {"status": "success"};
@@ -117,6 +121,8 @@ class AuthService {
           'email': user.email ?? '',
           'role': 'user',
           'created_at': FieldValue.serverTimestamp(),
+          'isPremium': false,
+          'usageCount': 0,
         });
         print("Google login — user mới, đã lưu Firestore");
         return {"status": "success", "role": "user"};

@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
+import 'package:ui_login_out/services/premium_theme_helper.dart';
 import 'Premium_screen.dart';
+import '../models/user_model.dart';
+import '../widgets/premium_upgrade_dialog.dart';
 
 class DuLieuScreen extends StatefulWidget {
   final ValueChanged<int>? onChangeTab;
@@ -116,6 +122,89 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     super.dispose();
   }
 
+  Future<void> _handleAnalyze() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    if (!doc.exists) return;
+    final userData = UserModel.fromDocument(doc);
+
+    if (!userData.isPremiumActive && userData.usageCount >= userData.freeLimit) {
+      if (mounted) _showUpgradeBottomSheet();
+    } else {
+      // KHÔNG TĂNG usageCount Ở ĐÂY NỮA
+      final List<double> scoresDetail = scores
+          .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
+          .toList();
+      widget.onOPenPhanTich?.call(_totalScore, subjects, scoresDetail);
+    }
+  }
+
+  void _showUpgradeBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 24),
+            Lottie.network(
+              'https://assets9.lottiefiles.com/packages/lf20_m6cuL6.json', // Premium/Upgrade animation
+              height: 180,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Bạn đã dùng hết lượt miễn phí",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Để tiếp tục sử dụng tính năng AI phân tích chuyên sâu và không giới hạn lượt dùng, hãy nâng cấp lên gói Premium ngay nhé!",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 15),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PremiumScreen()));
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff2563eb),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text("Nâng cấp Premium 👑", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Để sau", style: TextStyle(color: Colors.grey)),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -209,68 +298,75 @@ class DuLieuScreenState extends State<DuLieuScreen> {
   }
 
   Widget _buildTrialCard() {
-    return Container(
-      width: double.infinity,
-      height: 60,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 211, 121, 3).withOpacity(0.16),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color.fromARGB(255, 223, 146, 30).withOpacity(0.5),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: ValueListenableBuilder<int>(
-              valueListenable: freeUsageCount,
-              builder: (context, value, _) {
-                return Text(
-                  "Còn $value/3 lượt dùng thử",
-                  style: const TextStyle(
-                    color: Color(0xffffe08a),
+    return ValueListenableBuilder<UserModel?>(
+      valueListenable: currentUserNotifier,
+      builder: (context, user, _) {
+        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final bool isPremium = user?.isPremium ?? false;
+        final int remaining = (3 - (user?.usageCount ?? 0)).clamp(0, 3);
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          decoration: BoxDecoration(
+            color: theme.bgColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: theme.accentColor.withOpacity(0.6),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  isPremium ? theme.title : "Còn $remaining/3 lượt dùng thử",
+                  style: TextStyle(
+                    color: isPremium ? Colors.white : const Color(0xffffe08a),
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
-                );
-              },
-            ),
-          ),
-          InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const PremiumScreen()),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xffffb82e), Color(0xffff991f)],
                 ),
-                borderRadius: BorderRadius.circular(16),
               ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.workspace_premium, color: Colors.white, size: 16),
-                  SizedBox(width: 6),
-                  Text(
-                    "Nâng cấp",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+              Container(
+                height: 50,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: theme.gradientColors,
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PremiumScreen(),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(theme.icon, color: Colors.white, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        isPremium ? "Chi tiết" : "Nâng cấp",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -697,7 +793,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton(
-          onPressed: () {
+          onPressed: () async {
             if (!_hasValidScores) {
               setState(() => _showScoreError = true);
               final ctx = _scoreRowKey.currentContext;
@@ -712,10 +808,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
               return;
             }
             setState(() => _showScoreError = false);
-            final List<double> scoresDetail = scores
-                .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
-                .toList();
-            widget.onOPenPhanTich?.call(_totalScore, subjects, scoresDetail);
+            await _handleAnalyze();
           },
           style: ElevatedButton.styleFrom(
             elevation: 8,
@@ -742,9 +835,8 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       ),
     );
   }
-} // ← Đóng class DuLieuScreenState
+}
 
-// ── FORMATTER ────────────────────────────────────────────────────────────────
 class _ScoreInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(

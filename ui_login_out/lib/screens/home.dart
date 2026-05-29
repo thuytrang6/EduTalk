@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
+import 'package:ui_login_out/services/payment_service.dart';
+import '../models/user_model.dart';
 import 'PhanTich.dart';
 import 'DuLieu.dart';
 import 'ThaoLuan.dart';
@@ -10,7 +14,7 @@ import 'Profile.dart';
 import 'KetQua.dart';
 import 'About.dart';
 import 'ContactPage.dart';
-
+import 'Premium_screen.dart';
 class HomeScreen extends StatefulWidget {
   final String userName;
   HomeScreen({super.key, required this.userName});
@@ -38,6 +42,95 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double _aiIconRight = 16;
   double _aiIconBottom = 90;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToUsageCount();
+    _checkInitialPremiumStatus();
+  }
+
+  void _checkInitialPremiumStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final status = await PaymentService().checkPremiumStatus(user.uid);
+      if (status != null && status['expired'] == true && mounted) {
+        _showExpiryDialog(status['plan'] ?? 'Premium');
+      }
+    }
+  }
+
+  void _showExpiryDialog(String planName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Lottie.network(
+              'https://assets10.lottiefiles.com/packages/lf20_myejioos.json', // Sad/Expired animation
+              height: 150,
+              repeat: false,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Gói $planName đã hết hạn",
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Hãy gia hạn hoặc nâng cấp để tiếp tục trải nghiệm EduTalk Premium không giới hạn nhé!",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Để sau", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PremiumScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff2563eb),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text("Nâng cấp ngay", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _listenToUsageCount() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((snapshot) {
+            if (snapshot.exists && mounted) {
+              final userData = UserModel.fromDocument(snapshot);
+              // Đồng bộ giá trị từ Firestore sang ValueNotifier global
+              freeUsageCount.value = (3 - userData.usageCount).clamp(0, 3);
+              
+              // Đồng bộ toàn bộ thông tin User để xử lý Theme Premium
+              currentUserNotifier.value = userData;
+            }
+          });
+    }
+  }
 
   List<Widget> get pages => [
     HomePage(
@@ -103,13 +196,10 @@ class _HomeScreenState extends State<HomeScreen> {
     List<int> userScores,
     List<int> majorRequirements,
   ) {
-    // Trừ 1 lượt free
-    final currentCount = freeUsageCount.value;
-    if (currentCount > 0) {
-      freeUsageCount.value = currentCount - 1;
-    }
+    // Không cần trừ lượt ở đây nữa vì DuLieuScreen đã xử lý trên Firestore
+    // và HomeScreen đã có listener để đồng bộ ValueNotifier freeUsageCount.
 
-    // Nếu sau khi trừ còn 0 lượt → hiện thông báo hết lượt
+    // Nếu sau khi Firestore cập nhật mà còn 0 lượt → hiện thông báo hết lượt
     if (freeUsageCount.value == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(

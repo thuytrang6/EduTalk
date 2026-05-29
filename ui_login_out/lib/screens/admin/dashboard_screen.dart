@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -8,31 +12,47 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final Map<String, int> stats = {
-    'totalUsers': 1,
-    'premiumUsers': 0,
-    'totalPosts': 0,
-    'activeUsers': 1,
-  };
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(bottom: 100),
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildMainContent(),
-          ],
-        ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _db.collection('users').snapshots(),
+        builder: (context, userSnapshot) {
+          return StreamBuilder<QuerySnapshot>(
+            stream: _db.collection('transactions').where('status', isEqualTo: 'success').snapshots(),
+            builder: (context, transSnapshot) {
+              final users = userSnapshot.data?.docs ?? [];
+              final premiumUsers = users.where((u) => (u.data() as Map)['isPremium'] == true).length;
+
+              final transactions = transSnapshot.data?.docs ?? [];
+              double totalRevenue = 0;
+              for (var doc in transactions) {
+                totalRevenue += (doc.data() as Map)['amount'] ?? 0.0;
+              }
+
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 100),
+                child: Column(
+                  children: [
+                    _buildHeader(users.length, premiumUsers, totalRevenue),
+                    _buildMainContent(users.length, premiumUsers, transactions.length),
+                  ],
+                ),
+              );
+            }
+          );
+        }
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(int totalUsers, int premiumUsers, double revenue) {
+    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
@@ -43,7 +63,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+      padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -52,111 +72,140 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
-                child: const Icon(Icons.show_chart_rounded, color: Colors.white, size: 22),
+                child: const Icon(Icons.analytics_rounded, color: Colors.white, size: 22),
               ),
               const SizedBox(width: 14),
               const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Quản trị viên', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  Text('Admin Dashboard', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+                  Text('EduTalk Business', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Text('Doanh thu & Chỉ số', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 28),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.55,
-            children: [
-              _buildStatCard(Icons.people_alt_rounded, stats['totalUsers'].toString(), 'Tổng người dùng'),
-              _buildStatCard(Icons.workspace_premium_rounded, stats['premiumUsers'].toString(), 'Premium Users', isAmber: true),
-              _buildStatCard(Icons.chat_bubble_rounded, stats['totalPosts'].toString(), 'Bài viết forum', isPink: true),
-              _buildStatCard(Icons.how_to_reg_rounded, stats['activeUsers'].toString(), 'Hoạt động'),
-            ],
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("TỔNG DOANH THU", style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                const SizedBox(height: 8),
+                Text(currencyFormat.format(revenue), style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    _buildQuickStat("Người dùng", "$totalUsers", Icons.people_outline),
+                    const SizedBox(width: 24),
+                    _buildQuickStat("Premium", "$premiumUsers", Icons.star_outline),
+                  ],
+                )
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard(IconData icon, String value, String label, {bool isAmber = false, bool isPink = false}) {
-    Color iconColor = Colors.white70;
-    if (isAmber) iconColor = Colors.amber[300]!;
-    if (isPink) iconColor = Colors.pink[200]!;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, color: iconColor, size: 20),
-              Text(
-                value,
-                style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900),
-              ),
-            ],
-          ),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
-        ],
-      ),
+  Widget _buildQuickStat(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white60, size: 16),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11)),
+          ],
+        )
+      ],
     );
   }
 
-  Widget _buildMainContent() {
+  Widget _buildMainContent(int users, int premium, int transCount) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          const SizedBox(height: 20),
-          _buildQuickActionSection(),
+          const SizedBox(height: 24),
+          _buildQuickActionSection(users, premium),
           const SizedBox(height: 16),
-          _buildActivitySection(),
-          const SizedBox(height: 16),
-          _buildSystemHealthSection(),
+          _buildRecentTransactionsSection(),
         ],
       ),
     );
   }
 
-  Widget _buildQuickActionSection() {
+  Widget _buildRecentTransactionsSection() {
+    return _buildContainerSection(
+      title: 'Giao dịch gần đây',
+      icon: Icons.history_rounded,
+      iconColor: Colors.blue,
+      child: StreamBuilder<QuerySnapshot>(
+        stream: _db.collection('transactions').orderBy('timestamp', descending: true).limit(5).snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          final docs = snapshot.data!.docs;
+
+          if (docs.isEmpty) return const Padding(padding: EdgeInsets.symmetric(vertical: 20), child: Text("Chưa có giao dịch nào"));
+
+          return Column(
+            children: docs.map((doc) {
+              final data = doc.data() as Map;
+              final amount = data['amount'] ?? 0.0;
+              final status = data['status'] ?? 'pending';
+
+              return _buildTransactionItem(
+                data['plan'] ?? 'Gói cước',
+                NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(amount),
+                status == 'success' ? Colors.green : Colors.orange,
+              );
+            }).toList(),
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem(String title, String amount, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8, height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 12),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            ],
+          ),
+          Text(amount, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionSection(int users, int premium) {
     return _buildContainerSection(
       title: 'Quản lý nhanh',
-      icon: Icons.trending_up_rounded,
+      icon: Icons.settings_suggest_rounded,
       iconColor: Colors.orange,
       child: Column(
         children: [
-          _buildActionItem(
-            Icons.people_alt_rounded,
-            'Quản lý người dùng',
-            '${stats['totalUsers']} người dùng',
-            Colors.orange,
-          ),
-          _buildActionItem(
-            Icons.chat_bubble_rounded,
-            'Quản lý forum',
-            '${stats['totalPosts']} bài viết',
-            Colors.purple,
-          ),
-          _buildActionItem(
-            Icons.workspace_premium_rounded,
-            'Quản lý Premium',
-            '${stats['premiumUsers']} thành viên',
-            Colors.amber,
-          ),
+          _buildActionItem(Icons.people_alt_rounded, 'Người dùng', '$users thành viên', Colors.orange),
+          _buildActionItem(Icons.workspace_premium_rounded, 'Premium', '$premium thành viên', Colors.purple),
         ],
       ),
     );
@@ -188,133 +237,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.orange[50],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              'Xem',
-              style: TextStyle(
-                color: Colors.orange[700],
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
+          const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
         ],
       ),
     );
   }
 
-  Widget _buildActivitySection() {
-    return _buildContainerSection(
-      title: 'Hoạt động gần đây',
-      icon: Icons.show_chart_rounded,
-      iconColor: Colors.blue,
-      child: Column(
-        children: [
-          _buildRecentItem(
-            Icons.person_add_rounded,
-            'Người dùng mới đăng ký',
-            'Vài phút trước',
-            Colors.blue[100]!,
-            Colors.blue,
-          ),
-          _buildRecentItem(
-            Icons.chat_bubble_rounded,
-            'Bài viết mới trong forum',
-            '15 phút trước',
-            Colors.purple[100]!,
-            Colors.purple,
-          ),
-          _buildRecentItem(
-            Icons.workspace_premium_rounded,
-            'Nâng cấp Premium thành công',
-            '1 giờ trước',
-            Colors.amber[100]!,
-            Colors.amber[700]!,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentItem(IconData icon, String title, String time, Color bgColor, Color iconColor) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
-            child: Icon(icon, color: iconColor, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-          ),
-          Text(time, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSystemHealthSection() {
-    return _buildContainerSection(
-      title: 'Tình trạng hệ thống',
-      icon: Icons.radio_button_checked_rounded,
-      iconColor: Colors.green,
-      child: Column(
-        children: [
-          _buildHealthRow('Database'),
-          _buildHealthRow('API Server'),
-          _buildHealthRow('Storage'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHealthRow(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: Colors.black87)),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Text(
-              'Hoạt động tốt',
-              style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContainerSection({
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required Widget child,
-  }) {
+  Widget _buildContainerSection({required String title, required IconData icon, required Color iconColor, required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 4)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
