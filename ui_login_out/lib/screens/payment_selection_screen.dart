@@ -100,8 +100,8 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
     // Lắng nghe giao dịch MoMo
     PaymentService().listenTransactionStatus(orderId).listen((status) {
       if (status == "success" && mounted) {
-        // Tự động đóng màn hình chọn khi thành công
-        Navigator.pop(context);
+        // Tự động đóng màn hình chọn khi thành công để quay về Premium_screen
+        Navigator.of(context, rootNavigator: true).pop();
       }
     });
   }

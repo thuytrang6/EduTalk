@@ -47,7 +47,9 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
         .listen((status) {
       if (status == "success" && mounted) {
         _subscription?.cancel();
-        Navigator.pop(context); // Đóng Sheet khi đúng đơn này thành công
+        // Pop 2 lần để đóng cả BankTransferSheet và PaymentSelectionScreen
+        Navigator.pop(context); // Đóng Sheet hiện tại
+        Navigator.pop(context); // Đóng màn hình PaymentSelectionScreen bên dưới
       }
     });
   }
