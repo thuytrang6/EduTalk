@@ -24,8 +24,8 @@ class AuthService {
         uid: uid,
         name: name,
         email: email,
-        role: 'user',
-        createdAt: Timestamp.now(),
+        role: UserRole.user,
+        createdAt: DateTime.now(),
         isPremium: false,
         usageCount: 0,
       );
@@ -115,15 +115,16 @@ class AuthService {
       final userDoc = await userDocRef.get();
 
       if (!userDoc.exists) {
-        await userDocRef.set({
-          'uid': user.uid,
-          'name': user.displayName ?? '',
-          'email': user.email ?? '',
-          'role': 'user',
-          'created_at': FieldValue.serverTimestamp(),
-          'isPremium': false,
-          'usageCount': 0,
-        });
+        UserModel newUser = UserModel(
+          uid: user.uid,
+          name: user.displayName ?? '',
+          email: user.email ?? '',
+          role: UserRole.user,
+          createdAt: DateTime.now(),
+          isPremium: false,
+          usageCount: 0,
+        );
+        await userDocRef.set(newUser.toMap());
         print("Google login — user mới, đã lưu Firestore");
         return {"status": "success", "role": "user"};
       } else {
@@ -162,7 +163,6 @@ class AuthService {
     }
   }
 
-  // ========== THÊM HÀM XÓA TÀI KHOẢN VÀO ĐÂY ==========
   Future<Map<String, dynamic>> deleteAccount() async {
     try {
       final User? user = _auth.currentUser;
@@ -172,7 +172,6 @@ class AuthService {
 
       final String uid = user.uid;
 
-      // 1. Xóa tất cả lịch sử dự đoán của user
       print("Đang xóa lịch sử dự đoán...");
       final historySnapshot = await _firestore
           .collection('predictions')
@@ -185,15 +184,12 @@ class AuthService {
       }
       print("Đã xóa ${historySnapshot.docs.length} lịch sử dự đoán");
 
-      // 2. Xóa document user trong Firestore
       print("Đang xóa user document...");
       await _firestore.collection('users').doc(uid).delete();
 
-      // 3. Xóa tài khoản Authentication
       print("Đang xóa tài khoản Authentication...");
       await user.delete();
 
-      // 4. Đăng xuất Google
       await _googleSignIn.signOut();
 
       print("Xóa tài khoản thành công!");

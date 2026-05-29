@@ -8,37 +8,64 @@ import '../models/payment_model.dart';
 class PaymentService {
   static const String _baseUrl = "https://edutalk-7ndf.onrender.com";
 
-  Future<MomoPaymentResponse> createMomoPayment({
+  /// Tạo giao dịch MoMo
+  Future<PaymentResponse> createMomoPayment({
     required String userId,
-    required int amount,
-    required String orderInfo,
-    required String planName,
+    required String planCode, // Truyền 'monthly', 'yearly', hoặc 'lifetime'
+    String orderInfo = "EduTalk Premium",
   }) async {
     try {
       final response = await http.post(
         Uri.parse("$_baseUrl/payment/momo-payment"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "amount": amount,
-          "orderInfo": orderInfo,
           "userId": userId,
-          "plan": planName,
+          "plan": planCode,
+          "orderInfo": orderInfo,
         }),
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
-        return MomoPaymentResponse.fromJson(data);
+        return PaymentResponse.fromJson(data);
       } else {
-        throw Exception("Failed to create payment: ${response.statusCode}");
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? "Failed to create payment");
       }
     } catch (e) {
       throw Exception("Network error: $e");
     }
   }
 
+  /// Tạo giao dịch Chuyển khoản (SePay)
+  Future<PaymentResponse> createBankPayment({
+    required String userId,
+    required String planCode, // Truyền 'monthly', 'yearly', hoặc 'lifetime'
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse("$_baseUrl/payment/create-bank-payment"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "userId": userId,
+          "plan": planCode,
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body) as Map<String, dynamic>;
+        return PaymentResponse.fromJson(data);
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? "Failed to create bank payment");
+      }
+    } catch (e) {
+      throw Exception("Network error: $e");
+    }
+  }
+
+  /// Mở ứng dụng MoMo hoặc trình duyệt
   Future<void> openMomoPayment(String payUrl, {String? deeplink}) async {
-    // 1. Ưu tiên mở bằng Deep Link (momo://) nếu có
     if (deeplink != null && deeplink.isNotEmpty) {
       try {
         final Uri deepUri = Uri.parse(deeplink);
@@ -52,20 +79,17 @@ class PaymentService {
       }
     }
 
-    // 2. Fallback: Mở bằng payUrl (https://)
     final Uri webUri = Uri.parse(payUrl);
     try {
-      // Thử mở HTTPS link bằng App trước (Universal Link)
       bool launched = await launchUrl(
         webUri,
         mode: LaunchMode.externalNonBrowserApplication,
       );
       if (launched) return;
     } catch (e) {
-      // Bắt lỗi nếu không tìm thấy App phù hợp
+      debugPrint("Lỗi khi mở Universal Link: $e");
     }
 
-    // 3. Cuối cùng: Mở bằng trình duyệt
     if (await canLaunchUrl(webUri)) {
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
     } else {
@@ -73,43 +97,58 @@ class PaymentService {
     }
   }
 
-  Future<Map<String, dynamic>> createBankPayment({
-    required String userId,
-    required int amount,
-    required String planName,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse("$_baseUrl/payment/create-bank-payment"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "amount": amount,
-          "userId": userId,
-          "plan": planName,
-        }),
-      ).timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      } else {
-        throw Exception("Failed to create bank payment: ${response.statusCode}");
-      }
-    } catch (e) {
-      throw Exception("Network error: $e");
-    }
+  /// Lắng nghe trạng thái một giao dịch cụ thể (Realtime)
+  Stream<String> listenTransactionStatus(String paymentCode) {
+    return FirebaseFirestore.instance
+        .collection('transactions')
+        .doc(paymentCode)
+        .snapshots()
+        .map((snapshot) {
+          final data = snapshot.data();
+          if (data == null) return "pending";
+          return data['status'] ?? "pending";
+        });
   }
 
+  /// Lắng nghe trạng thái Premium qua Firestore (Realtime)
   Stream<bool> listenPremiumStatus(String userId) {
     return FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
         .snapshots()
         .map((snapshot) {
-          final data = snapshot.data() as Map<String, dynamic>?;
-          return data?['isPremium'] ?? false;
+          final data = snapshot.data();
+          if (data == null) return false;
+          
+          final isPremium = data['isPremium'] ?? false;
+          final plan = data['plan'];
+          final expiry = data['premiumExpiry'] as Timestamp?;
+
+          if (!isPremium) return false;
+          if (plan == 'lifetime') return true;
+          if (expiry == null) return false;
+          
+          return expiry.toDate().isAfter(DateTime.now());
         });
   }
 
+  /// Xem trước giá nâng cấp (Pro-rated)
+  Future<Map<String, dynamic>?> getUpgradePreview(String userId, String planCode) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$_baseUrl/payment/upgrade-preview/$userId/$planCode"),
+      ).timeout(const Duration(seconds: 10));
+      
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint("Lỗi preview nâng cấp: $e");
+    }
+    return null;
+  }
+
+  /// Kiểm tra trạng thái Premium từ Backend (Đồng bộ logic)
   Future<Map<String, dynamic>?> checkPremiumStatus(String userId) async {
     try {
       final response = await http.get(

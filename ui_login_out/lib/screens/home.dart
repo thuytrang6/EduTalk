@@ -112,6 +112,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  DateTime? _lastPremiumAt;
+  bool _initialStateCaptured = false;
+
   void _listenToUsageCount() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -122,6 +125,29 @@ class _HomeScreenState extends State<HomeScreen> {
           .listen((snapshot) {
             if (snapshot.exists && mounted) {
               final userData = UserModel.fromDocument(snapshot);
+              
+              // Logic thông báo nâng cấp thành công (MoMo & Bank)
+              if (!_initialStateCaptured) {
+                // Lần đầu load app: Chỉ ghi nhớ thời điểm thanh toán gần nhất, không hiện dialog
+                _lastPremiumAt = userData.premiumAt;
+                _initialStateCaptured = true;
+              } else {
+                // Các lần update sau:
+                // Nếu premiumAt mới xuất hiện HOẶC mới hơn cái cũ -> Vừa thanh toán thành công
+                if (userData.premiumAt != null && 
+                   (_lastPremiumAt == null || userData.premiumAt!.isAfter(_lastPremiumAt!))) {
+                  
+                  _lastPremiumAt = userData.premiumAt; // Cập nhật mốc mới nhất
+                  
+                  // Đợi 800ms để các sheet (MoMo/Bank) đóng lời hẳn rồi mới hiện Dialog
+                  Future.delayed(const Duration(milliseconds: 800), () {
+                    if (mounted) {
+                      _showUpgradeSuccessDialog(userData.currentPlan ?? "Premium");
+                    }
+                  });
+                }
+              }
+
               // Đồng bộ giá trị từ Firestore sang ValueNotifier global
               freeUsageCount.value = (3 - userData.usageCount).clamp(0, 3);
               
@@ -130,6 +156,54 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           });
     }
+  }
+
+  void _showUpgradeSuccessDialog(String planName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 20),
+            Lottie.asset(
+              'assets/Live chatbot.json', // Local Robot animation
+              width: 150,
+              height: 150,
+              repeat: false,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Nâng cấp thành công!",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Chào mừng bạn đến với cộng đồng EduTalk Premium $planName!\nTận hưởng trải nghiệm không giới hạn ngay bây giờ.",
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF22C55E),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text("Bắt đầu trải nghiệm ngay 🚀", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   List<Widget> get pages => [
@@ -196,11 +270,10 @@ class _HomeScreenState extends State<HomeScreen> {
     List<int> userScores,
     List<int> majorRequirements,
   ) {
-    // Không cần trừ lượt ở đây nữa vì DuLieuScreen đã xử lý trên Firestore
-    // và HomeScreen đã có listener để đồng bộ ValueNotifier freeUsageCount.
+    // Ưu tiên Premium: Nếu là Premium Active, không bao giờ hiện SnackBar hết lượt.
+    final bool isPremium = currentUserNotifier.value?.isPremiumActive ?? false;
 
-    // Nếu sau khi Firestore cập nhật mà còn 0 lượt → hiện thông báo hết lượt
-    if (freeUsageCount.value == 0) {
+    if (!isPremium && freeUsageCount.value == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
