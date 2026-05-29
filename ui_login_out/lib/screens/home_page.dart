@@ -473,7 +473,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     child: Center(
                       child: Text(
-                        (user?.name ?? userName)[0].toUpperCase(),
+                        (user?.name ?? _userName)[0].toUpperCase(),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 22,

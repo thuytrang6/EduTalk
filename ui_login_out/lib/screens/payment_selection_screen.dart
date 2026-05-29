@@ -23,6 +23,15 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
   PaymentMethod? _selectedMethod;
   bool _isLoading = false;
 
+  String get _planCode {
+    switch (widget.planName) {
+      case 'Gói Tháng': return 'monthly';
+      case 'Gói Năm': return 'yearly';
+      case 'Gói Trọn Đời': return 'lifetime';
+      default: return 'monthly';
+    }
+  }
+
   void _onConfirm() async {
     if (_selectedMethod == null) return;
 
@@ -31,12 +40,17 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
       try {
         final res = await PaymentService().createMomoPayment(
           userId: widget.userId,
-          amount: widget.planPrice.toInt(),
+          planCode: _planCode,
           orderInfo: "EduTalk Premium ${widget.planName}",
-          planName: widget.planName,
         );
         if (res.payUrl != null) {
           await PaymentService().openMomoPayment(res.payUrl!, deeplink: res.deeplink);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Lỗi thanh toán: $e")),
+          );
         }
       } finally {
         if (mounted) setState(() => _isLoading = false);
@@ -50,6 +64,7 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
         builder: (_) => BankTransferSheet(
           planName: widget.planName,
+          planCode: _planCode,
           userId: widget.userId,
           price: widget.planPrice.toInt(),
         ),

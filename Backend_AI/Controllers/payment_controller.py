@@ -7,31 +7,141 @@ import json
 import random
 import string
 import re
+import os
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify
 from firebase_admin import firestore
 
-# Khởi tạo Blueprint cho Payment
 payment_bp = Blueprint('payment', __name__)
+logging.basicConfig(level=logging.INFO)
 
-# Cấu hình MoMo
+# ── CONFIGURATION ──────────────────────────────────────────────────────────────
 MOMO_CONFIG = {
-    "partnerCode": "MOMOBKUN20180529",
-    "accessKey": "klm05TvNBzhg7h7j",
-    "secretKey": "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa",
-    "endpoint": "https://test-payment.momo.vn/v2/gateway/api/create",
-    "redirectUrl": "edutalk://payment-result",
-    "ipnUrl": "https://edutalk-7ndf.onrender.com/payment/payment-callback",
+    "partnerCode": os.environ.get("MOMO_PARTNER_CODE", "MOMOBKUN20180529"),
+    "accessKey":   os.environ.get("MOMO_ACCESS_KEY", "klm05TvNBzhg7h7j"),
+    "secretKey":   os.environ.get("MOMO_SECRET_KEY", "at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa"),
+    "endpoint":    os.environ.get("MOMO_ENDPOINT", "https://test-payment.momo.vn/v2/gateway/api/create"),
+    "redirectUrl": os.environ.get("MOMO_REDIRECT_URL", "edutalk://payment-result"),
+    "ipnUrl":      os.environ.get("MOMO_IPN_URL", "https://edutalk-7ndf.onrender.com/payment/payment-callback"),
     "requestType": "captureWallet"
 }
 
-# Cấu hình SePay (Thanh toán Ngân hàng)
 SEPAY_CONFIG = {
-    "apiKey": "EduTalk2025SecretKey", # Mã bảo mật đã đặt trên SePay
-    "prefix": "ET"
+    "apiKey": os.environ.get("SEPAY_API_KEY", "EduTalk2025SecretKey"),
+    "prefix": os.environ.get("SEPAY_PREFIX", "ET")
 }
 
-def create_momo_signature(payload):
-    raw_signature = (
+# ── PLANS ──────────────────────────────────────────────────────────────────────
+PLANS = {
+    "monthly":  {"name": "Gói Tháng",    "days": 30,  "amount": 29000},
+    "yearly":   {"name": "Gói Năm",      "days": 365, "amount": 216000},
+    "lifetime": {"name": "Gói Trọn Đời", "days": -1,  "amount": 499000},
+}
+
+PLAN_NAME_TO_CODE = {v["name"]: k for k, v in PLANS.items()}
+
+# ── HELPERS ────────────────────────────────────────────────────────────────────
+
+def get_plan_code(plan_input: str) -> str:
+    """Map cả code và tên sang code chuẩn"""
+    if plan_input in PLANS:
+        return plan_input
+    return PLAN_NAME_TO_CODE.get(plan_input, "monthly")
+
+def calculate_expiry(plan_code: str, current_expiry=None):
+    """Tính ngày hết hạn mới (Pro-rated)"""
+    if plan_code == "lifetime":
+        return None
+
+    now = datetime.now(timezone.utc)
+    start = now
+
+    if current_expiry:
+        try:
+            # Firestore timestamp to UTC datetime
+            if hasattr(current_expiry, 'replace'):
+                exp_dt = current_expiry.replace(tzinfo=timezone.utc) if current_expiry.tzinfo is None else current_expiry
+            else:
+                exp_dt = current_expiry
+            
+            if exp_dt > now:
+                start = exp_dt
+        except Exception:
+            pass
+
+    days = PLANS[plan_code]["days"]
+    return start + timedelta(days=days)
+
+def get_transaction_type(user_data: dict, new_plan_code: str) -> str:
+    """Xác định loại: new | renew | upgrade | downgrade"""
+    current_plan = user_data.get("plan")
+    is_premium   = user_data.get("isPremium", False)
+
+    if not is_premium or not current_plan:
+        return "new"
+    if current_plan == new_plan_code:
+        return "renew"
+
+    rank = {"monthly": 1, "yearly": 2, "lifetime": 3}
+    if rank.get(new_plan_code, 0) > rank.get(current_plan, 0):
+        return "upgrade"
+    return "downgrade"
+
+def upgrade_user_premium(db, user_id: str, plan_code: str) -> dict:
+    """Cập nhật Firestore user"""
+    plan_info = PLANS.get(plan_code, PLANS["monthly"])
+    user_ref  = db.collection("users").document(user_id)
+    user_doc  = user_ref.get()
+
+    user_data    = user_doc.to_dict() if user_doc.exists else {}
+    current_plan = user_data.get("plan")
+    prev_expiry  = user_data.get("premiumExpiry")
+
+    transaction_type = get_transaction_type(user_data, plan_code)
+    new_expiry       = calculate_expiry(plan_code, prev_expiry)
+
+    update_data = {
+        "isPremium":          True,
+        "subscriptionStatus": "active",
+        "plan":               plan_code,
+        "planName":           plan_info["name"],
+        "currentPlan":        plan_info["name"],
+        "premiumAt":          firestore.SERVER_TIMESTAMP,
+        "premiumStart":       firestore.SERVER_TIMESTAMP,
+        "premiumExpiry":      new_expiry,
+    }
+    user_ref.set(update_data, merge=True)
+
+    return {
+        "transaction_type": transaction_type,
+        "previous_plan":    current_plan,
+        "premium_expiry":   new_expiry,
+    }
+
+def build_transaction_doc(method: str, user_id: str, plan_code: str, amount: int, upgrade_info: dict, extra: dict = None) -> dict:
+    """Tạo cấu trúc document transaction chuẩn"""
+    plan_info = PLANS.get(plan_code, PLANS["monthly"])
+    return {
+        "userId":          user_id,
+        "method":          method,
+        "status":          "success",
+        "timestamp":       firestore.SERVER_TIMESTAMP,
+        "planCode":        plan_code,
+        "planName":        plan_info["name"],
+        "amount":          amount,
+        "transactionType": upgrade_info.get("transaction_type"),
+        "previousPlan":    upgrade_info.get("previous_plan"),
+        "premiumFrom":     firestore.SERVER_TIMESTAMP,
+        "premiumTo":       upgrade_info.get("premium_expiry"),
+        "paymentDetail":   extra
+    }
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MOMO
+# ══════════════════════════════════════════════════════════════════════════════
+
+def create_momo_signature(payload: dict) -> str:
+    raw = (
         f"accessKey={MOMO_CONFIG['accessKey']}&"
         f"amount={payload['amount']}&"
         f"extraData={payload['extraData']}&"
@@ -43,13 +153,11 @@ def create_momo_signature(payload):
         f"requestId={payload['requestId']}&"
         f"requestType={MOMO_CONFIG['requestType']}"
     )
-    h = hmac.new(MOMO_CONFIG['secretKey'].encode('utf-8'),
-                 raw_signature.encode('utf-8'), digestmod=hashlib.sha256)
-    return h.hexdigest()
+    return hmac.new(MOMO_CONFIG['secretKey'].encode(), raw.encode(), hashlib.sha256).hexdigest()
 
-def verify_momo_signature(data):
+def verify_momo_signature(data: dict) -> bool:
     try:
-        raw_signature = (
+        raw = (
             f"accessKey={MOMO_CONFIG['accessKey']}&"
             f"amount={data['amount']}&"
             f"extraData={data['extraData']}&"
@@ -64,176 +172,192 @@ def verify_momo_signature(data):
             f"resultCode={data['resultCode']}&"
             f"transId={data['transId']}"
         )
-        h = hmac.new(MOMO_CONFIG['secretKey'].encode('utf-8'),
-                     raw_signature.encode('utf-8'), digestmod=hashlib.sha256)
-        return h.hexdigest() == data.get('signature')
+        expected = hmac.new(MOMO_CONFIG['secretKey'].encode(), raw.encode(), hashlib.sha256).hexdigest()
+        return expected == data.get('signature')
     except Exception as e:
-        logging.error(f"Error verifying signature: {str(e)}")
+        logging.error(f"[MoMo] Signature verify error: {e}")
         return False
-
-from datetime import datetime, timedelta, timezone
-
-def calculate_expiry(plan_type, current_expiry=None):
-    now = datetime.now(timezone.utc)
-    # Nếu đang còn hạn, cộng thêm vào ngày hết hạn hiện tại
-    start_date = now
-    if current_expiry and current_expiry > now:
-        start_date = current_expiry
-        
-    if plan_type == 'monthly':
-        return start_date + timedelta(days=30)
-    elif plan_type == 'yearly':
-        return start_date + timedelta(days=365)
-    elif plan_type == 'lifetime':
-        return None  # Vĩnh viễn
-    return now + timedelta(days=30) # Default
-
-def upgrade_user_premium(db, user_id, plan_name):
-    # Map tên gói sang mã gói
-    plan_map = {
-        'Gói Tháng': 'monthly',
-        'Gói Năm': 'yearly',
-        'Gói Trọn Đời': 'lifetime'
-    }
-    plan_type = plan_map.get(plan_name, 'monthly')
-    
-    user_ref = db.collection("users").document(user_id)
-    user_doc = user_ref.get()
-    
-    current_expiry = None
-    if user_doc.exists:
-        data = user_doc.to_dict()
-        current_expiry = data.get("premiumExpiry")
-        
-    new_expiry = calculate_expiry(plan_type, current_expiry)
-    
-    user_ref.set({
-        "isPremium": True,
-        "subscriptionStatus": "active",
-        "plan": plan_type,
-        "currentPlan": plan_name,
-        "premiumAt": firestore.SERVER_TIMESTAMP,
-        "premiumStart": firestore.SERVER_TIMESTAMP,
-        "premiumExpiry": new_expiry
-    }, merge=True)
-    return True
 
 @payment_bp.route('/momo-payment', methods=['POST'])
 def create_momo_payment():
     try:
-        data = request.get_json()
-        amount = data.get("amount")
-        order_info = data.get("orderInfo")
-        user_id = data.get("userId")
-        plan = data.get("plan")
-
-        order_id = str(uuid.uuid4())
-        request_id = str(uuid.uuid4())
+        data       = request.get_json()
+        user_id    = data.get("userId")
+        plan_input = data.get("plan")
         
-        extra_data = json.dumps({"user_id": user_id, "plan": plan})
+        plan_code  = get_plan_code(plan_input)
+        plan_info  = PLANS.get(plan_code)
+
+        order_id   = str(uuid.uuid4())
+        request_id = str(uuid.uuid4())
+        extra_data = json.dumps({"user_id": user_id, "plan": plan_code})
 
         payload = {
             "partnerCode": MOMO_CONFIG["partnerCode"],
-            "accessKey": MOMO_CONFIG["accessKey"],
-            "requestId": request_id,
-            "amount": str(amount),
-            "orderId": order_id,
-            "orderInfo": order_info,
+            "accessKey":   MOMO_CONFIG["accessKey"],
+            "requestId":   request_id,
+            "amount":      str(plan_info["amount"]),
+            "orderId":     order_id,
+            "orderInfo":   data.get("orderInfo", f"EduTalk {plan_info['name']}"),
             "redirectUrl": MOMO_CONFIG["redirectUrl"],
-            "ipnUrl": MOMO_CONFIG["ipnUrl"],
+            "ipnUrl":      MOMO_CONFIG["ipnUrl"],
             "requestType": MOMO_CONFIG["requestType"],
-            "extraData": extra_data,
-            "lang": "vi"
+            "extraData":   extra_data,
+            "lang":        "vi"
         }
-        
         payload["signature"] = create_momo_signature(payload)
-        
-        response = requests.post(MOMO_CONFIG["endpoint"], json=payload)
-        response_data = response.json()
-        
-        if response.status_code == 200 and response_data.get("resultCode") == 0:
+
+        response = requests.post(MOMO_CONFIG["endpoint"], json=payload, timeout=15)
+        res_data = response.json()
+
+        if res_data.get("resultCode") == 0:
             return jsonify({
-                "deeplink": response_data.get("deeplink"),
-                "payUrl": response_data.get("payUrl"),
-                "orderId": order_id
+                "success":  True,
+                "payUrl":   res_data.get("payUrl"),
+                "deeplink": res_data.get("deeplink"),
+                "qrCode":   res_data.get("qrCodeUrl"),
+                "orderId":  order_id
             })
-        else:
-            return jsonify({"success": False, "error": response_data.get("message", "Error from MoMo")}), 400
-            
+        return jsonify({"success": False, "error": res_data.get("message")}), 400
     except Exception as e:
-        logging.error(f"Error creating MoMo payment: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @payment_bp.route('/payment-callback', methods=['POST'])
-def payment_callback():
+def momo_callback():
     try:
         data = request.get_json()
-        logging.info(f"MoMo Callback received: {data}")
-        
         if not verify_momo_signature(data):
-            logging.error("Invalid MoMo signature!")
             return jsonify({"status": "error", "message": "Invalid signature"}), 400
 
         if str(data.get("resultCode")) == "0":
-            extra_data_str = data.get("extraData")
-            if extra_data_str:
-                extra_data = json.loads(extra_data_str)
-                user_id = extra_data.get("user_id")
-                plan = extra_data.get("plan")
+            extra      = json.loads(data.get("extraData", "{}"))
+            user_id    = extra.get("user_id")
+            plan_code  = extra.get("plan")
+            
+            if user_id:
+                db = firestore.client()
+                upgrade_info = upgrade_user_premium(db, user_id, plan_code)
                 
-                if user_id:
-                    db = firestore.client()
-                    upgrade_user_premium(db, user_id, plan)
-                    
-                    db.collection("transactions").add({
-                        "amount": int(data.get("amount")),
-                        "message": data.get("message"),
-                        "method": "momo",
-                        "orderId": data.get("orderId"),
-                        "plan": plan,
-                        "status": "success",
-                        "timestamp": firestore.SERVER_TIMESTAMP,
-                        "transId": int(data.get("transId")),
-                        "userId": user_id
-                    })
-                    logging.info(f"Successfully upgraded user {user_id} and recorded transaction")
+                payment_detail = {
+                    "transId":     data.get("transId"),
+                    "orderId":     data.get("orderId"),
+                    "orderInfo":   data.get("orderInfo"),
+                    "payType":     data.get("payType"),
+                    "partnerCode": data.get("partnerCode"),
+                    "message":     data.get("message")
+                }
+                
+                trans_doc = build_transaction_doc(
+                    method       = "momo",
+                    user_id      = user_id,
+                    plan_code    = plan_code,
+                    amount       = int(data.get("amount", 0)),
+                    upgrade_info = upgrade_info,
+                    extra        = payment_detail
+                )
+                db.collection("transactions").add(trans_doc)
         
         return jsonify({"status": "ok"}), 200
-        
     except Exception as e:
-        logging.error(f"Error processing MoMo callback: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"status": "error", "error": str(e)}), 500
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BANK (SePay)
+# ══════════════════════════════════════════════════════════════════════════════
 
 @payment_bp.route('/create-bank-payment', methods=['POST'])
 def create_bank_payment():
     try:
-        data = request.get_json()
-        user_id = data.get("userId")
-        amount = data.get("amount")
-        plan = data.get("plan")
+        data       = request.get_json()
+        user_id    = data.get("userId")
+        plan_input = data.get("plan")
+        
+        plan_code  = get_plan_code(plan_input)
+        plan_info  = PLANS.get(plan_code)
         
         payment_code = ''.join(random.choices(string.digits, k=6))
-        
         db = firestore.client()
+        
         db.collection("transactions").document(payment_code).set({
-            "amount": int(amount),
-            "method": "bank",
-            "plan": plan,
-            "status": "pending",
-            "userId": user_id,
-            "paymentCode": payment_code,
-            "timestamp": firestore.SERVER_TIMESTAMP
+            "userId":      user_id,
+            "method":      "bank",
+            "status":      "pending",
+            "planCode":    plan_code,
+            "planName":    plan_info["name"],
+            "amount":      plan_info["amount"],
+            "paymentCode": f"{SEPAY_CONFIG['prefix']}{payment_code}",
+            "timestamp":   firestore.SERVER_TIMESTAMP
         })
         
         return jsonify({
-            "success": True,
+            "success":     True,
             "paymentCode": f"{SEPAY_CONFIG['prefix']}{payment_code}",
-            "amount": amount,
-            "orderId": payment_code
+            "amount":      plan_info["amount"],
+            "orderId":     payment_code
         })
     except Exception as e:
-        logging.error(f"Error creating bank payment: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+@payment_bp.route('/sepay-webhook', methods=['POST'])
+def sepay_webhook():
+    try:
+        auth_header = request.headers.get("Authorization", "")
+        api_key     = auth_header.replace("Apikey ", "").strip()
+        if api_key != SEPAY_CONFIG["apiKey"]:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
+            
+        data    = request.get_json()
+        content = data.get("content", "")
+        amount_received = float(data.get("transferAmount", 0))
+        
+        match = re.search(rf"{SEPAY_CONFIG['prefix']}(\d{{6,8}})", content.upper())
+        if not match:
+            return jsonify({"success": True, "status": "ignored"}), 200
+            
+        payment_code = match.group(1)
+        db = firestore.client()
+        trans_ref  = db.collection("transactions").document(payment_code)
+        trans_doc  = trans_ref.get()
+        
+        if not trans_doc.exists:
+            return jsonify({"success": False, "message": "Transaction not found"}), 404
+            
+        trans_data = trans_doc.to_dict()
+        if trans_data['status'] == 'success':
+            return jsonify({"success": True, "status": "already_processed"}), 200
+            
+        if amount_received < trans_data['amount']:
+            return jsonify({"success": False, "message": "Amount mismatch"}), 400
+             
+        upgrade_info = upgrade_user_premium(db, trans_data['userId'], trans_data['planCode'])
+        
+        payment_detail = {
+            "gateway":         data.get("gateway"),
+            "accountNumber":   data.get("accountNumber"),
+            "subAccount":      data.get("subAccount"),
+            "transferAmount":  data.get("transferAmount"),
+            "referenceCode":   data.get("referenceCode"),
+            "transactionDate": data.get("transactionDate"),
+            "content":         content,
+            "sepayId":         data.get("id")
+        }
+        
+        trans_ref.update({
+            "status":          "success",
+            "transactionType": upgrade_info["transaction_type"],
+            "previousPlan":    upgrade_info["previous_plan"],
+            "premiumFrom":     firestore.SERVER_TIMESTAMP,
+            "premiumTo":       upgrade_info["premium_expiry"],
+            "paymentDetail":   payment_detail
+        })
+        
+        return jsonify({"success": True, "status": "ok"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STATUS
+# ══════════════════════════════════════════════════════════════════════════════
 
 @payment_bp.route('/check-status/<user_id>', methods=['GET'])
 def check_premium_status(user_id):
@@ -245,107 +369,46 @@ def check_premium_status(user_id):
         if not user_doc.exists:
             return jsonify({"success": False, "error": "User not found"}), 404
             
-        user_data = user_doc.to_dict()
+        user_data  = user_doc.to_dict()
         is_premium = user_data.get("isPremium", False)
-        plan = user_data.get("plan")
-        expiry = user_data.get("premiumExpiry")
+        plan_code  = user_data.get("plan")
+        expiry     = user_data.get("premiumExpiry")
         
-        # Nếu đang là premium và không phải trọn đời, kiểm tra hết hạn
-        if is_premium and plan != 'lifetime' and expiry:
-            # Convert Firestore timestamp to datetime
-            if hasattr(expiry, 'timestamp'):
-                expiry_dt = expiry
-            else:
-                # Handle potential other formats if any
-                expiry_dt = expiry
-                
-            from datetime import datetime, timezone
-            now = datetime.now(timezone.utc)
-            
-            if expiry_dt <= now:
-                # Hết hạn -> Cập nhật Firestore
+        now = datetime.now(timezone.utc)
+        
+        # Kiểm tra hết hạn
+        if is_premium and plan_code != 'lifetime' and expiry:
+            exp_dt = expiry.replace(tzinfo=timezone.utc) if hasattr(expiry, 'replace') and expiry.tzinfo is None else expiry
+            if exp_dt <= now:
                 user_ref.update({
-                    "isPremium": False,
-                    "plan": None,
-                    "currentPlan": None
+                    "isPremium":          False,
+                    "plan":               None,
+                    "planName":           None,
+                    "currentPlan":        None,
+                    "subscriptionStatus": "expired"
                 })
                 return jsonify({
-                    "success": True, 
-                    "isPremium": False, 
-                    "message": "Premium expired",
-                    "expired": True
+                    "success":   True,
+                    "isPremium": False,
+                    "expired":   True,
+                    "message":   "Premium expired"
                 })
         
-        return jsonify({
-            "success": True, 
-            "isPremium": is_premium,
-            "plan": plan,
-            "expiry": expiry.isoformat() if expiry and hasattr(expiry, 'isoformat') else None
-        })
-        
-    except Exception as e:
-        logging.error(f"Error checking premium status: {str(e)}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        days_left = None
+        if is_premium:
+            if plan_code == 'lifetime':
+                days_left = -1
+            elif expiry:
+                exp_dt = expiry.replace(tzinfo=timezone.utc) if hasattr(expiry, 'replace') and expiry.tzinfo is None else expiry
+                days_left = (exp_dt - now).days
 
-@payment_bp.route('/sepay-webhook', methods=['POST'])
-def sepay_webhook():
-    try:
-        # 1. Xác thực API Key từ Header Authorization (SePay gửi dưới dạng "Apikey LDSZGQ...")
-        auth_header = request.headers.get("Authorization", "")
-        api_key = auth_header.replace("Apikey ", "").strip()
-        
-        if api_key != SEPAY_CONFIG["apiKey"]:
-            logging.warning(f"Unauthorized Webhook attempt with key: {api_key}")
-            return jsonify({"status": "error", "message": "Unauthorized"}), 403
-            
-        data = request.get_json()
-        logging.info(f"SePay Webhook received: {data}")
-        
-        content = data.get("content", "")
-        # SePay dùng trường 'transferAmount' cho số tiền nhận được
-        amount_received = float(data.get("transferAmount", 0))
-        
-        # 2. Phân tích nội dung để tìm paymentCode (Ví dụ: ET123456)
-        if SEPAY_CONFIG['prefix'].upper() not in content.upper():
-             return jsonify({"success": True, "status": "ignored", "message": "Invalid prefix"}), 200
-             
-        # Tìm chính xác 6-8 chữ số trong nội dung chuyển khoản
-        match = re.search(r'\d{6,8}', content)
-        if not match:
-            return jsonify({"success": True, "status": "ignored", "message": "Payment code not found"}), 200
-            
-        payment_code = match.group(0)
-        
-        db = firestore.client()
-        transaction_ref = db.collection("transactions").document(payment_code)
-        transaction_doc = transaction_ref.get()
-        
-        if not transaction_doc.exists:
-            return jsonify({"success": False, "status": "error", "message": "Transaction not found"}), 404
-            
-        transaction_data = transaction_doc.to_dict()
-        
-        if transaction_data['status'] == 'success':
-            return jsonify({"success": True, "status": "ok", "message": "Already processed"}), 200
-            
-        if amount_received < transaction_data['amount']:
-             return jsonify({"success": False, "status": "error", "message": "Amount mismatch"}), 400
-             
-        user_id = transaction_data['userId']
-        plan_name = transaction_data['plan'] # Trong transaction lưu planName như 'Gói Tháng'
-        
-        db = firestore.client()
-        upgrade_user_premium(db, user_id, plan_name)
-        
-        transaction_ref.update({
-            "status": "success",
-            "timestamp": firestore.SERVER_TIMESTAMP,
-            "sepayData": data
+        return jsonify({
+            "success":   True, 
+            "isPremium": is_premium,
+            "plan":      plan_code,
+            "planName":  PLANS.get(plan_code, {}).get("name") if plan_code else None,
+            "daysLeft":  days_left,
+            "expiry":    expiry.isoformat() if hasattr(expiry, 'isoformat') else None
         })
-        
-        logging.info(f"Successfully upgraded user {user_id} via Bank Transfer (SePay)")
-        return jsonify({"success": True, "status": "ok"}), 200
-        
     except Exception as e:
-        logging.error(f"Error processing SePay webhook: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500

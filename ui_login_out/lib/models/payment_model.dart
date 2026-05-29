@@ -36,57 +36,43 @@ class PlanInfo {
   };
 }
 
-class MomoPaymentResponse {
-  final String? payUrl;
-  final String? deeplink;
-  final String? orderId;
-  final String? message;
-  final int? resultCode;
-
-  MomoPaymentResponse({this.payUrl, this.deeplink, this.orderId, this.message, this.resultCode});
-
-  factory MomoPaymentResponse.fromJson(Map<String, dynamic> json) {
-    return MomoPaymentResponse(
-      payUrl: json['payUrl'],
-      deeplink: json['deeplink'],
-      orderId: json['orderId'],
-      message: json['message'],
-      resultCode: json['resultCode'],
-    );
-  }
-}
-
-class PaymentResult {
+class PaymentResponse {
   final bool success;
-  final String? payUrl;
-  final String? deeplink;
-  final String? qrCodeUrl;
+  final String? payUrl;      // MoMo
+  final String? deeplink;    // MoMo
+  final String? qrCode;      // MoMo QR hoặc Bank QR URL
   final String? orderId;
+  final String? paymentCode; // Bank (SePay)
   final String? plan;
+  final String? planName;
   final int? amount;
   final String? message;
 
-  PaymentResult({
+  PaymentResponse({
     required this.success,
     this.payUrl,
     this.deeplink,
-    this.qrCodeUrl,
+    this.qrCode,
     this.orderId,
+    this.paymentCode,
     this.plan,
+    this.planName,
     this.amount,
     this.message,
   });
 
-  factory PaymentResult.fromJson(Map<String, dynamic> json) {
-    return PaymentResult(
-      success:   json['success'] ?? false,
-      payUrl:    json['payUrl'],
-      deeplink:  json['deeplink'],
-      qrCodeUrl: json['qrCodeUrl'],
-      orderId:   json['orderId'],
-      plan:      json['plan'],
-      amount:    json['amount'],
-      message:   json['message'] ?? json['error'],
+  factory PaymentResponse.fromJson(Map<String, dynamic> json) {
+    return PaymentResponse(
+      success:     json['success'] ?? false,
+      payUrl:      json['payUrl'],
+      deeplink:    json['deeplink'],
+      qrCode:      json['qrCode'], // MoMo: qrCodeUrl, Bank: N/A in response but maybe later
+      orderId:     json['orderId'],
+      paymentCode: json['paymentCode'],
+      plan:        json['plan'] ?? json['planCode'],
+      planName:    json['planName'],
+      amount:      json['amount'] != null ? int.tryParse(json['amount'].toString()) : null,
+      message:     json['message'] ?? json['error'],
     );
   }
 }

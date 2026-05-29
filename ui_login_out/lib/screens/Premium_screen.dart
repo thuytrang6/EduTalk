@@ -338,16 +338,15 @@ class PremiumScreen extends StatelessWidget {
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
         final bool isPremium = user?.isPremiumActive ?? false;
-        final String? currentPlan = user?.plan;
+        final SubscriptionPlan currentPlan = user?.plan ?? SubscriptionPlan.none;
         
-        // Tính tiền dư nếu có gói cũ
         int refundAmount = 0;
-        if (isPremium && user?.premiumExpiry != null && user?.plan != 'lifetime') {
-          final remainingDays = user!.premiumExpiry!.toDate().difference(DateTime.now()).inDays;
+        if (isPremium && user?.premiumExpiry != null && currentPlan != SubscriptionPlan.lifetime) {
+          final remainingDays = user!.premiumExpiry!.difference(DateTime.now()).inDays;
           if (remainingDays > 0) {
-            if (user.plan == 'monthly') {
+            if (currentPlan == SubscriptionPlan.monthly) {
               refundAmount = (remainingDays / 30 * 29000).round();
-            } else if (user.plan == 'yearly') {
+            } else if (currentPlan == SubscriptionPlan.yearly) {
               refundAmount = (remainingDays * (216000 / 365)).round();
             }
           }
@@ -367,9 +366,9 @@ class PremiumScreen extends StatelessWidget {
               color: const Color(0xFF2563EB),
               icon: Icons.flash_on_rounded,
               buttonIcon: Icons.auto_awesome_rounded,
-              buttonText: currentPlan == 'monthly' ? "Đang sử dụng" : "Mua gói Tháng",
-              isActive: currentPlan == 'monthly',
-              isLocked: currentPlan == 'yearly' || currentPlan == 'lifetime',
+              buttonText: currentPlan == SubscriptionPlan.monthly ? "Đang sử dụng" : "Mua gói Tháng",
+              isActive: currentPlan == SubscriptionPlan.monthly,
+              isLocked: currentPlan == SubscriptionPlan.yearly || currentPlan == SubscriptionPlan.lifetime,
             ),
             const SizedBox(height: 16),
             _buildPlanCard(
@@ -382,13 +381,13 @@ class PremiumScreen extends StatelessWidget {
               color: const Color(0xFFFF8000),
               icon: Icons.shield_rounded,
               buttonIcon: Icons.workspace_premium_rounded,
-              buttonText: currentPlan == 'yearly' ? "Đang sử dụng" : (currentPlan == 'monthly' ? "Nâng cấp gói Năm" : "Mua gói Năm"),
-              isActive: currentPlan == 'yearly',
-              isLocked: currentPlan == 'lifetime',
+              buttonText: currentPlan == SubscriptionPlan.yearly ? "Đang sử dụng" : (currentPlan == SubscriptionPlan.monthly ? "Nâng cấp gói Năm" : "Mua gói Năm"),
+              isActive: currentPlan == SubscriptionPlan.yearly,
+              isLocked: currentPlan == SubscriptionPlan.lifetime,
               isBestValue: true,
               oldPrice: "348.000đ",
               savings: "Tiết kiệm 132.000đ",
-              refundAmount: currentPlan == 'monthly' ? refundAmount : 0,
+              refundAmount: currentPlan == SubscriptionPlan.monthly ? refundAmount : 0,
             ),
             const SizedBox(height: 16),
             _buildPlanCard(
@@ -401,9 +400,9 @@ class PremiumScreen extends StatelessWidget {
               color: const Color(0xFF8B5CF6),
               icon: Icons.workspace_premium_rounded,
               buttonIcon: Icons.workspace_premium_rounded,
-              buttonText: currentPlan == 'lifetime' ? "Đang sử dụng" : "Mua gói Trọn đời",
-              isActive: currentPlan == 'lifetime',
-              refundAmount: (currentPlan == 'monthly' || currentPlan == 'yearly') ? refundAmount : 0,
+              buttonText: currentPlan == SubscriptionPlan.lifetime ? "Đang sử dụng" : "Mua gói Trọn đời",
+              isActive: currentPlan == SubscriptionPlan.lifetime,
+              refundAmount: (currentPlan == SubscriptionPlan.monthly || currentPlan == SubscriptionPlan.yearly) ? refundAmount : 0,
             ),
           ],
         );
@@ -416,9 +415,9 @@ class PremiumScreen extends StatelessWidget {
   }
 
   Widget _buildCurrentPlanStatus(UserModel user) {
-    final expiryStr = user.plan == 'lifetime' 
+    final expiryStr = user.plan == SubscriptionPlan.lifetime 
         ? "Vĩnh viễn" 
-        : (user.premiumExpiry != null ? "Hết hạn vào: ${user.premiumExpiry!.toDate().day}/${user.premiumExpiry!.toDate().month}/${user.premiumExpiry!.toDate().year}" : "");
+        : (user.premiumExpiry != null ? "Hết hạn vào: ${user.premiumExpiry!.day}/${user.premiumExpiry!.month}/${user.premiumExpiry!.year}" : "");
 
     return Container(
       width: double.infinity,
@@ -438,13 +437,14 @@ class PremiumScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Bạn đang sở hữu ${user.currentPlan}",
+                  "Bạn đang sở hữu ${user.currentPlan ?? 'Premium'}",
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF166534)),
                 ),
-                Text(
-                  expiryStr,
-                  style: const TextStyle(fontSize: 12, color: Color(0xFF166534)),
-                ),
+                if (expiryStr.isNotEmpty)
+                  Text(
+                    expiryStr,
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF166534)),
+                  ),
               ],
             ),
           ),
