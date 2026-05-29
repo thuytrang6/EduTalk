@@ -242,7 +242,7 @@ class PremiumScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      isPremium ? "KHÔNG GIỚI HẠN" : "$remaining / 3",
+                      isPremium ? (user?.plan == SubscriptionPlan.lifetime ? "KHÔNG GIỚI HẠN" : "CÒN ${user?.premiumExpiry?.difference(DateTime.now()).inDays ?? 0} NGÀY") : "$remaining / 3",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: isPremium ? 32 : 48,
@@ -250,12 +250,14 @@ class PremiumScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      "...",
-                      style: TextStyle(
+                    Text(
+                      isPremium 
+                        ? (user?.plan == SubscriptionPlan.lifetime ? "Vĩnh viễn" : "Hết hạn: ${user?.premiumExpiry?.day}/${user?.premiumExpiry?.month}/${user?.premiumExpiry?.year}")
+                        : "...",
+                      style: const TextStyle(
                         color: Color(0xFFFFD700),
-                        fontSize: 30,
-                        height: 0.5,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
