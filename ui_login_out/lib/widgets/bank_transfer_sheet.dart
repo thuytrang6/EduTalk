@@ -48,7 +48,7 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
       if (status == "success" && mounted) {
         _subscription?.cancel();
         Navigator.pop(context);
-        _showSuccessDialog();
+        // Không hiện dialog ở đây nữa, home.dart sẽ tự hiện
       }
     });
   }

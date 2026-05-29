@@ -101,7 +101,9 @@ class _PaymentSelectionScreenState extends State<PaymentSelectionScreen> {
     // Lắng nghe giao dịch MoMo
     PaymentService().listenTransactionStatus(orderId).listen((status) {
       if (status == "success" && mounted) {
-        _showSuccessDialog();
+        // Tự động đóng màn hình chọn khi thành công
+        // home.dart sẽ chịu trách nhiệm hiện Dialog chúc mừng
+        Navigator.pop(context);
       }
     });
   }

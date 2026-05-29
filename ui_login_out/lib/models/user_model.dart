@@ -16,6 +16,7 @@ class UserModel {
   final String? currentPlan;   // Tên hiển thị (ví dụ: 'Gói Tháng')
   final DateTime? premiumStart;
   final DateTime? premiumExpiry;
+  final DateTime? premiumAt; // Thời điểm thanh toán thành công gần nhất
   final String subscriptionStatus; // active, expired, cancelled, none
 
   UserModel({
@@ -31,6 +32,7 @@ class UserModel {
     this.currentPlan,
     this.premiumStart,
     this.premiumExpiry,
+    this.premiumAt,
     this.subscriptionStatus = 'none',
   });
 
@@ -56,6 +58,7 @@ class UserModel {
       currentPlan: data['currentPlan'],
       premiumStart: (data['premiumStart'] as Timestamp?)?.toDate(),
       premiumExpiry: (data['premiumExpiry'] as Timestamp?)?.toDate(),
+      premiumAt: (data['premiumAt'] as Timestamp?)?.toDate(),
       subscriptionStatus: data['subscriptionStatus'] ?? 'none',
     );
   }

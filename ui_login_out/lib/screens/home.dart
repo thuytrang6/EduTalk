@@ -112,6 +112,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  DateTime? _lastPremiumAt;
+  bool _initialStateCaptured = false;
+
   void _listenToUsageCount() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -122,6 +125,23 @@ class _HomeScreenState extends State<HomeScreen> {
           .listen((snapshot) {
             if (snapshot.exists && mounted) {
               final userData = UserModel.fromDocument(snapshot);
+              
+              // Logic thông báo nâng cấp thành công (MoMo & Bank)
+              if (!_initialStateCaptured) {
+                // Lần đầu load app: Chỉ ghi nhớ thời điểm thanh toán gần nhất, không hiện dialog
+                _lastPremiumAt = userData.premiumAt;
+                _initialStateCaptured = true;
+              } else {
+                // Các lần update sau:
+                // Nếu premiumAt mới xuất hiện HOẶC mới hơn cái cũ -> Vừa thanh toán thành công
+                if (userData.premiumAt != null && 
+                   (_lastPremiumAt == null || userData.premiumAt!.isAfter(_lastPremiumAt!))) {
+                  
+                  _lastPremiumAt = userData.premiumAt; // Cập nhật mốc mới nhất
+                  _showUpgradeSuccessDialog(userData.currentPlan ?? "Premium");
+                }
+              }
+
               // Đồng bộ giá trị từ Firestore sang ValueNotifier global
               freeUsageCount.value = (3 - userData.usageCount).clamp(0, 3);
               
@@ -130,6 +150,53 @@ class _HomeScreenState extends State<HomeScreen> {
             }
           });
     }
+  }
+
+  void _showUpgradeSuccessDialog(String planName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 20),
+            Lottie.network(
+              'https://lottie.host/825f385c-1971-463e-862d-94b79148d45e/v2t4VqE5xT.json', // Crown/Success animation
+              height: 160,
+              repeat: false,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Nâng cấp thành công!",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Chào mừng bạn đến với cộng đồng EduTalk Premium $planName!\nTận hưởng trải nghiệm không giới hạn ngay bây giờ.",
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF22C55E),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+                child: const Text("Bắt đầu trải nghiệm ngay 🚀", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   List<Widget> get pages => [
