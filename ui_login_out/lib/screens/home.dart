@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,6 +16,7 @@ import 'KetQua.dart';
 import 'About.dart';
 import 'ContactPage.dart';
 import 'Premium_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   final String userName;
   HomeScreen({super.key, required this.userName});
@@ -50,13 +52,23 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkInitialPremiumStatus();
   }
 
+  @override
+  void dispose() {
+    _usageSubscription?.cancel();
+    super.dispose();
+  }
+
   void _checkInitialPremiumStatus() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
+    if (user == null) return;
+    try {
       final status = await PaymentService().checkPremiumStatus(user.uid);
       if (status != null && status['expired'] == true && mounted) {
         _showExpiryDialog(status['plan'] ?? 'Premium');
       }
+    } catch (e) {
+      // Server đang sleep (Render free tier) hoặc không có mạng → bỏ qua, không crash app
+      debugPrint('Bỏ qua kiểm tra Premium: $e');
     }
   }
 
@@ -103,9 +115,14 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xff2563eb),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text("Nâng cấp ngay", style: TextStyle(color: Colors.white)),
+            child: const Text(
+              "Nâng cấp ngay",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -114,18 +131,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   DateTime? _lastPremiumAt;
   bool _initialStateCaptured = false;
+  StreamSubscription? _usageSubscription;
 
   void _listenToUsageCount() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      FirebaseFirestore.instance
+      _usageSubscription = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .snapshots()
           .listen((snapshot) {
             if (snapshot.exists && mounted) {
               final userData = UserModel.fromDocument(snapshot);
-              
+
               // Logic thông báo nâng cấp thành công (MoMo & Bank)
               if (!_initialStateCaptured) {
                 // Lần đầu load app: Chỉ ghi nhớ thời điểm thanh toán gần nhất, không hiện dialog
@@ -134,15 +152,17 @@ class _HomeScreenState extends State<HomeScreen> {
               } else {
                 // Các lần update sau:
                 // Nếu premiumAt mới xuất hiện HOẶC mới hơn cái cũ -> Vừa thanh toán thành công
-                if (userData.premiumAt != null && 
-                   (_lastPremiumAt == null || userData.premiumAt!.isAfter(_lastPremiumAt!))) {
-                  
+                if (userData.premiumAt != null &&
+                    (_lastPremiumAt == null ||
+                        userData.premiumAt!.isAfter(_lastPremiumAt!))) {
                   _lastPremiumAt = userData.premiumAt; // Cập nhật mốc mới nhất
-                  
+
                   // Đợi 800ms để các sheet (MoMo/Bank) đóng lời hẳn rồi mới hiện Dialog
                   Future.delayed(const Duration(milliseconds: 800), () {
                     if (mounted) {
-                      _showUpgradeSuccessDialog(userData.currentPlan ?? "Premium");
+                      _showUpgradeSuccessDialog(
+                        userData.currentPlan ?? "Premium",
+                      );
                     }
                   });
                 }
@@ -150,7 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // Đồng bộ giá trị từ Firestore sang ValueNotifier global
               freeUsageCount.value = (3 - userData.usageCount).clamp(0, 3);
-              
+
               // Đồng bộ toàn bộ thông tin User để xử lý Theme Premium
               currentUserNotifier.value = userData;
             }
@@ -178,7 +198,11 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
             const Text(
               "Nâng cấp thành công!",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF1E293B),
+              ),
             ),
             const SizedBox(height: 12),
             Text(
@@ -194,10 +218,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF22C55E),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text("Bắt đầu trải nghiệm ngay 🚀", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  "Bắt đầu trải nghiệm ngay 🚀",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],

@@ -77,9 +77,18 @@ class DuLieuScreenState extends State<DuLieuScreen> {
   }
 
   void _normalizeScore(int index) {
-    final value =
-        double.tryParse(scores[index].text.replaceAll(',', '.')) ?? 0.0;
-    final normalized = value.clamp(0.0, 10.0);
+    String text = scores[index].text.replaceAll(',', '.');
+    double? value = double.tryParse(text);
+
+    // Nếu nhập 2 chữ số không có dấu chấm (vd: "85") → hiểu là "8.5"
+    if (value == null || (value > 10 && !text.contains('.'))) {
+      if (text.length == 2 && !text.contains('.')) {
+        text = '${text[0]}.${text[1]}';
+        value = double.tryParse(text);
+      }
+    }
+
+    final normalized = (value ?? 0.0).clamp(0.0, 10.0);
     scores[index].text = normalized.toStringAsFixed(1);
     setState(() {});
   }
@@ -126,7 +135,10 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
     if (!doc.exists) return;
     final userData = UserModel.fromDocument(doc);
 
@@ -136,11 +148,11 @@ class DuLieuScreenState extends State<DuLieuScreen> {
           .map((c) => double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0)
           .toList();
       widget.onOPenPhanTich?.call(_totalScore, subjects, scoresDetail);
-    } 
+    }
     // Nếu KHÔNG phải Premium, lúc này mới check lượt dùng thử.
     else if (userData.usageCount >= userData.freeLimit) {
       if (mounted) _showUpgradeBottomSheet();
-    } 
+    }
     // Trường hợp chưa hết lượt dùng thử.
     else {
       final List<double> scoresDetail = scores
@@ -167,7 +179,10 @@ class DuLieuScreenState extends State<DuLieuScreen> {
             Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
             const SizedBox(height: 24),
             Lottie.asset(
@@ -193,14 +208,28 @@ class DuLieuScreenState extends State<DuLieuScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PremiumScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const PremiumScreen(),
+                    ),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xff2563eb),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text("Nâng cấp Premium 👑", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  "Nâng cấp Premium 👑",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -214,6 +243,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -310,7 +340,10 @@ class DuLieuScreenState extends State<DuLieuScreen> {
     return ValueListenableBuilder<UserModel?>(
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
-        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final theme = PremiumTheme.getTheme(
+          user?.currentPlan,
+          user?.isPremium ?? false,
+        );
         final bool isPremium = user?.isPremiumActive ?? false;
         final int remaining = (3 - (user?.usageCount ?? 0)).clamp(0, 3);
 
@@ -339,11 +372,12 @@ class DuLieuScreenState extends State<DuLieuScreen> {
               ),
               Container(
                 height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: theme.gradientColors,
-                  ),
+                  gradient: LinearGradient(colors: theme.gradientColors),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: InkWell(
@@ -855,28 +889,15 @@ class _ScoreInputFormatter extends TextInputFormatter {
     final text = newValue.text.replaceAll(',', '.');
     if (text.isEmpty) return newValue.copyWith(text: '');
 
-    final dotCount = text.split('').where((c) => c == '.').length;
-    if (dotCount > 1) return oldValue;
+    // Chỉ cho phép số và dấu chấm
+    if (!RegExp(r'^[\d.]*$').hasMatch(text)) return oldValue;
 
-    if (!text.contains('.') && text.length == 2) {
-      final auto = '${text[0]}.${text[1]}';
-      final parsed = double.tryParse(auto) ?? 0.0;
-      if (parsed > 10.0) {
-        return TextEditingValue(
-          text: '9.9',
-          selection: const TextSelection.collapsed(offset: 3),
-        );
-      }
-      return TextEditingValue(
-        text: auto,
-        selection: TextSelection.collapsed(offset: auto.length),
-      );
-    }
+    // Không cho nhiều hơn 1 dấu chấm
+    if (text.split('.').length > 2) return oldValue;
 
+    // Không cho nhập nếu giá trị vượt 10
     final parsed = double.tryParse(text);
-    if (parsed != null && parsed > 10.0) {
-      return oldValue;
-    }
+    if (parsed != null && parsed > 10.0) return oldValue;
 
     return newValue.copyWith(text: text);
   }

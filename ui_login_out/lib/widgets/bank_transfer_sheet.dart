@@ -10,7 +10,7 @@ class BankTransferSheet extends StatefulWidget {
   final String userId;
   final int price;
   final String paymentCode; // ETxxxxxx
-  final String orderId;     // Numeric ID
+  final String orderId; // Numeric ID
 
   const BankTransferSheet({
     Key? key,
@@ -32,7 +32,7 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
 
   final String bankId = "OCB";
   final String accountNo = "0385274441";
-  final String accountName = "NGUYEN ANH QUAN";
+  final String accountName = "EduTalk Company";
 
   @override
   void initState() {
@@ -45,13 +45,15 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
     _subscription = PaymentService()
         .listenTransactionStatus(widget.orderId)
         .listen((status) {
-      if (status == "success" && mounted) {
-        _subscription?.cancel();
-        // Pop 2 lần để đóng cả BankTransferSheet và PaymentSelectionScreen
-        Navigator.pop(context); // Đóng Sheet hiện tại
-        Navigator.pop(context); // Đóng màn hình PaymentSelectionScreen bên dưới
-      }
-    });
+          if (status == "success" && mounted) {
+            _subscription?.cancel();
+            // Pop 2 lần để đóng cả BankTransferSheet và PaymentSelectionScreen
+            Navigator.pop(context); // Đóng Sheet hiện tại
+            Navigator.pop(
+              context,
+            ); // Đóng màn hình PaymentSelectionScreen bên dưới
+          }
+        });
   }
 
   @override
@@ -76,7 +78,8 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final String qrUrl = "https://img.vietqr.io/image/$bankId-$accountNo-qr_only.png?amount=${widget.price}&addInfo=${widget.paymentCode}&accountName=$accountName";
+    final String qrUrl =
+        "https://img.vietqr.io/image/$bankId-$accountNo-qr_only.png?amount=${widget.price}&addInfo=${widget.paymentCode}&accountName=$accountName";
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -106,7 +109,11 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                     color: const Color(0xFF005A3C).withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.account_balance_rounded, color: Color(0xFF005A3C), size: 24),
+                  child: const Icon(
+                    Icons.account_balance_rounded,
+                    color: Color(0xFF005A3C),
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Column(
@@ -114,11 +121,18 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                   children: [
                     const Text(
                       "Quét mã thanh toán",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF1E293B)),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1E293B),
+                      ),
                     ),
                     Text(
                       "EduTalk Premium - Thanh toán an toàn",
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
                   ],
                 ),
@@ -152,14 +166,19 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                           return const SizedBox(
                             width: 200,
                             height: 200,
-                            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           );
                         },
                       ),
                     ),
                     const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF2563EB).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(100),
@@ -167,11 +186,19 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.qr_code_scanner_rounded, size: 14, color: Color(0xFF2563EB)),
+                          Icon(
+                            Icons.qr_code_scanner_rounded,
+                            size: 14,
+                            color: Color(0xFF2563EB),
+                          ),
                           SizedBox(width: 6),
                           Text(
                             "VietQR - Quét bằng mọi app Bank",
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF2563EB),
+                            ),
                           ),
                         ],
                       ),
@@ -195,14 +222,39 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
-                  child: Text("O", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    "O",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
             ),
-            _buildInfoRow("Số tài khoản", accountNo, isMono: true, canCopy: true, fieldId: "stk"),
+            _buildInfoRow(
+              "Số tài khoản",
+              accountNo,
+              isMono: true,
+              canCopy: true,
+              fieldId: "stk",
+            ),
             _buildInfoRow("Chủ tài khoản", accountName),
-            _buildInfoRow("Số tiền", "${widget.price}đ", isRed: true, isLarge: true),
-            _buildInfoRow("Nội dung CK", widget.paymentCode, isMono: true, canCopy: true, fieldId: "content", isBold: true),
+            _buildInfoRow(
+              "Số tiền",
+              "${widget.price}đ",
+              isRed: true,
+              isLarge: true,
+            ),
+            _buildInfoRow(
+              "Nội dung CK",
+              widget.paymentCode,
+              isMono: true,
+              canCopy: true,
+              fieldId: "content",
+              isBold: true,
+            ),
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),
@@ -210,18 +262,6 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                 color: const Color(0xFFFFFBEB),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFFEF3C7)),
-              ),
-              child: const Row(
-                children: [
-                  Text("💡", style: TextStyle(fontSize: 18)),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Hệ thống tự động kích hoạt sau khi nhận được tiền",
-                      style: TextStyle(fontSize: 13, color: Color(0xFF92400E), fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ],
               ),
             ),
             const SizedBox(height: 32),
@@ -249,17 +289,27 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                     onPressed: () {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Hệ thống đang kiểm tra giao dịch của bạn!")),
+                        const SnackBar(
+                          content: Text(
+                            "Hệ thống đang kiểm tra giao dịch của bạn!",
+                          ),
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
                     ),
                     child: const Text(
                       "Tôi đã chuyển khoản",
-                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -268,7 +318,10 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                   onPressed: () => Navigator.pop(context),
                   child: Text(
                     "Đóng",
-                    style: TextStyle(color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -295,7 +348,14 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey.shade500,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Row(
@@ -309,8 +369,12 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                     style: TextStyle(
                       fontSize: isLarge ? 18 : 14,
                       fontFamily: isMono ? 'Courier' : null,
-                      fontWeight: (isBold || isLarge) ? FontWeight.w900 : FontWeight.w700,
-                      color: isRed ? const Color(0xFFEF4444) : const Color(0xFF1E293B),
+                      fontWeight: (isBold || isLarge)
+                          ? FontWeight.w900
+                          : FontWeight.w700,
+                      color: isRed
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFF1E293B),
                     ),
                   ),
                 ),
@@ -325,10 +389,14 @@ class _BankTransferSheetState extends State<BankTransferSheet> {
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 200),
                           child: Icon(
-                            _copiedFields.contains(fieldId) ? Icons.check_rounded : Icons.copy_rounded,
+                            _copiedFields.contains(fieldId)
+                                ? Icons.check_rounded
+                                : Icons.copy_rounded,
                             key: ValueKey(_copiedFields.contains(fieldId)),
                             size: 18,
-                            color: _copiedFields.contains(fieldId) ? Colors.green : const Color(0xFF2563EB),
+                            color: _copiedFields.contains(fieldId)
+                                ? Colors.green
+                                : const Color(0xFF2563EB),
                           ),
                         ),
                       ),
