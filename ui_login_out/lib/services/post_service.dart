@@ -1,23 +1,40 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/post_model.dart';
+
 class PostService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance; 
+  
 
-  // 1. Hàm Upload ảnh lên Firebase Storage
+  // 1. Hàm Upload ảnh lên Cloudinary
   Future<String?> uploadPostImage(File imageFile) async {
     try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString();
-      Reference ref = _storage.ref().child('post_images').child(fileName);
-      UploadTask uploadTask = ref.putFile(imageFile);
-      TaskSnapshot snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL(); 
+      const cloudName = "edutalk-app"; 
+      const uploadPreset = "edutalk_posts";  
+      
+      final url = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/image/upload");
+      final request = http.MultipartRequest('POST', url)
+        ..fields['upload_preset'] = uploadPreset
+        ..files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+      final response = await request.send();
+      
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final jsonMap = jsonDecode(responseData);
+        return jsonMap['secure_url']; // Trả về link xịn
+      } else {
+        debugPrint("Lỗi upload Cloudinary: ${response.statusCode}");
+        return null;
+      }
     } catch (e) {
-      debugPrint("Lỗi Upload Ảnh: $e");
+      debugPrint("Lỗi khi đẩy ảnh qua Service: $e");
       return null;
     }
   }
@@ -97,27 +114,64 @@ class PostService {
   Future<void> upvotePost(String postId, String uid) async {
     DocumentReference postRef = _db.collection('posts').doc(postId);
 
-    return _db.runTransaction((transaction) async {
-      DocumentSnapshot snapshot = await transaction.get(postRef);
-      if (!snapshot.exists) return;
+    try {
+      bool isUpvoting = false; // Biến cờ để check xem là Like hay Hủy Like
+      String? postOwnerId;
 
-      List<dynamic> upvotedBy = snapshot.get('upvotedBy') ?? [];
-      int currentCount = snapshot.get('interactionCount') ?? 0;
+      await _db.runTransaction((transaction) async {
+        DocumentSnapshot snapshot = await transaction.get(postRef);
+        if (!snapshot.exists) return;
 
-      if (upvotedBy.contains(uid)) {
-        // HỦY VOTE
-        transaction.update(postRef, {
-          'upvotedBy': FieldValue.arrayRemove([uid]),
-          'interactionCount': currentCount - 1
-        });
-      } else {
-        // VOTE
-        transaction.update(postRef, {
-          'upvotedBy': FieldValue.arrayUnion([uid]),
-          'interactionCount': currentCount + 1
+        // Lấy danh sách người đã upvote và điểm tương tác
+        List<dynamic> upvotedBy = snapshot.get('upvotedBy') ?? [];
+        int currentCount = snapshot.get('interactionCount') ?? 0;
+        
+        // Lấy ID của chủ bài viết 
+        final data = snapshot.data() as Map<String, dynamic>?;
+        postOwnerId = data?['authorId'];
+
+        if (upvotedBy.contains(uid)) {
+          // HỦY VOTE
+          transaction.update(postRef, {
+            'upvotedBy': FieldValue.arrayRemove([uid]),
+            'interactionCount': currentCount - 1
+          });
+          isUpvoting = false; 
+        } else {
+          // VOTE
+          transaction.update(postRef, {
+            'upvotedBy': FieldValue.arrayUnion([uid]),
+            'interactionCount': currentCount + 1
+          });
+          isUpvoting = true; 
+        }
+      });
+
+      // ==========================================
+      // BƯỚC 3: BẮN THÔNG BÁO CHO CHỦ BÀI VIẾT
+      // ==========================================
+      // Chỉ gửi thông báo khi: Đang LIKE (không phải Hủy) + Có chủ bài + Khác người Like
+      if (isUpvoting && postOwnerId != null && postOwnerId != uid) {
+        
+        // Truy vấn lấy tên của người vừa thả Like (trong bảng users)
+        final userDoc = await _db.collection('users').doc(uid).get();
+        String senderName = userDoc.data()?['name'] ?? "Thành viên EduTalk";
+
+        // Ghi vào bảng notifications
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'receiverId': postOwnerId,
+          'senderId': uid,
+          'senderName': senderName,
+          'type': 'like',          // <-- Đổi type thành 'like' để hiện icon trái tim đỏ
+          'postId': postId,
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
         });
       }
-    });
+      
+    } catch (e) {
+      debugPrint("Lỗi upvotePost: $e");
+    }
   }
 
   // 7. Hàm Xóa bài viết 
@@ -129,6 +183,7 @@ class PostService {
       rethrow;
     }
   }
+
   // 8. Hàm Sửa bài viết
   Future<void> editPost(String postId, String newContent) async {
     try {
@@ -140,8 +195,13 @@ class PostService {
       rethrow;
     }
   }
+
   // 9. Hàm Thêm bình luận (Comment)
   Future<void> addComment(String postId, CommentModel comment) async {
+    // Lấy ID người dùng hiện tại trước khi xử lý
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (currentUserId == null) return; // Nếu chưa đăng nhập thì dừng luôn
+
     DocumentReference postRef = _db.collection('posts').doc(postId);
     DocumentReference newCommentRef = postRef.collection('comments').doc();
 
@@ -152,22 +212,39 @@ class PostService {
         
         // 2. Tăng 2 điểm interaction và 1 điểm commentCount cho bài viết
         transaction.update(postRef, {
-          'interactionCount': FieldValue.increment(2),
+          'interactionCount': FieldValue.increment(1),
           'commentCount': FieldValue.increment(1),
         });
       });
 
-      // 3. Gửi thông báo cho chủ bài viết (nằm trong try để bắt lỗi)
-      final postDoc = await _db.collection('posts').doc(postId).get();
+      final postDoc = await postRef.get();
+      
       if (postDoc.exists) {
-        final String authorId = postDoc['authorId'];
-        await sendNotification(receiverId: authorId, type: 'comment', postId: postId);
+        // Lấy authorId (có ép kiểu cho an toàn)
+        final data = postDoc.data() as Map<String, dynamic>?;
+        final postOwnerId = data?['authorId'];
+        if (postOwnerId != null && postOwnerId != currentUserId) {
+          
+          // Tạo 1 document mới trong bảng notifications
+          await FirebaseFirestore.instance
+              .collection('notifications') 
+              .add({
+            'receiverId': postOwnerId,          // Người nhận là chủ bài viết
+            'senderId': currentUserId,          // Người gửi là đứa vừa comment
+            'senderName': comment.authorName,   // Tên đứa comment
+            'type': 'comment',                  // Loại thông báo 
+            'postId': postId,                   // ID bài viết để bấm vào nó mở lên
+            'isRead': false,                    // Trạng thái chưa đọc
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
       }
+
     } catch (e) {
-      debugPrint("Lỗi thêm bình luận: $e");
-      rethrow;
+      debugPrint("Lỗi addComment: $e");
     }
   }
+
   // 10. Hàm lấy danh sách bình luận (Real-time)
   Stream<List<CommentModel>> getCommentsStream(String postId) {
     return _db
@@ -180,6 +257,7 @@ class PostService {
             .map((doc) => CommentModel.fromMap(doc.data(), doc.id))
             .toList());
   }
+
   // 11. Hàm Tương tác (Upvote) cho bình luận
   Future<void> upvoteComment(String postId, String commentId, String uid) async {
     DocumentReference commentRef = _db.collection('posts').doc(postId).collection('comments').doc(commentId);
@@ -222,6 +300,7 @@ class PostService {
       );
     }
   }
+
   // 12. Lấy danh sách thông báo của User hiện tại
   Stream<List<NotificationModel>> getNotificationsStream(String userId) {
     return _db

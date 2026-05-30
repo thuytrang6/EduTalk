@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'Setting.dart';
 import 'Premium_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'free_usage_store.dart';
 import '../services/premium_theme_helper.dart';
 import '../models/user_model.dart';
@@ -61,6 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   final ImagePicker _picker = ImagePicker();
   File? _imageFile;
+  String? _photoUrl; // Biến lưu link ảnh từ Cloudinary
 
   String _displayName = "";
   bool _isUpdating = false;
@@ -164,6 +167,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() {
           _phoneController.text = data['phone'] ?? "";
           _dobController.text = data['dob'] ?? "";
+          _photoUrl = data['photoUrl']; // Lấy link ảnh từ Firestore về
+
           if ((data['name'] ?? "").toString().isNotEmpty) {
             _displayName = data['name'];
             _nameController.text = _displayName;
@@ -237,9 +242,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
         maxHeight: 512,
         imageQuality: 80,
       );
+      
       if (image != null) {
-        setState(() => _imageFile = File(image.path));
+        setState(() {
+          _imageFile = File(image.path);
+          _isUpdating = true; // Bật vòng xoay loading
+        });
+
+        final uid = FirebaseAuth.instance.currentUser?.uid;
+        if (uid == null) throw Exception("Chưa đăng nhập");
+
+        // 1. GỌI API ĐẨY ẢNH LÊN CLOUDINARY
+        const cloudName = "edutalk-app"; // Thay tên của ông vào đây
+        const uploadPreset = "edutalk_avatars"; // Thay preset vào đây (Nhớ set Unsigned trên web)
+        
+        final url = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/image/upload");
+        final request = http.MultipartRequest('POST', url)
+          ..fields['upload_preset'] = uploadPreset
+          ..files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
+
+        final response = await request.send();
+        
+        if (response.statusCode != 200) {
+          throw Exception("Lỗi khi up ảnh lên Cloudinary");
+        }
+
+        // 2. LẤY LINK ẢNH TRẢ VỀ
+        final responseData = await response.stream.bytesToString();
+        final jsonMap = jsonDecode(responseData);
+        final downloadUrl = jsonMap['secure_url']; // Link https của ảnh
+
+        // 3. LƯU LINK ĐÓ VÀO FIRESTORE CỦA USER
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'photoUrl': downloadUrl,
+        }, SetOptions(merge: true));
+        
+        await FirebaseAuth.instance.currentUser?.updatePhotoURL(downloadUrl);
+
+        // 4. CẬP NHẬT GIAO DIỆN
         if (mounted) {
+          setState(() {
+            _photoUrl = downloadUrl;
+            _isUpdating = false;
+          });
           _showTopNotification(
             message: "Đã cập nhật ảnh đại diện mới!",
             backgroundColor: const Color.fromARGB(255, 180, 180, 181),
@@ -249,10 +294,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isUpdating = false);
         _showTopNotification(
-          message: "Lỗi khi chọn ảnh. Vui lòng cấp quyền!",
+          message: "Lỗi khi up ảnh: $e",
           backgroundColor: Colors.redAccent,
-          icon: Icons.lock_open_outlined,
+          icon: Icons.error_outline,
         );
       }
     }
@@ -447,10 +493,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: CircleAvatar(
                 radius: 70,
                 backgroundColor: Colors.white.withOpacity(0.2),
+                // Ưu tiên hiển thị file nếu vừa chọn xong, không có thì lấy ảnh mạng
                 backgroundImage: _imageFile != null
                     ? FileImage(_imageFile!)
-                    : null,
-                child: _imageFile == null
+                    : (_photoUrl != null && _photoUrl!.isNotEmpty
+                        ? NetworkImage(_photoUrl!) as ImageProvider
+                        : null),
+                // Chỉ hiện chữ cái khi chưa có file lẫn ảnh mạng
+                child: (_imageFile == null && (_photoUrl == null || _photoUrl!.isEmpty))
                     ? Text(
                         _displayName.isNotEmpty
                             ? _displayName[0].toUpperCase()
