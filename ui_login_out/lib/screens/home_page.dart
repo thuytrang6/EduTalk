@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
+import 'package:ui_login_out/screens/trending_majors_card.dart'; // 1. ĐÃ IMPORT FILE TREND ĐỘNG
 import 'Premium_screen.dart';
 import 'ThongKeTs.dart';
 import 'about_screen.dart';
@@ -137,7 +138,7 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    NganhHot(context),
+                    const TrendingMajorsCard(), // 2. ĐÃ THAY THÀNH WIDGET AI TRENDING ĐỘNG
                     const SizedBox(height: 16),
                     KhamPhaThem(context),
                     const SizedBox(height: 20),
@@ -296,142 +297,6 @@ class _HomePageState extends State<HomePage> {
             const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget NganhHot(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x12000000),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.trending_up, color: Color(0xff22c55e), size: 18),
-              const SizedBox(width: 6),
-              const Expanded(
-                child: Text(
-                  "Ngành Hot 2024",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black,
-                  ),
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ThongKeTs(
-                        onTabChange: widget.onChangeTab,
-                      ), // Thêm chữ widget.
-                    ),
-                  );
-                },
-                child: const Text(
-                  "Xem dữ liệu",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xff2563eb),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          hotItems(index: "1", title: "Công nghệ thông tin", percent: 15),
-          const SizedBox(height: 10),
-          hotItems(index: "2", title: "Y tế", percent: 12),
-          const SizedBox(height: 10),
-          hotItems(index: "3", title: "Giáo dục", percent: 10),
-        ],
-      ),
-    );
-  }
-
-  Widget hotItems({
-    required String index,
-    required String title,
-    required int percent,
-  }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xfff8fafc),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xffeef2f7), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x10000000),
-                  blurRadius: 6,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                index,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xffd1fae5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              "+$percent%",
-              style: const TextStyle(
-                color: Color(0xff059669),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -8,6 +8,8 @@ import 'package:ui_login_out/services/post_service.dart';
 import 'package:ui_login_out/models/post_model.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'notification_screen.dart';
+
 // ===========================================================================
 // HÀM TÍNH THỜI GIAN TRÔI QUA
 // ===========================================================================
@@ -44,7 +46,7 @@ class _ThaoLuanScreenState extends State<ThaoLuanScreen> {
 
   void changeTab(String tab) => setState(() {
     activeTab = tab;
-    _searchKeyword = ""; // Reset search khi đổi tab
+    _searchKeyword = ""; 
   });
 
   void _onSearch(String keyword) => setState(() => _searchKeyword = keyword.trim().toLowerCase());
@@ -77,7 +79,6 @@ class _ThaoLuanScreenState extends State<ThaoLuanScreen> {
     return service.getPostsStream();
   }
 
-  /// Lọc client-side theo keyword (content + authorName + tags)
   List<PostModel> _applySearch(List<PostModel> posts) {
     if (_searchKeyword.isEmpty) return posts;
     return posts.where((p) {
@@ -155,10 +156,13 @@ class _ThaoLuanScreenState extends State<ThaoLuanScreen> {
 }
 
 // ===========================================================================
-// SHEET TẠO BÀI VIẾT (CÓ LƯU NHÁP)
+// SHEET 2-IN-1: TẠO BÀI MỚI / CHỈNH SỬA BÀI CŨ
 // ===========================================================================
 class _CreatePostSheet extends StatefulWidget {
-  const _CreatePostSheet();
+  final PostModel? existingPost; // Nếu có truyền vào là chế độ SỬA
+
+  const _CreatePostSheet({this.existingPost});
+  
   @override
   State<_CreatePostSheet> createState() => _CreatePostSheetState();
 }
@@ -167,7 +171,10 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
   final TextEditingController controller = TextEditingController();
   List<String> selectedTopics = []; 
   String selectedBlock = ""; 
-  File? _selectedImage;
+  
+  File? _selectedImage; // Ảnh chọn từ máy
+  String? _oldImageUrl; // Link ảnh cũ trên mạng
+
   bool _isLoading = false;
   bool _isPostedSuccess = false;
 
@@ -176,15 +183,35 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
   @override
   void initState() {
     super.initState();
-    controller.text = PostDraft.content;
-    selectedTopics = List.from(PostDraft.selectedTopics);
-    selectedBlock = PostDraft.selectedBlock;
-    _selectedImage = PostDraft.image;
+    
+    // NẾU LÀ SỬA BÀI: Load dữ liệu cũ lên
+    if (widget.existingPost != null) {
+      controller.text = widget.existingPost!.content;
+      selectedTopics = List.from(widget.existingPost!.tags);
+      _oldImageUrl = widget.existingPost!.imageUrl;
+
+      // Cố gắng tách khối thi ra từ biến Bio (VD: 2k6 • Khối A00)
+      String bio = widget.existingPost!.authorBio;
+      if (bio.contains("Khối ")) {
+        selectedBlock = bio.split("Khối ").last;
+        if (!examBlocks.contains(selectedBlock)) selectedBlock = "A00";
+      } else {
+        selectedBlock = "A00";
+      }
+    } 
+    // NẾU LÀ TẠO BÀI MỚI: Load bản nháp
+    else {
+      controller.text = PostDraft.content;
+      selectedTopics = List.from(PostDraft.selectedTopics);
+      selectedBlock = PostDraft.selectedBlock;
+      _selectedImage = PostDraft.image;
+    }
   }
 
   @override
   void dispose() {
-    if (!_isPostedSuccess) {
+    // CHỈ LƯU NHÁP NẾU LÀ TẠO BÀI MỚI
+    if (!_isPostedSuccess && widget.existingPost == null) {
       PostDraft.content = controller.text;
       PostDraft.selectedTopics = List.from(selectedTopics);
       PostDraft.selectedBlock = selectedBlock;
@@ -196,7 +223,12 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
 
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
-    if (pickedFile != null) setState(() => _selectedImage = File(pickedFile.path));
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+        _oldImageUrl = null; // Khi chọn ảnh mới thì bỏ ảnh cũ đi
+      });
+    }
   }
 
   void _toggleTopic(String topic) {
@@ -223,38 +255,72 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
         return;
       }
 
-      String? imageUrl;
+      // 1. Xử lý up ảnh (Gọi qua Service)
+      String? finalImageUrl = _oldImageUrl; 
       if (_selectedImage != null) {
-        imageUrl = await service.uploadPostImage(_selectedImage!);
+        finalImageUrl = await service.uploadPostImage(_selectedImage!);
       }
 
+      // 2. LẤY THÔNG TIN USER TỪ FIRESTORE
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       String name = userDoc.data()?['name'] ?? "Thành viên EduTalk";
-
-      final newPost = PostModel(
-        authorId: user.uid,
-        content: content,
-        imageUrl: imageUrl,
-        tags: selectedTopics.isEmpty ? ["Hỏi đáp"] : selectedTopics,
-        authorName: name,
-        authorBio: "2k6 • Khối $selectedBlock",
-        createdAt: DateTime.now(),
-      );
-
-      await service.createPost(newPost);
+      String? dob = userDoc.data()?['dob']; // Dữ liệu ngày sinh dạng DD/MM/YYYY
       
-      _isPostedSuccess = true; 
-      PostDraft.content = "";
-      PostDraft.selectedTopics = ["Tư vấn ngành"];
-      PostDraft.selectedBlock = "A00";
-      PostDraft.image = null;
+      // 👉 LOGIC MỚI: LẤY THẲNG NĂM SINH
+      String yearPrefix = "";
+      if (dob != null && dob.trim().length >= 4) {
+        // Cắt lấy đúng 4 số cuối cùng của chuỗi (chính là Năm)
+        String yearStr = dob.trim().substring(dob.trim().length - 4); 
+        yearPrefix = "$yearStr • "; // VD: "2004 • "
+      }
+      
+      // Ghép chuỗi hoàn chỉnh. Nếu user chưa nhập ngày sinh thì chỉ hiện "Khối A00"
+      String finalBio = "${yearPrefix}Khối $selectedBlock";
 
-      if (mounted) {
-        _showCenterAlert(context, "Đã chia sẻ bài viết!");
-        Navigator.pop(context);
+      if (widget.existingPost == null) {
+        // =======================
+        // LUỒNG TẠO BÀI MỚI
+        // =======================
+        final newPost = PostModel(
+          authorId: user.uid,
+          content: content,
+          imageUrl: finalImageUrl,
+          tags: selectedTopics.isEmpty ? ["Hỏi đáp"] : selectedTopics,
+          authorName: name,
+          authorBio: finalBio, // 👉 Ráp cái Bio mới vào đây
+          createdAt: DateTime.now(),
+        );
+
+        await service.createPost(newPost);
+        
+        _isPostedSuccess = true; 
+        PostDraft.content = "";
+        PostDraft.selectedTopics = ["Tư vấn ngành"];
+        PostDraft.selectedBlock = "A00";
+        PostDraft.image = null;
+
+        if (mounted) {
+          Navigator.pop(context);
+          _showCenterAlert(context, "Đăng bài thành công!");
+        }
+      } else {
+        // =======================
+        // LUỒNG CẬP NHẬT BÀI 
+        // =======================
+        await FirebaseFirestore.instance.collection('posts').doc(widget.existingPost!.id!).update({
+          'content': content,
+          'imageUrl': finalImageUrl,
+          'tags': selectedTopics.isEmpty ? ["Hỏi đáp"] : selectedTopics,
+          'authorBio': finalBio, // 👉 Ráp cái Bio mới vào đây
+        });
+
+        if (mounted) {
+          Navigator.pop(context);
+          _showCenterAlert(context, "Đã cập nhật bài viết!");
+        }
       }
     } catch (e) {
-      _showCenterAlert(context, "Lỗi hệ thống: $e", isError: true);
+      if (mounted) _showCenterAlert(context, "Lỗi hệ thống: $e", isError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -274,8 +340,13 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Tạo bài viết mới", style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            Text(
+              widget.existingPost == null ? "Tạo bài viết mới" : "Chỉnh sửa bài viết", 
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)
+            ),
             const SizedBox(height: 15),
+            
+            // XỬ LÝ KHUNG ẢNH (Ảnh mới hoặc Ảnh cũ)
             if (_selectedImage != null)
               Stack(
                 children: [
@@ -291,7 +362,24 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
                     )
                   )
                 ]
+              )
+            else if (_oldImageUrl != null)
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20), 
+                    child: Image.network(_oldImageUrl!, height: 180, width: double.infinity, fit: BoxFit.cover)
+                  ),
+                  Positioned(
+                    right: 8, top: 8, 
+                    child: GestureDetector(
+                      onTap: () => setState(() => _oldImageUrl = null), 
+                      child: const CircleAvatar(backgroundColor: Colors.black54, radius: 15, child: Icon(Icons.close, size: 18, color: Colors.white))
+                    )
+                  )
+                ]
               ),
+
             const SizedBox(height: 20),
             const Text("Khối & Chủ đề", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF475569))),
             const SizedBox(height: 10),
@@ -322,7 +410,10 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
               children: [
                 IconButton(onPressed: _pickImage, icon: const Icon(Icons.image_search_rounded, size: 28, color: Color(0xFF2563EB))),
                 const Spacer(),
-                ElevatedButton(onPressed: _isLoading ? null : _handlePostSubmit, child: const Text("Đăng bài"))
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _handlePostSubmit, 
+                  child: Text(widget.existingPost == null ? "Đăng bài" : "Cập nhật")
+                )
               ]
             )
           ],
@@ -330,63 +421,6 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
       ),
     );
   }
-}
-
-// ===========================================================================
-// GIAO DIỆN CHỈNH SỬA BÀI VIẾT (DIALOG)
-// ===========================================================================
-void _showEditPostDialog(BuildContext context, PostModel post) {
-  TextEditingController editController = TextEditingController(text: post.content);
-  bool isSaving = false;
-
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text("Chỉnh sửa bài viết", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-            content: TextField(
-              controller: editController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                hintText: "Nhập nội dung mới...",
-                filled: true,
-                fillColor: const Color(0xFFF3F4F6),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: isSaving ? null : () => Navigator.pop(dialogContext),
-                child: const Text("Hủy", style: TextStyle(color: Colors.grey)),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB)),
-                onPressed: isSaving ? null : () async {
-                  if (editController.text.trim().isEmpty) return;
-                  setDialogState(() => isSaving = true);
-                  
-                  await PostService().editPost(post.id!, editController.text.trim());
-                  
-                  if (dialogContext.mounted) {
-                    Navigator.pop(dialogContext);
-                    _showCenterAlert(context, "Đã cập nhật bài viết!");
-                  }
-                },
-                child: isSaving
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : const Text("Lưu thay đổi", style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          );
-        },
-      );
-    },
-  );
 }
 
 // ===========================================================================
@@ -411,7 +445,6 @@ class _PostCard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Icon cảnh báo
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -425,8 +458,6 @@ class _PostCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 20),
-              
-              // Tiêu đề
               const Text(
                 "Gắn cờ bài viết?",
                 style: TextStyle(
@@ -436,8 +467,6 @@ class _PostCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              
-              // Nội dung
               const Text(
                 "Bạn có chắc chắn muốn báo cáo nội dung này cho Admin kiểm duyệt không?",
                 textAlign: TextAlign.center,
@@ -448,8 +477,6 @@ class _PostCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 28),
-              
-              // Hai nút bấm
               Row(
                 children: [
                   Expanded(
@@ -580,7 +607,12 @@ class _PostCard extends StatelessWidget {
                           ),
                         );
                       } else if (value == 'edit') {
-                        _showEditPostDialog(context, post);
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => _CreatePostSheet(existingPost: post),
+                        );
                       }
                     },
                     itemBuilder: (context) => [
@@ -616,7 +648,6 @@ class _PostCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround, 
               children: [
-                // NÚT TRÁI TIM 
                 InkWell(
                   onTap: () {
                     if (post.id != null && currentUserId.isNotEmpty) {
@@ -634,8 +665,9 @@ class _PostCard extends StatelessWidget {
                           color: isUpvoted ? Colors.redAccent : const Color(0xFF68748C)
                         ),
                         const SizedBox(width: 6),
+                        // Đã tách số TIM độc lập, không bị ảnh hưởng bởi Comment
                         Text(
-                          '${post.interactionCount}', 
+                          '${post.upvotedBy.length}', 
                           style: TextStyle(
                             color: isUpvoted ? Colors.redAccent : const Color(0xFF68748C), 
                             fontWeight: FontWeight.bold
@@ -646,7 +678,6 @@ class _PostCard extends StatelessWidget {
                   ),
                 ),
                 
-                // NÚT BÌNH LUẬN 
                 InkWell(
                   onTap: () {
                     if (post.id != null) {
@@ -674,12 +705,11 @@ class _PostCard extends StatelessWidget {
                   ),
                 ),
 
-                // NÚT CHIA SẺ (NATIVE SHARE)
                 IconButton(
                   icon: const Icon(Icons.share_rounded, size: 20, color: Color(0xFF68748C)),
-                  onPressed: () {
-                    Share.share(
-                      "Ê vào đọc bài này trên EduTalk nè!\n\n${post.authorName} vừa chia sẻ: \"${post.content}\""
+                  onPressed: () async {
+                    await Share.share(
+                     "\n${post.authorName} vừa chia sẻ: \"${post.content}\""
                     );
                   },
                 ),
@@ -1026,7 +1056,7 @@ class _TopSectionState extends State<_TopSection> {
                   child: _isSearching
                       ? TextField(
                           controller: _searchController,
-                          autofocus: true, // Tự động bật bàn phím
+                          autofocus: true,
                           decoration: InputDecoration(
                             hintText: "Nhập từ khóa tìm kiếm...",
                             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
@@ -1061,63 +1091,39 @@ class _TopSectionState extends State<_TopSection> {
               ),
               const SizedBox(width: 10),
               
-              // NÚT TÌM KIẾM (ĐỔI THÀNH DẤU X KHI ĐANG MỞ)
               _CircleButton(
                 icon: _isSearching ? Icons.close_rounded : Icons.search_rounded,
                 onTap: () {
                   setState(() {
                     if (_isSearching) {
                       _searchController.clear();
-                      widget.onSearch(""); // Reset kết quả tìm kiếm
+                      widget.onSearch("");
                     }
                     _isSearching = !_isSearching;
                   });
                 },
               ),
               
-              // NÚT THÔNG BÁO (HIỂN THỊ DROPDOWN LƠ LỬNG GÓC PHẢI)
               if (!_isSearching) const SizedBox(width: 10),
               if (!_isSearching)
                 _CircleButton(
                   icon: Icons.notifications_none_rounded,
                   onTap: () {
-                    showGeneralDialog(
-                      context: context,
-                      barrierDismissible: true,
-                      barrierLabel: "Đóng thông báo",
-                      barrierColor: Colors.transparent, // Để trong suốt để nhìn giống dropdown
-                      transitionDuration: const Duration(milliseconds: 200),
-                      pageBuilder: (context, _, __) {
-                        return Align(
-                          alignment: Alignment.topRight, // Ép nó sang góc trên bên phải
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 80, right: 16), // Cách đỉnh 80px, cách lề phải 16px
-                            child: Material(
-                              color: Colors.transparent,
-                              child: Container(
-                                // Định cỡ cho cái hộp thông báo (không quá to)
-                                width: MediaQuery.of(context).size.width * 0.85 > 380 
-                                    ? 380 
-                                    : MediaQuery.of(context).size.width * 0.85,
-                                constraints: BoxConstraints(
-                                  maxHeight: MediaQuery.of(context).size.height * 0.75, // Cao tối đa 75% màn hình
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 20, spreadRadius: 5)
-                                  ],
-                                ),
-                                child: const _NotificationDropdown(),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                      transitionBuilder: (context, animation, _, child) {
-                        return FadeTransition(opacity: animation, child: child); // Hiệu ứng mờ dần hiện ra
-                      },
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NotificationScreen(
+                          onOpenPost: (postId) {
+                            Navigator.pop(context); 
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) => _CommentSheet(postId: postId),
+                            );
+                          },
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -1140,31 +1146,29 @@ class _IntroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
+      width: double.infinity, 
       decoration: BoxDecoration(
         color: const Color(0xFFF7F7F8),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: const Color(0xFFD5DAE3)),
       ),
-      child: Row(
+      child: Column( 
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE9EEF9),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: const Text("Hỏi đáp đúng mối quan tâm", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
-                ),
-                const SizedBox(height: 16),
-                const Text("Hỏi đúng chỗ\nChọn đúng nghề\nVề đúng hệ.", style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, height: 1.2)),
-              ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE9EEF9),
+              borderRadius: BorderRadius.circular(999),
             ),
+            child: const Text("Hỏi đáp đúng mối quan tâm", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
           ),
-          const Icon(Icons.chevron_right_rounded, size: 40, color: Color(0xFF68748C)),
+          const SizedBox(height: 16),
+          const Text(
+            "Hỏi đúng chỗ • Chọn đúng nghề • Về đúng hệ.", 
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, height: 1.4),
+            
+          ),
         ],
       ),
     );
@@ -1260,11 +1264,6 @@ class _SelectableTopicChip extends StatelessWidget {
   }
 }
 
-
-// ===========================================================================
-// CÁC WIDGET PHỤ GIAO DIỆN (ĐÃ FIX NGOẶC)
-// ===========================================================================
-
 class _CircleButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
@@ -1288,7 +1287,6 @@ class _CircleButton extends StatelessWidget {
   }
 } 
 
-// Hàm Alert cũng cần đóng ngoặc hàm build cẩn thận
 void _showCenterAlert(BuildContext context, String message, {bool isError = false}) {
   showDialog(
     context: context,
@@ -1329,349 +1327,4 @@ void _showCenterAlert(BuildContext context, String message, {bool isError = fals
       );
     },
   );
-}
-
-// ===========================================================================
-// BẢNG THÔNG BÁO DROPDOWN (CHUẨN FORM FACEBOOK)
-// ===========================================================================
-class _NotificationDropdown extends StatefulWidget {
-  const _NotificationDropdown();
-  @override
-  State<_NotificationDropdown> createState() => _NotificationDropdownState();
-}
-
-class _NotificationDropdownState extends State<_NotificationDropdown> {
-  bool _isUnreadOnly = false;
-  // Set lưu id các thông báo đã đọc trong phiên hiện tại (trước khi có field isRead trên Firestore)
-  final Set<String> _readInSession = {};
-
-  String _notifMessage(NotificationModel notif) {
-    if (notif.type == 'like') return "đã thích bài viết của bạn.";
-    if (notif.type == 'comment') return "đã bình luận vào bài viết của bạn.";
-    if (notif.type == 'reply') return "đã trả lời bình luận của bạn.";
-    return "đã tương tác với bài viết của bạn.";
-  }
-
-  IconData _subIcon(String type) {
-    if (type == 'like') return Icons.favorite;
-    if (type == 'reply') return Icons.reply_rounded;
-    return Icons.mode_comment;
-  }
-
-  Color _subIconColor(String type) {
-    if (type == 'like') return Colors.redAccent;
-    return Colors.blueAccent;
-  }
-
-  /// Đánh dấu một thông báo là đã đọc (local + Firestore)
-  Future<void> _markAsRead(NotificationModel notif) async {
-    if (notif.id == null) return;
-    setState(() => _readInSession.add(notif.id!));
-    await PostService().markNotificationAsRead(notif.id!);
-  }
-
-  /// Đọc tất cả thông báo chưa đọc
-  Future<void> _markAllAsRead(List<NotificationModel> notifs) async {
-    final unread = notifs.where((n) => !n.isRead && !_readInSession.contains(n.id)).toList();
-    if (unread.isEmpty) return;
-    setState(() {
-      for (final n in unread) {
-        if (n.id != null) _readInSession.add(n.id!);
-      }
-    });
-    await PostService().markAllNotificationsAsRead(
-      unread.map((n) => n.id!).where((id) => id.isNotEmpty).toList(),
-    );
-  }
-
-  bool _isRead(NotificationModel notif) =>
-      notif.isRead || _readInSession.contains(notif.id);
-
-  /// Đóng dropdown → đánh dấu đã đọc → mở CommentSheet của bài viết
-  Future<void> _openPost(BuildContext context, NotificationModel notif) async {
-    // 1. Đóng dropdown
-    Navigator.of(context, rootNavigator: true).pop();
-
-    // 2. Đánh dấu đã đọc
-    await _markAsRead(notif);
-
-    // 3. Mở CommentSheet (dùng postId từ notification)
-    if (context.mounted) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => _CommentSheet(postId: notif.postId),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 1. Tiêu đề
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Thông báo", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
-            ],
-          ),
-        ),
-
-        // 2. Tab Tất cả / Chưa đọc
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              _TabPill(label: "Tất cả", active: !_isUnreadOnly, onTap: () => setState(() => _isUnreadOnly = false)),
-              const SizedBox(width: 8),
-              _TabPill(label: "Chưa đọc", active: _isUnreadOnly, onTap: () => setState(() => _isUnreadOnly = true)),
-            ],
-          ),
-        ),
-
-        // 3. Danh sách thông báo (scrollable)
-        Expanded(
-          child: currentUser == null
-              ? const Center(child: Text("Bạn cần đăng nhập để xem thông báo.", style: TextStyle(color: Colors.grey)))
-              : StreamBuilder<List<NotificationModel>>(
-                  stream: PostService().getNotificationsStream(currentUser.uid),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final allNotifs = snapshot.data ?? [];
-                    var notifs = _isUnreadOnly
-                        ? allNotifs.where((n) => !_isRead(n)).toList()
-                        : allNotifs;
-
-                    if (notifs.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.notifications_off_outlined, size: 48, color: Colors.grey.shade300),
-                            const SizedBox(height: 12),
-                            Text(
-                              _isUnreadOnly ? "Không có thông báo chưa đọc." : "Chưa có thông báo nào.",
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    // Chia thành "Mới" (chưa đọc) và "Trước đó" (đã đọc) khi ở tab Tất cả
-                    final unreadNotifs = notifs.where((n) => !_isRead(n)).toList();
-                    final readNotifs = notifs.where((n) => _isRead(n)).toList();
-
-                    return ListView(
-                      padding: EdgeInsets.zero,
-                      children: [
-                        // --- Section: Mới ---
-                        if (!_isUnreadOnly && unreadNotifs.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text("Mới", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                                GestureDetector(
-                                  onTap: () => _markAllAsRead(allNotifs),
-                                  child: const Text("Đọc tất cả", style: TextStyle(fontSize: 13, color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          ...unreadNotifs.map((n) => _NotifItem(
-                            notif: n,
-                            isRead: false,
-                            onTap: () => _openPost(context, n),
-                          )),
-                        ],
-
-                        // --- Section: Trước đó ---
-                        if (!_isUnreadOnly && readNotifs.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-                            child: const Text("Trước đó", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                          ),
-                          ...readNotifs.map((n) => _NotifItem(
-                            notif: n,
-                            isRead: true,
-                            onTap: () => _openPost(context, n),
-                          )),
-                        ],
-
-                        // --- Khi ở tab Chưa đọc: không chia section ---
-                        if (_isUnreadOnly) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text("Chưa đọc", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                                GestureDetector(
-                                  onTap: () => _markAllAsRead(allNotifs),
-                                  child: const Text("Đọc tất cả", style: TextStyle(fontSize: 13, color: Color(0xFF2563EB), fontWeight: FontWeight.w600)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          ...notifs.map((n) => _NotifItem(
-                            notif: n,
-                            isRead: false,
-                            onTap: () => _openPost(context, n),
-                          )),
-                        ],
-
-                        const SizedBox(height: 12),
-                      ],
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Widget con: một dòng thông báo (tách ra để gọn)
-// ---------------------------------------------------------------------------
-class _NotifItem extends StatelessWidget {
-  final NotificationModel notif;
-  final bool isRead;
-  final VoidCallback onTap;
-
-  const _NotifItem({required this.notif, required this.isRead, required this.onTap});
-
-  IconData _subIcon(String type) {
-    if (type == 'like') return Icons.favorite;
-    if (type == 'reply') return Icons.reply_rounded;
-    return Icons.mode_comment;
-  }
-
-  Color _subIconColor(String type) {
-    if (type == 'like') return Colors.redAccent;
-    return Colors.blueAccent;
-  }
-
-  String _message(String type) {
-    if (type == 'like') return "đã thích bài viết của bạn.";
-    if (type == 'comment') return "đã bình luận vào bài viết của bạn.";
-    if (type == 'reply') return "đã trả lời bình luận của bạn.";
-    return "đã tương tác với bài viết của bạn.";
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        color: isRead ? Colors.transparent : const Color(0xFFF0F5FF),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Avatar + icon nhỏ góc dưới
-            SizedBox(
-              width: 60, height: 60,
-              child: Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: const Color(0xFFE7EAEE),
-                    child: Text(
-                      notif.senderName.isNotEmpty ? notif.senderName[0].toUpperCase() : "U",
-                      style: const TextStyle(fontSize: 20, color: Colors.black54),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0, right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: Icon(_subIcon(notif.type), size: 16, color: _subIconColor(notif.type)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Nội dung
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    text: TextSpan(
-                      style: const TextStyle(color: Colors.black87, fontSize: 14, height: 1.4),
-                      children: [
-                        TextSpan(text: "${notif.senderName} ", style: const TextStyle(fontWeight: FontWeight.bold)),
-                        TextSpan(text: _message(notif.type)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    getTimeAgo(notif.createdAt),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isRead ? Colors.grey.shade500 : const Color(0xFF2563EB),
-                      fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Chấm xanh nếu chưa đọc
-            if (!isRead) ...[
-              const SizedBox(width: 8),
-              Container(width: 10, height: 10, decoration: const BoxDecoration(color: Color(0xFF2563EB), shape: BoxShape.circle)),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Widget con: tab pill (Tất cả / Chưa đọc)
-// ---------------------------------------------------------------------------
-class _TabPill extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _TabPill({required this.label, required this.active, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFFEAF1FF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(fontWeight: FontWeight.bold, color: active ? const Color(0xFF2563EB) : Colors.black54),
-        ),
-      ),
-    );
-  }
 }
