@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../auth_service.dart';
+import '../services/auth_service.dart';
 import 'Login.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_screen.dart';
@@ -22,7 +22,7 @@ class _SettingScreenState extends State<SettingScreen> {
     return Scaffold(
       backgroundColor: const Color(0xfff6f7fb),
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: const ClampingScrollPhysics(),
         child: Stack(children: [_buildHeader(), _buildMainContent()]),
       ),
     );
@@ -177,20 +177,7 @@ class _SettingScreenState extends State<SettingScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 20),
-        _buildSection(
-          title: "Hỗ trợ",
-          items: [
-            _buildNavigationItem(
-              icon: Icons.help_outline_rounded,
-              iconColor: const Color(0xffec4899),
-              bgColor: const Color(0xfffdf2f8),
-              title: "Trung tâm trợ giúp",
-              subtitle: "Câu hỏi thường gặp & hướng dẫn",
-              onTap: () {},
-            ),
-          ],
-        ),
+
         const SizedBox(height: 20),
         _buildSection(
           items: [

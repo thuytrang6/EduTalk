@@ -10,10 +10,10 @@ class ApiService {
     required String userId,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/predict'),
+      Uri.parse('$baseUrl/api/prediction/predict'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'scores': scores, 'userId': userId}),
-    );
+    ).timeout(const Duration(seconds: 30));
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {

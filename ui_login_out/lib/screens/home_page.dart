@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
-import 'package:ui_login_out/screens/trending_majors_card.dart'; // 1. ĐÃ IMPORT FILE TREND ĐỘNG
+import 'package:ui_login_out/services/premium_theme_helper.dart';
 import 'Premium_screen.dart';
 import 'ThongKeTs.dart';
 import 'about_screen.dart';
 import 'support_screen.dart';
+import '../models/user_model.dart';
+import 'trending_majors_card.dart';
 
 class HomePage extends StatefulWidget {
   final ValueChanged<int>? onChangeTab;
@@ -24,19 +26,19 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String userName = "Bạn";
+  String _userName = "Bạn";
 
   @override
   void initState() {
     super.initState();
-    _loadUserSession(); // Gọi hàm lấy tên khi trang vừa mở
+    _loadUserSession();
   }
 
   void _loadUserSession() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       setState(() {
-        userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
+        _userName = user.displayName ?? user.email?.split('@')[0] ?? "Bạn";
       });
     }
   }
@@ -47,17 +49,15 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xfff6f7fb),
       body: SafeArea(
         child: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(), // hiệu ứng cuộn mượt mà
+          physics: const ClampingScrollPhysics(),
           child: Column(
             children: [
               Stack(
-                clipBehavior:
-                    Clip.none, // cho phép phần tử con vượt ra ngoài Stack
+                clipBehavior: Clip.none,
                 children: [
                   Container(
-                    height: 550,
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
@@ -78,9 +78,8 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(color: Colors.white70),
                         ),
                         const SizedBox(height: 5),
-                        // ĐÃ THAY CHỮ "BẠN" BẰNG BIẾN _userName
                         Text(
-                          "$userName 👋",
+                          "$_userName 👋",
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 24,
@@ -94,9 +93,8 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
-
                   Positioned(
-                    top: 450,
+                    bottom: -75,
                     left: 20,
                     right: 20,
                     child: Row(
@@ -133,12 +131,13 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 120),
+              const SizedBox(height: 90),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    const TrendingMajorsCard(), // 2. ĐÃ THAY THÀNH WIDGET AI TRENDING ĐỘNG
+                    // 👉 SỬ DỤNG AI ĐỂ TẠO LIST NGÀNH HOT
+                    const TrendingMajorsCard(), 
                     const SizedBox(height: 16),
                     KhamPhaThem(context),
                     const SizedBox(height: 20),
@@ -200,7 +199,7 @@ class _HomePageState extends State<HomePage> {
                 MaterialPageRoute(
                   builder: (context) => ThongKeTs(
                     onTabChange: widget.onChangeTab,
-                  ), // Thêm chữ widget.
+                  ),
                 ),
               );
             },
@@ -218,7 +217,7 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(builder: (_) => const AboutScreen()),
               );
-              widget.onOpenAbout?.call(); // Thêm chữ widget.
+              widget.onOpenAbout?.call();
             },
           ),
           const SizedBox(height: 10),
@@ -234,7 +233,7 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(builder: (_) => const SupportScreen()),
               );
-              widget.onOpenContact?.call(); // Thêm chữ widget.
+              widget.onOpenContact?.call();
             },
           ),
         ],
@@ -302,89 +301,140 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget freeAcountCard(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(255, 110, 104, 104).withOpacity(0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xffeab308).withOpacity(0.6),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Tài khoản miễn phí",
-                  style: TextStyle(
-                    color: Color(0xffffe08a),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                ValueListenableBuilder(
-                  valueListenable: freeUsageCount,
-                  builder: (context, value, _) {
-                    return Text(
-                      "Số lượt $value/3 dùng thử",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    );
-                  },
-                ),
-              ],
+    return ValueListenableBuilder<UserModel?>(
+      valueListenable: currentUserNotifier,
+      builder: (context, user, _) {
+        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final bool isPremium = user?.isPremium ?? false;
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.bgColor, // Semi-transparent blending
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: theme.accentColor.withOpacity(0.3),
+              width: 1.2,
             ),
           ),
-          Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color.fromARGB(255, 254, 187, 54),
-                  Color.fromARGB(255, 255, 155, 48),
-                  Color.fromARGB(255, 244, 130, 0),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PremiumScreen(),
-                  ),
-                );
-              },
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Icon(Icons.workspace_premium, color: Colors.white, size: 18),
-                  SizedBox(width: 6),
-                  Text(
-                    "Nâng cấp",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+                  // Avatar Circle with Gradient
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: theme.gradientColors,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(color: Colors.white24, width: 2),
+                    ),
+                    child: Center(
+                      child: Text(
+                        (user?.name ?? _userName)[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Info Column
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Badge Pill
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.accentColor.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: theme.accentColor.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(theme.icon, color: theme.accentColor, size: 14),
+                              const SizedBox(width: 6),
+                              Text(
+                                theme.title,
+                                style: TextStyle(
+                                  color: theme.accentColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 20),
+              // Action Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isPremium 
+                      ? "Gói hiện tại: ${user?.currentPlan ?? 'Premium'}"
+                      : "Dùng thử: ${3 - (user?.usageCount ?? 0)}/3 lượt còn lại",
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PremiumScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: theme.gradientColors),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.gradientColors.first.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        isPremium ? "Chi tiết" : "Nâng cấp",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -414,11 +464,11 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 20),
           Material(
-            color: Colors.transparent, // để giữ nguyên hiệu ứng gradient
+            color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(16),
               onTap: () {
-                widget.onChangeTab?.call(2); // Thêm chữ widget.
+                widget.onChangeTab?.call(2);
               },
               child: Container(
                 width: double.infinity,
@@ -459,7 +509,6 @@ class _HomePageState extends State<HomePage> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      // cho hiệu ứng nhấn
       borderRadius: BorderRadius.circular(25),
       onTap: onTap,
       child: Container(

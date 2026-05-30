@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'support_request_screen.dart';
 
 class SupportScreen extends StatelessWidget {
   const SupportScreen({super.key});
@@ -150,16 +151,7 @@ class SupportScreen extends StatelessWidget {
                   bgColor: const Color(0xffecfdf5),
 
                   title: "Hotline",
-                  subtitle: "0123 456 789",
-                ),
-
-                _buildContactItem(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  iconColor: const Color(0xff8b5cf6),
-                  bgColor: const Color(0xfff5f3ff),
-
-                  title: "Live Chat",
-                  subtitle: "Chat trực tiếp với hỗ trợ",
+                  subtitle: "1900 6067",
                 ),
 
                 const SizedBox(height: 24),
@@ -172,7 +164,14 @@ class SupportScreen extends StatelessWidget {
                   height: 56,
 
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SupportRequestScreen(),
+                        ),
+                      );
+                    },
 
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xff1e293b),

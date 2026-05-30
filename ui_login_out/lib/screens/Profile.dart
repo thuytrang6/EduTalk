@@ -8,6 +8,9 @@ import 'Setting.dart';
 import 'Premium_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'free_usage_store.dart';
+import '../services/premium_theme_helper.dart';
+import '../models/user_model.dart';
 
 // ── CUSTOM FORMATTER CHUẨN: KHÔNG BỊ THỤT SỐ KHI NHẬP NGÀY SINH ──
 class DateTextFormatter extends TextInputFormatter {
@@ -553,74 +556,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildPremiumCard() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: warmBg,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: const Color(0xFFFFE58F).withOpacity(0.6),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD97706).withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [accentOrange, Color(0xFFFF6D00)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(
-                  Icons.workspace_premium_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Nâng cấp Premium ✨",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
-                        color: primaryNavy,
-                      ),
-                    ),
-                    Text(
-                      "Sử dụng không giới hạn • Hỗ trợ ưu tiên",
-                      style: TextStyle(fontSize: 12, color: Color(0xFF5A6B81)),
-                    ),
-                  ],
-                ),
+    return ValueListenableBuilder<UserModel?>(
+      valueListenable: currentUserNotifier,
+      builder: (context, user, _) {
+        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final bool isPremium = user?.isPremium ?? false;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: theme.bgColor,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: theme.accentColor.withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          _buildProgressBar(),
-          const SizedBox(height: 20),
-          _buildPremiumButton(),
-        ],
-      ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: theme.gradientColors,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      theme.icon,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isPremium ? theme.title : "Nâng cấp Premium ✨",
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          isPremium ? "Sử dụng không giới hạn" : "Mở khóa toàn bộ tính năng",
+                          style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.7)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildProgressBar(theme, user?.usageCount ?? 0, isPremium),
+              const SizedBox(height: 20),
+              _buildPremiumButton(theme, isPremium),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildProgressBar() {
+  Widget _buildProgressBar(PremiumTheme theme, int usageCount, bool isPremium) {
+    double progress = isPremium ? 1.0 : ((3 - usageCount) / 3).clamp(0.0, 1.0);
+    int remaining = (3 - usageCount).clamp(0, 3);
+
     return Column(
       children: [
         Stack(
@@ -628,29 +642,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Container(
               height: 10,
               decoration: BoxDecoration(
-                color: const Color(0xFFFDE68A).withOpacity(0.4),
+                color: Colors.white.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            Container(
-              height: 10,
-              width: 600,
-              decoration: BoxDecoration(
-                color: accentOrange,
-                borderRadius: BorderRadius.circular(10),
-              ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 600),
+                  curve: Curves.easeOutBack,
+                  height: 10,
+                  width: constraints.maxWidth * progress,
+                  decoration: BoxDecoration(
+                    color: theme.accentColor,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(color: theme.accentColor.withOpacity(0.4), blurRadius: 8)
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),
         const SizedBox(height: 8),
-        const Align(
+        Align(
           alignment: Alignment.centerRight,
           child: Text(
-            "3/3 lượt",
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: primaryNavy,
+            isPremium ? "TRẠNG THÁI: UNLIMITED" : "DÙNG THỬ: $remaining/3 LƯỢT",
+            style: const TextStyle(
+              fontSize: 11,
+              letterSpacing: 0.5,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
             ),
           ),
         ),
@@ -658,18 +682,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPremiumButton() {
+  Widget _buildPremiumButton(PremiumTheme theme, bool isPremium) {
     return Container(
       width: double.infinity,
       height: 54,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [accentOrange, Color(0xFFFF5D00)],
+        gradient: LinearGradient(
+          colors: theme.gradientColors,
         ),
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFFF5D00).withOpacity(0.3),
+            color: theme.gradientColors.first.withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 6),
           ),
@@ -691,9 +715,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
         ),
-        child: const Text(
-          "Xem gói Premium",
-          style: TextStyle(
+        child: Text(
+          isPremium ? "Quản lý gói" : "Xem gói Premium",
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w900,
             fontSize: 16,

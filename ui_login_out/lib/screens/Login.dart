@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../auth_service.dart';
+import '../services/auth_service.dart';
 import '/screens/Register.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -13,7 +13,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
-  
+
   bool _isLoading = false;
   bool _isObscure = true;
 
@@ -163,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 10),
                           TextField(
                             controller: _passwordController,
-                            obscureText: _isObscure, 
+                            obscureText: _isObscure,
                             style: const TextStyle(color: Colors.white),
                             decoration: InputDecoration(
                               prefixIcon: const Icon(
@@ -172,12 +172,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _isObscure ? Icons.visibility_off : Icons.visibility,
+                                  _isObscure
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
                                   color: Colors.white70,
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    _isObscure = !_isObscure; // Đổi trạng thái khi bấm
+                                    _isObscure =
+                                        !_isObscure; // Đổi trạng thái khi bấm
                                   });
                                 },
                               ),

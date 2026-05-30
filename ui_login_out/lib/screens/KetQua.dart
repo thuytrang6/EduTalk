@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/user_model.dart';
+import 'Premium_screen.dart';
 
 class KetQuaScreen extends StatefulWidget {
   final VoidCallback onBack;
@@ -32,7 +39,7 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics: const ClampingScrollPhysics(),
           child: Column(
             children: [
               buildTopSection(),
@@ -43,8 +50,6 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
                   children: [
                     const SizedBox(height: 170),
                     buildReasonCard(),
-                    const SizedBox(height: 16),
-                    buildChartCard(),
                     const SizedBox(height: 16),
                     buildUniversityCard(),
                     const SizedBox(height: 20),
@@ -91,21 +96,7 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
           Positioned(
             top: 0,
             left: 0,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: widget.onBack,
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ),
+            child: Material(color: Colors.transparent),
           ),
           Center(
             child: Column(
@@ -354,97 +345,6 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  Widget buildChartCard() {
-    final labels = [
-      'Năng động',
-      'Hướng nội',
-      'Sáng tạo',
-      'Logic',
-      'Tò mò',
-      'Cảm thông',
-      'Công nghệ',
-      'Xã hội',
-      'Sức khỏe',
-      'Nghệ thuật',
-    ];
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'BIỂU ĐỒ NĂNG LỰC',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF7C8799),
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 18),
-          // Radar chart placeholder — sẽ thêm fl_chart sau
-          Container(
-            height: 260,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE9EEF5)),
-            ),
-            alignment: Alignment.center,
-            child: widget.userScores.isEmpty
-                ? const Text(
-                    'Chưa có dữ liệu',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF94A3B8),
-                    ),
-                  )
-                : CustomPaint(
-                    size: const Size(240, 240),
-                    painter: _RadarChartPainter(
-                      userScores: widget.userScores
-                          .map((e) => e.toDouble())
-                          .toList(),
-                      majorRequirements: widget.majorRequirements
-                          .map((e) => e.toDouble())
-                          .toList(),
-                      labels: labels,
-                    ),
-                  ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildLegendItem(
-                color: const Color(0xFF3B82F6),
-                label: 'Hồ sơ của bạn',
-              ),
-              const SizedBox(width: 18),
-              _buildLegendItem(
-                color: const Color(0xFFEF4444),
-                label: 'Yêu cầu ngành',
-                isDashed: true,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildLegendItem({
     required Color color,
     required String label,
@@ -474,148 +374,315 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
     );
   }
 
-  Widget buildUniversityCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.school_rounded, color: Color(0xFF0EA5A4), size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Top Trường Gợi Ý',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                ),
+  Future<void> _exportToPdf() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // Check Premium before exporting
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    final user = UserModel.fromDocument(userDoc);
+
+    if (!user.isPremiumActive) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Tính năng Premium"),
+            content: const Text(
+              "Bạn cần nâng cấp gói Premium để sử dụng tính năng xuất báo cáo chuyên nghiệp.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Để sau"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PremiumScreen()),
+                  );
+                },
+                child: const Text("Nâng cấp ngay"),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          if (widget.recommendations.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  'Không có trường nào được gợi ý',
-                  style: TextStyle(color: Color(0xFF94A3B8)),
-                ),
-              ),
-            )
-          else
-            ...widget.recommendations.asMap().entries.map((entry) {
-              final index = entry.key;
-              final uni = entry.value as Map<String, dynamic>;
-              final isLast = index == widget.recommendations.length - 1;
-              return Container(
-                padding: const EdgeInsets.only(top: 8, bottom: 14),
-                decoration: BoxDecoration(
-                  border: isLast
-                      ? null
-                      : const Border(
-                          bottom: BorderSide(
-                            color: Color(0xFFE9EDF3),
-                            width: 1,
-                          ),
-                        ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE8F0FE),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${index + 1}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF3B82F6),
-                          ),
-                        ),
-                      ),
+        );
+      }
+      return;
+    }
+
+    final pdf = pw.Document();
+
+    // Tải font hỗ trợ Tiếng Việt (Roboto là font mặc định phổ biến)
+    final font = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.all(32),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Center(
+                  child: pw.Text(
+                    "BÁO CÁO TƯ VẤN NGHỀ NGHIỆP EDUTALK",
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 24,
+                      color: PdfColors.blue900,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            uni['ten_truong']?.toString() ?? '',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF143B8F),
-                              height: 1.3,
-                            ),
+                  ),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Divider(),
+                pw.SizedBox(height: 20),
+                pw.Text(
+                  "Kết quả dự đoán: ${widget.predictedMajor}",
+                  style: pw.TextStyle(font: fontBold, fontSize: 18),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text(
+                  "Tổng điểm xét tuyển: ${widget.totalScore.toStringAsFixed(2)}",
+                  style: pw.TextStyle(font: font, fontSize: 14),
+                ),
+                pw.SizedBox(height: 30),
+                pw.Text(
+                  "DANH SÁCH TRƯỜNG ĐỀ XUẤT:",
+                  style: pw.TextStyle(font: fontBold, fontSize: 16),
+                ),
+                pw.SizedBox(height: 10),
+                ...widget.recommendations.map(
+                  (uni) => pw.Container(
+                    margin: const pw.EdgeInsets.only(bottom: 12),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(
+                          "- ${uni['ten_truong']}",
+                          style: pw.TextStyle(font: fontBold, fontSize: 14),
+                        ),
+                        pw.Text(
+                          "  Ngành: ${uni['ten_nganh']}",
+                          style: pw.TextStyle(font: font, fontSize: 12),
+                        ),
+                        pw.Text(
+                          "  Điểm chuẩn: ${uni['diem_chuan_2024']}",
+                          style: pw.TextStyle(
+                            font: font,
+                            fontSize: 12,
+                            color: PdfColors.green900,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            uni['ten_nganh']?.toString() ?? '',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE8F7EE),
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              'Điểm chuẩn 2024: ${uni['diem_chuan_2024'] ?? '-'}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF16A34A),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                pw.Spacer(),
+                pw.Center(
+                  child: pw.Text(
+                    "Cảm ơn bạn đã sử dụng dịch vụ của EduTalk Premium",
+                    style: pw.TextStyle(
+                      font: font,
+                      fontSize: 10,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
+                ),
+                pw.Center(
+                  child: pw.Text(
+                    "Website: edutalk-premium.id.vn",
+                    style: pw.TextStyle(
+                      font: font,
+                      fontSize: 10,
+                      color: PdfColors.blue700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  }
+
+  Widget buildUniversityCard() {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(26),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: const [
+                  Icon(
+                    Icons.school_rounded,
+                    color: Color(0xFF0EA5A4),
+                    size: 20,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Top Trường Gợi Ý',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if (widget.recommendations.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      'Không có trường nào được gợi ý',
+                      style: TextStyle(color: Color(0xFF94A3B8)),
+                    ),
+                  ),
+                )
+              else
+                ...widget.recommendations.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final uni = entry.value as Map<String, dynamic>;
+                  final isLast = index == widget.recommendations.length - 1;
+                  return Container(
+                    padding: const EdgeInsets.only(top: 8, bottom: 14),
+                    decoration: BoxDecoration(
+                      border: isLast
+                          ? null
+                          : const Border(
+                              bottom: BorderSide(
+                                color: Color(0xFFE9EDF3),
+                                width: 1,
                               ),
                             ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F0FE),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          if (uni['website'] != null &&
-                              uni['website'].toString().isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              uni['website'].toString(),
+                          child: Center(
+                            child: Text(
+                              '${index + 1}',
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
                                 color: Color(0xFF3B82F6),
                               ),
                             ),
-                          ],
-                        ],
-                      ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                uni['ten_truong']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF143B8F),
+                                  height: 1.3,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                uni['ten_nganh']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F7EE),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'Điểm chuẩn 2024: ${uni['diem_chuan_2024'] ?? '-'}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF16A34A),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            }).toList(),
-        ],
-      ),
+                  );
+                }).toList(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Nút Xuất PDF
+        SizedBox(
+          width: double.infinity,
+          height: 56,
+          child: OutlinedButton.icon(
+            onPressed: _exportToPdf,
+            icon: const Icon(
+              Icons.picture_as_pdf_rounded,
+              color: Color(0xFFE11D48),
+            ),
+            label: const Text(
+              "Xuất báo cáo PDF",
+              style: TextStyle(
+                color: Color(0xFF1E293B),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFFE2E8F0), width: 1.5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(22),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -653,174 +720,3 @@ class _KetQuaScreenState extends State<KetQuaScreen> {
 }
 
 // ── RADAR CHART PAINTER ────────────────────────────────────────────────────────
-class _RadarChartPainter extends CustomPainter {
-  final List<double> userScores;
-  final List<double> majorRequirements;
-  final List<String> labels;
-
-  _RadarChartPainter({
-    required this.userScores,
-    required this.majorRequirements,
-    required this.labels,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final int n = labels.length;
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 30;
-    const maxVal = 5.0;
-
-    // Vẽ lưới nền
-    final gridPaint = Paint()
-      ..color = const Color(0xFFE2E8F0)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    for (int level = 1; level <= 5; level++) {
-      final r = radius * level / maxVal;
-      final path = Path();
-      for (int i = 0; i < n; i++) {
-        final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
-        final x = center.dx + r * cos(angle);
-        final y = center.dy + r * sin(angle);
-        if (i == 0)
-          path.moveTo(x, y);
-        else
-          path.lineTo(x, y);
-      }
-      path.close();
-      canvas.drawPath(path, gridPaint);
-    }
-
-    // Vẽ trục
-    final axisPaint = Paint()
-      ..color = const Color(0xFFCBD5E1)
-      ..strokeWidth = 1;
-    for (int i = 0; i < n; i++) {
-      final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
-      canvas.drawLine(
-        center,
-        Offset(
-          center.dx + radius * cos(angle),
-          center.dy + radius * sin(angle),
-        ),
-        axisPaint,
-      );
-    }
-
-    // Vẽ vùng yêu cầu ngành (đỏ, nét đứt)
-    if (majorRequirements.length == n) {
-      final majorPath = Path();
-      for (int i = 0; i < n; i++) {
-        final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
-        final r = radius * (majorRequirements[i] / maxVal);
-        final x = center.dx + r * cos(angle);
-        final y = center.dy + r * sin(angle);
-        if (i == 0)
-          majorPath.moveTo(x, y);
-        else
-          majorPath.lineTo(x, y);
-      }
-      majorPath.close();
-      canvas.drawPath(
-        majorPath,
-        Paint()
-          ..color = const Color(0x22EF4444)
-          ..style = PaintingStyle.fill,
-      );
-      canvas.drawPath(
-        majorPath,
-        Paint()
-          ..color = const Color(0xFFEF4444)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5,
-      );
-    }
-
-    // Vẽ vùng người dùng (xanh)
-    if (userScores.length == n) {
-      final userPath = Path();
-      for (int i = 0; i < n; i++) {
-        final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
-        final r = radius * (userScores[i] / maxVal);
-        final x = center.dx + r * cos(angle);
-        final y = center.dy + r * sin(angle);
-        if (i == 0)
-          userPath.moveTo(x, y);
-        else
-          userPath.lineTo(x, y);
-      }
-      userPath.close();
-      canvas.drawPath(
-        userPath,
-        Paint()
-          ..color = const Color(0x443B82F6)
-          ..style = PaintingStyle.fill,
-      );
-      canvas.drawPath(
-        userPath,
-        Paint()
-          ..color = const Color(0xFF3B82F6)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2,
-      );
-
-      // Chấm tròn tại các đỉnh
-      final dotPaint = Paint()
-        ..color = const Color(0xFF3B82F6)
-        ..style = PaintingStyle.fill;
-      for (int i = 0; i < n; i++) {
-        final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
-        final r = radius * (userScores[i] / maxVal);
-        canvas.drawCircle(
-          Offset(center.dx + r * cos(angle), center.dy + r * sin(angle)),
-          4,
-          dotPaint,
-        );
-      }
-    }
-
-    // Vẽ nhãn
-    final textStyle = const TextStyle(
-      color: Color(0xFF475569),
-      fontSize: 9,
-      fontWeight: FontWeight.w600,
-    );
-    for (int i = 0; i < n; i++) {
-      final angle = (i * 2 * 3.141592653589793 / n) - 3.141592653589793 / 2;
-      final labelR = radius + 18;
-      final x = center.dx + labelR * cos(angle);
-      final y = center.dy + labelR * sin(angle);
-      final tp = TextPainter(
-        text: TextSpan(text: labels[i], style: textStyle),
-        textDirection: TextDirection.ltr,
-        textAlign: TextAlign.center,
-      )..layout(maxWidth: 60);
-      tp.paint(canvas, Offset(x - tp.width / 2, y - tp.height / 2));
-    }
-  }
-
-  double cos(double angle) => (angle == 0) ? 1 : _cos(angle);
-  double sin(double angle) => (angle == 0) ? 0 : _sin(angle);
-
-  double _cos(double x) {
-    double result = 1, term = 1;
-    for (int i = 1; i <= 10; i++) {
-      term *= -x * x / ((2 * i - 1) * (2 * i));
-      result += term;
-    }
-    return result;
-  }
-
-  double _sin(double x) {
-    double result = x, term = x;
-    for (int i = 1; i <= 10; i++) {
-      term *= -x * x / ((2 * i) * (2 * i + 1));
-      result += term;
-    }
-    return result;
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}

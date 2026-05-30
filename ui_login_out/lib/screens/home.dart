@@ -1,6 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ui_login_out/screens/free_usage_store.dart';
+import 'package:ui_login_out/services/payment_service.dart';
+import '../models/user_model.dart';
 import 'PhanTich.dart';
 import 'DuLieu.dart';
 import 'ThaoLuan.dart';
@@ -11,6 +16,7 @@ import 'KetQua.dart';
 import 'About.dart';
 import 'ContactPage.dart';
 import 'ai_chat_screen.dart';
+import 'Premium_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;
@@ -39,6 +45,199 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double _aiIconRight = 16;
   double _aiIconBottom = 90;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToUsageCount();
+    _checkInitialPremiumStatus();
+  }
+
+  @override
+  void dispose() {
+    _usageSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _checkInitialPremiumStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final status = await PaymentService().checkPremiumStatus(user.uid);
+      if (status != null && status['expired'] == true && mounted) {
+        _showExpiryDialog(status['plan'] ?? 'Premium');
+      }
+    } catch (e) {
+      // Server đang sleep (Render free tier) hoặc không có mạng → bỏ qua, không crash app
+      debugPrint('Bỏ qua kiểm tra Premium: $e');
+    }
+  }
+
+  void _showExpiryDialog(String planName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Lottie.network(
+              'https://assets10.lottiefiles.com/packages/lf20_myejioos.json', // Sad/Expired animation
+              height: 150,
+              repeat: false,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Gói $planName đã hết hạn",
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Hãy gia hạn hoặc nâng cấp để tiếp tục trải nghiệm EduTalk Premium không giới hạn nhé!",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Để sau", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PremiumScreen()),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff2563eb),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              "Nâng cấp ngay",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  DateTime? _lastPremiumAt;
+  bool _initialStateCaptured = false;
+  StreamSubscription? _usageSubscription;
+
+  void _listenToUsageCount() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _usageSubscription = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots()
+          .listen((snapshot) {
+            if (snapshot.exists && mounted) {
+              final userData = UserModel.fromDocument(snapshot);
+
+              // Logic thông báo nâng cấp thành công (MoMo & Bank)
+              if (!_initialStateCaptured) {
+                // Lần đầu load app: Chỉ ghi nhớ thời điểm thanh toán gần nhất, không hiện dialog
+                _lastPremiumAt = userData.premiumAt;
+                _initialStateCaptured = true;
+              } else {
+                // Các lần update sau:
+                // Nếu premiumAt mới xuất hiện HOẶC mới hơn cái cũ -> Vừa thanh toán thành công
+                if (userData.premiumAt != null &&
+                    (_lastPremiumAt == null ||
+                        userData.premiumAt!.isAfter(_lastPremiumAt!))) {
+                  _lastPremiumAt = userData.premiumAt; // Cập nhật mốc mới nhất
+
+                  // Đợi 800ms để các sheet (MoMo/Bank) đóng lời hẳn rồi mới hiện Dialog
+                  Future.delayed(const Duration(milliseconds: 800), () {
+                    if (mounted) {
+                      _showUpgradeSuccessDialog(
+                        userData.currentPlan ?? "Premium",
+                      );
+                    }
+                  });
+                }
+              }
+
+              // Đồng bộ giá trị từ Firestore sang ValueNotifier global
+              freeUsageCount.value = (3 - userData.usageCount).clamp(0, 3);
+
+              // Đồng bộ toàn bộ thông tin User để xử lý Theme Premium
+              currentUserNotifier.value = userData;
+            }
+          });
+    }
+  }
+
+  void _showUpgradeSuccessDialog(String planName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 20),
+            Lottie.asset(
+              'assets/Live chatbot.json', // Local Robot animation
+              width: 150,
+              height: 150,
+              repeat: false,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Nâng cấp thành công!",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Chào mừng bạn đến với cộng đồng EduTalk Premium $planName!\nTận hưởng trải nghiệm không giới hạn ngay bây giờ.",
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF22C55E),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  "Bắt đầu trải nghiệm ngay 🚀",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   List<Widget> get pages => [
     HomePage(
@@ -104,14 +303,10 @@ class _HomeScreenState extends State<HomeScreen> {
     List<int> userScores,
     List<int> majorRequirements,
   ) {
-    // Trừ 1 lượt free
-    final currentCount = freeUsageCount.value;
-    if (currentCount > 0) {
-      freeUsageCount.value = currentCount - 1;
-    }
+    // Ưu tiên Premium: Nếu là Premium Active, không bao giờ hiện SnackBar hết lượt.
+    final bool isPremium = currentUserNotifier.value?.isPremiumActive ?? false;
 
-    // Nếu sau khi trừ còn 0 lượt → hiện thông báo hết lượt
-    if (freeUsageCount.value == 0) {
+    if (!isPremium && freeUsageCount.value == 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

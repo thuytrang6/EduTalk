@@ -41,6 +41,8 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
 
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+      
+      // Thêm Timeout để tránh đợi quá lâu khi server Render đang khởi động
       final result = await _apiService.predict(
         scores: inItems.map((item) => item.value.toDouble()).toList(),
         userId: uid,
@@ -49,6 +51,19 @@ class _PhanTichScreenState extends State<PhanTichScreen> {
       if (context.mounted) Navigator.pop(context);
 
       if (result['success'] == true) {
+        // 1. Tăng usageCount trên Firestore TRƯỚC (chỉ khi không phải Premium)
+        if (uid.isNotEmpty) {
+          final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+          if (userDoc.exists) {
+            final isPremium = userDoc.data()?['isPremium'] ?? false;
+            if (!isPremium) {
+              await FirebaseFirestore.instance.collection('users').doc(uid).update({
+                'usageCount': FieldValue.increment(1),
+              });
+            }
+          }
+        }
+
         final major = result['predicted_major'] as String;
         final unis = result['recommendations'] as List<dynamic>;
         final userScores = List<int>.from(
