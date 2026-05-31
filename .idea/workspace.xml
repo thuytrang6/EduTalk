@@ -5,11 +5,29 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7df15832-86fe-40a5-8fd6-feca56b92c55" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Backend_AI/edutalk-a2f80-firebase-adminsdk-fbsvc-0320936907.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/admin/AdminLayout.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/provider/Themenotifier.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/ChangePass.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/services/OTP_service.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/services/admin_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/models/user_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/models/user_model.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/Login.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/Login.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/Setting.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/Setting.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/admin_layout.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/admin_layout.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/dashboard_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/dashboard_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/forum_management_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/forum_management_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/premium_management_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/premium_management_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/user_management_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/user_management_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/services/auth_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/services/auth_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/node_modules/.package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui_login_out/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_login_out/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/pubspec.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -22,18 +40,6 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;nguyenanhquan060205-lab&quot;
-  }
-}</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/thuytrang6/EduTalk.git&quot;,
-    &quot;accountId&quot;: &quot;2868d729-5233-4cfe-82d4-cdce8ddb2191&quot;
-  }
-}</component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 0
@@ -46,37 +52,19 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;Flutter.main.dart.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;quan&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/HUIT_CNTT/LTDD/EduTalk&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;SDKs&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.20689656&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;studioLabs&quot;,
-    &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "Merging quan",
+    "kotlin-language-version-configured": "true",
+    "show.migrate.to.gradle.popup": "false"
   }
-}</component>
-  <component name="RunManager">
-    <configuration default="true" type="FlutterRunConfigurationType" factoryName="Flutter">
-      <option name="filePath" value="$PROJECT_DIR$/ui_login_out/lib/main.dart" />
-      <method v="2">
-        <option name="RunConfigurationTask" enabled="true" run_configuration_name="main.dart" run_configuration_type="FlutterRunConfigurationType" />
-      </method>
-    </configuration>
-  </component>
+}]]></component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">

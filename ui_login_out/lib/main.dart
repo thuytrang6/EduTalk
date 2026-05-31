@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'package:ui_login_out/screens/home.dart';
 import 'firebase_options.dart';
 import 'screens/Login.dart';
 import 'screens/admin/admin_layout.dart';
+import 'provider/Themenotifier.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -15,16 +17,20 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await dotenv.load(fileName: ".env");
 
-  // Khởi tạo Firebase App Check
-  // - Debug mode: Dùng DebugProvider (cho emulator / máy dev)
-  // - Release mode: Dùng PlayIntegrity (cho app chính thức trên CH Play)
   await FirebaseAppCheck.instance.activate(
     androidProvider: kDebugMode
         ? AndroidProvider.debug
         : AndroidProvider.playIntegrity,
   );
 
-  runApp(const MyApp());
+  runApp(
+    // Bọc toàn bộ app bằng ChangeNotifierProvider để ThemeNotifier
+    // có thể được truy cập từ bất kỳ widget nào qua context.watch / context.read
+    ChangeNotifierProvider(
+      create: (_) => ThemeNotifier(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -32,9 +38,60 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lắng nghe ThemeNotifier để rebuild khi theme thay đổi
+    final themeNotifier = context.watch<ThemeNotifier>();
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'EduTalk',
+
+      // ── Theme mode: light / dark điều khiển bởi ThemeNotifier ──
+      themeMode: themeNotifier.themeMode,
+
+      // ── Light Theme ─────────────────────────────────────────────
+      theme: ThemeData(
+        brightness: Brightness.light,
+        fontFamily: '.AppleSystemUIFont',
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB),
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF6F7FB),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Color(0xFF1E293B),
+          elevation: 0,
+        ),
+        cardColor: Colors.white,
+        textTheme: const TextTheme().apply(
+          fontFamily: '.AppleSystemUIFont',
+          bodyColor: Color(0xFF1E293B),
+          displayColor: Color(0xFF1E293B),
+        ),
+      ),
+
+      // ── Dark Theme ──────────────────────────────────────────────
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        fontFamily: '.AppleSystemUIFont',
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB),
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1E293B),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        cardColor: const Color(0xFF1E293B),
+        textTheme: const TextTheme().apply(
+          fontFamily: '.AppleSystemUIFont',
+          bodyColor: Colors.white,
+          displayColor: Colors.white,
+        ),
+      ),
+
       home: const AuthGate(),
     );
   }
@@ -80,6 +137,13 @@ class _AuthGateState extends State<AuthGate> {
           return const LoginScreen();
         }
 
+        // Khi user đăng nhập, reload theme setting từ Firestore
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            context.read<ThemeNotifier>().reloadForUser();
+          }
+        });
+
         final String name =
             user.displayName ?? user.email?.split('@')[0] ?? 'Bạn';
 
@@ -87,7 +151,9 @@ class _AuthGateState extends State<AuthGate> {
           future: _getDoc(user.uid),
           builder: (context, docSnapshot) {
             print(
-              'DOC STATE: ${docSnapshot.connectionState} hasError=${docSnapshot.hasError} exists=${docSnapshot.data?.exists}',
+              'DOC STATE: ${docSnapshot.connectionState} '
+              'hasError=${docSnapshot.hasError} '
+              'exists=${docSnapshot.data?.exists}',
             );
 
             if (docSnapshot.connectionState == ConnectionState.waiting) {
