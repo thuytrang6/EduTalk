@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/admin_service.dart';
+import '../../models/user_model.dart';
 
 class PremiumManagementScreen extends StatefulWidget {
   const PremiumManagementScreen({super.key});
@@ -8,12 +11,7 @@ class PremiumManagementScreen extends StatefulWidget {
 }
 
 class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
-  List<Map<String, dynamic>> premiumUsers = [
-    {'username': 'nguyenvana', 'email': 'vana@gmail.com', 'premiumSince': '2023-10-01', 'revenue': 199000},
-    {'username': 'lethic', 'email': 'thic@gmail.com', 'premiumSince': '2024-01-20', 'revenue': 199000},
-    {'username': 'hoangminh', 'email': 'minh@gmail.com', 'premiumSince': '2024-02-15', 'revenue': 199000},
-    {'username': 'thuytien', 'email': 'tien@gmail.com', 'premiumSince': '2024-03-01', 'revenue': 199000},
-  ];
+  final AdminService _adminService = AdminService();
 
   String searchQuery = '';
 
@@ -32,29 +30,117 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
     return '$result ₫';
   }
 
+  Color _getLevelColor(SubscriptionPlan plan) {
+    switch (plan) {
+      case SubscriptionPlan.monthly:
+        return const Color(0xFF2563EB);
+      case SubscriptionPlan.yearly:
+        return const Color(0xFFFF8000);
+      case SubscriptionPlan.lifetime:
+        return const Color(0xFF8B5CF6);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getLevelLabel(SubscriptionPlan plan) {
+    switch (plan) {
+      case SubscriptionPlan.monthly:
+        return 'Gói Tháng';
+      case SubscriptionPlan.yearly:
+        return 'Gói Năm';
+      case SubscriptionPlan.lifetime:
+        return 'Gói Trọn Đời';
+      default:
+        return 'Free';
+    }
+  }
+
+  IconData _getLevelIcon(SubscriptionPlan plan) {
+    switch (plan) {
+      case SubscriptionPlan.monthly:
+        return Icons.flash_on_rounded;
+      case SubscriptionPlan.yearly:
+        return Icons.shield_rounded;
+      case SubscriptionPlan.lifetime:
+        return Icons.workspace_premium_rounded;
+      default:
+        return Icons.person_outline_rounded;
+    }
+  }
+
+  int _getLevelPrice(SubscriptionPlan plan) {
+    switch (plan) {
+      case SubscriptionPlan.monthly:
+        return 29000;
+      case SubscriptionPlan.yearly:
+        return 216000;
+      case SubscriptionPlan.lifetime:
+        return 499000;
+      default:
+        return 0;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final filteredUsers = premiumUsers
-        .where((user) => user['username'].toString().toLowerCase().contains(searchQuery.toLowerCase()))
-        .toList();
-
-    final totalRevenue = premiumUsers.length * 199000;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          children: [
-            _buildHeader(premiumUsers.length, totalRevenue),
-            _buildSearchBox(),
-            const SizedBox(height: 8),
-            _buildRevenueStats(totalRevenue),
-            const SizedBox(height: 16),
-            _buildPremiumList(filteredUsers),
-            const SizedBox(height: 100),
-          ],
-        ),
+      body: StreamBuilder<List<UserModel>>(
+        stream: _adminService.getUsersStream(),
+        builder: (context, userSnapshot) {
+          return StreamBuilder<QuerySnapshot>(
+            stream: _adminService.getSuccessfulTransactionsStream(),
+            builder: (context, transSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting ||
+                  transSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final allUsers = userSnapshot.data ?? [];
+
+              // Lọc chỉ lấy premium users
+              final premiumUsers = allUsers.where((user) {
+                return user.isPremium == true;
+              }).toList();
+
+              // Tính tổng doanh thu từ transactions
+              final transactions = transSnapshot.data?.docs ?? [];
+              int totalRevenue = 0;
+              for (var doc in transactions) {
+                final data = doc.data() as Map<String, dynamic>;
+                totalRevenue += ((data['amount'] ?? 0) as num).toInt();
+              }
+
+              // Đếm theo level
+              final monthlyCount = premiumUsers.where((u) => u.plan == SubscriptionPlan.monthly).length;
+              final yearlyCount = premiumUsers.where((u) => u.plan == SubscriptionPlan.yearly).length;
+              final lifetimeCount = premiumUsers.where((u) => u.plan == SubscriptionPlan.lifetime).length;
+
+              // Filter theo search
+              final filteredUsers = premiumUsers
+                  .where((user) => user.name.toLowerCase().contains(searchQuery.toLowerCase()))
+                  .toList();
+
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildHeader(premiumUsers.length, totalRevenue),
+                    _buildSearchBox(),
+                    const SizedBox(height: 8),
+                    _buildLevelBreakdown(monthlyCount, yearlyCount, lifetimeCount),
+                    const SizedBox(height: 16),
+                    _buildRevenueStats(totalRevenue),
+                    const SizedBox(height: 16),
+                    _buildPremiumList(filteredUsers),
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
@@ -66,7 +152,7 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFEA580C), Color(0xFFDC2626), Color(0xFFDB2777)],
+          colors: [Color(0xFF1E40AF), Color(0xFF2563EB), Color(0xFF3B82F6)],
         ),
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(40)),
       ),
@@ -79,7 +165,7 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _buildHeaderCard(Icons.workspace_premium_rounded, Colors.amber, 'Thành viên', '$count')),
+              Expanded(child: _buildHeaderCard(Icons.diamond_rounded, Colors.amber, 'Thành viên', '$count')),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildHeaderCard(
@@ -146,6 +232,63 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
     );
   }
 
+  Widget _buildLevelBreakdown(int monthly, int yearly, int lifetime) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 3))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.bar_chart_rounded, color: Color(0xFF2563EB), size: 18),
+              SizedBox(width: 8),
+              Text('Phân bổ theo gói', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: _buildLevelCard('Tháng', monthly, _getLevelColor(SubscriptionPlan.monthly), _getLevelIcon(SubscriptionPlan.monthly))),
+              const SizedBox(width: 10),
+              Expanded(child: _buildLevelCard('Năm', yearly, _getLevelColor(SubscriptionPlan.yearly), _getLevelIcon(SubscriptionPlan.yearly))),
+              const SizedBox(width: 10),
+              Expanded(child: _buildLevelCard('Trọn Đời', lifetime, _getLevelColor(SubscriptionPlan.lifetime), _getLevelIcon(SubscriptionPlan.lifetime))),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLevelCard(String label, int count, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 6),
+          Text(
+            '$count',
+            style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 20),
+          ),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(color: color.withOpacity(0.8), fontSize: 11, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRevenueStats(int total) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -169,9 +312,9 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [Colors.amber[50]!, Colors.orange[50]!]),
+              gradient: LinearGradient(colors: [Colors.blue[50]!, Colors.blue[100]!]),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.amber[100]!),
+              border: Border.all(color: Colors.blue[200]!),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -179,13 +322,14 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                 const Text('Tổng doanh thu',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
                 Text(formatCurrency(total),
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF7A3300))),
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF1E3A8A))),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          _buildDetailRow('Gói Premium', formatCurrency(199000)),
-          _buildDetailRow('TB/người dùng', formatCurrency(199000)),
+          _buildDetailRow('Gói Tháng', formatCurrency(_getLevelPrice(SubscriptionPlan.monthly))),
+          _buildDetailRow('Gói Năm', formatCurrency(_getLevelPrice(SubscriptionPlan.yearly))),
+          _buildDetailRow('Gói Trọn Đời', formatCurrency(_getLevelPrice(SubscriptionPlan.lifetime))),
         ],
       ),
     );
@@ -204,12 +348,12 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
     );
   }
 
-  Widget _buildPremiumList(List<Map<String, dynamic>> users) {
+  Widget _buildPremiumList(List<UserModel> users) {
     if (users.isEmpty) {
       return Column(
         children: [
           const SizedBox(height: 40),
-          Icon(Icons.workspace_premium_outlined, size: 64, color: Colors.grey[300]),
+          Icon(Icons.diamond_outlined, size: 64, color: Colors.grey[300]),
           const SizedBox(height: 16),
           Text('Chưa có thành viên Premium', style: TextStyle(color: Colors.grey[500])),
         ],
@@ -223,6 +367,10 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
       itemCount: users.length,
       itemBuilder: (context, index) {
         final user = users[index];
+        final SubscriptionPlan plan = user.plan;
+        final Color levelColor = _getLevelColor(plan);
+        final int userContribution = _getLevelPrice(plan);
+
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
@@ -237,13 +385,13 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFFFFB300), Color(0xFFFB8C00)]),
+                  gradient: LinearGradient(colors: [levelColor.withOpacity(0.8), levelColor]),
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                  boxShadow: [BoxShadow(color: levelColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
                 ),
                 child: Center(
                   child: Text(
-                    user['username'][0].toUpperCase(),
+                    user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22),
                   ),
                 ),
@@ -255,15 +403,39 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(user['username'],
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 14),
+                        Flexible(
+                          child: Text(user.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              overflow: TextOverflow.ellipsis),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: levelColor.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_getLevelIcon(plan), color: levelColor, size: 11),
+                              const SizedBox(width: 3),
+                              Text(
+                                _getLevelLabel(plan),
+                                style: TextStyle(
+                                  color: levelColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                    Text(user['email'], style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                    Text(user.email, style: const TextStyle(color: Colors.grey, fontSize: 11)),
                     const SizedBox(height: 3),
-                    Text('Premium từ: ${user['premiumSince']}',
+                    Text('Premium từ: ${user.premiumSince ?? "N/A"}',
                         style: const TextStyle(color: Colors.grey, fontSize: 10)),
                   ],
                 ),
@@ -273,7 +445,7 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                 children: [
                   const Text('Đóng góp', style: TextStyle(color: Colors.grey, fontSize: 10)),
                   const SizedBox(height: 2),
-                  Text(formatCurrency(user['revenue']),
+                  Text(formatCurrency(userContribution),
                       style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
                 ],
               ),

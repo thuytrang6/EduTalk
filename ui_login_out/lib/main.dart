@@ -35,6 +35,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'EduTalk',
+      theme: ThemeData(
+        fontFamily: '.AppleSystemUIFont',
+        textTheme: const TextTheme().apply(
+          fontFamily: '.AppleSystemUIFont',
+        ),
+      ),
       home: const AuthGate(),
     );
   }

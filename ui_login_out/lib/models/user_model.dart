@@ -18,6 +18,8 @@ class UserModel {
   final DateTime? premiumExpiry;
   final DateTime? premiumAt; // Thời điểm thanh toán thành công gần nhất
   final String subscriptionStatus; // active, expired, cancelled, none
+  final String premiumLevel;
+  final String? premiumSince;
 
   UserModel({
     required this.uid,
@@ -34,6 +36,8 @@ class UserModel {
     this.premiumExpiry,
     this.premiumAt,
     this.subscriptionStatus = 'none',
+    this.premiumLevel = 'none',
+    this.premiumSince,
   });
 
   bool get isPremiumActive {
@@ -60,6 +64,8 @@ class UserModel {
       premiumExpiry: (data['premiumExpiry'] as Timestamp?)?.toDate(),
       premiumAt: (data['premiumAt'] as Timestamp?)?.toDate(),
       subscriptionStatus: data['subscriptionStatus'] ?? 'none',
+      premiumLevel: data['premiumLevel'] ?? 'none',
+      premiumSince: data['premiumSince'],
     );
   }
 
@@ -87,6 +93,8 @@ class UserModel {
       'premiumStart': premiumStart != null ? Timestamp.fromDate(premiumStart!) : null,
       'premiumExpiry': premiumExpiry != null ? Timestamp.fromDate(premiumExpiry!) : null,
       'subscriptionStatus': subscriptionStatus,
+      'premiumLevel': premiumLevel,
+      'premiumSince': premiumSince,
     };
   }
 }

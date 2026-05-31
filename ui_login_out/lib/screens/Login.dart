@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import '../services/auth_service.dart';
 import '/screens/Register.dart';
+import 'admin/admin_layout.dart';
+import '../main.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,6 +35,46 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // 👉 HÀM MỚI: TỰ KIỂM TRA ROLE VÀ CHUYỂN TRANG
+  Future<void> _checkRoleAndNavigate() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Mò lên Firestore lấy thông tin role
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        String role = 'user';
+        
+        if (doc.exists && doc.data() != null) {
+          final data = doc.data() as Map<String, dynamic>;
+          role = data['role'] ?? 'user';
+        }
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        if (role == 'admin') {
+          // Ép buộc chuyển hẳn sang Admin Panel, xóa sạch lịch sử trang Login
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const AdminLayout()),
+            (route) => false,
+          );
+        } else {
+          // Nếu là user thường, chuyển sang AuthGate và xóa lịch sử trang
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const AuthGate()),
+            (route) => false,
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showError("Lỗi phân quyền: $e");
+    }
+  }
+
   void _handleLogin() async {
     String email = _userController.text.trim();
     String password = _passwordController.text.trim();
@@ -46,12 +90,15 @@ class _LoginScreenState extends State<LoginScreen> {
         await _authService.login(email, password) as Map<String, dynamic>?;
 
     if (!mounted) return;
-    setState(() => _isLoading = false);
 
     if (result == null || result["status"] != "success") {
+      setState(() => _isLoading = false);
       _showError(result?["status"]?.toString() ?? "Đăng nhập thất bại");
+      return;
     }
-    // Nếu success: AuthGate tự nhảy sang HomeScreen
+
+    // Đăng nhập Auth thành công -> Gọi hàm check Role
+    _checkRoleAndNavigate();
   }
 
   void _handleGoogleLogin() async {
@@ -60,12 +107,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final Map<String, dynamic> result = await _authService.signInWithGoogle();
 
     if (!mounted) return;
-    setState(() => _isLoading = false);
 
     if (result["status"] != "success") {
+      setState(() => _isLoading = false);
       _showError(result["status"]?.toString() ?? "Đăng nhập thất bại");
+      return;
     }
-    // Nếu success: AuthGate tự nhảy sang HomeScreen
+
+    // Đăng nhập Auth thành công -> Gọi hàm check Role
+    _checkRoleAndNavigate();
   }
 
   @override
@@ -179,8 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    _isObscure =
-                                        !_isObscure; // Đổi trạng thái khi bấm
+                                    _isObscure = !_isObscure; 
                                   });
                                 },
                               ),
@@ -195,7 +244,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                           const SizedBox(height: 30),
-                          // Nút Đăng nhập
                           Container(
                             width: double.infinity,
                             height: 55,
@@ -252,7 +300,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          // Nút Google
                           SizedBox(
                             width: double.infinity,
                             height: 55,
@@ -318,8 +365,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
               ),
-
-              // Loading overlay — đè lên toàn màn hình, không dùng Dialog
               if (_isLoading)
                 Container(
                   color: Colors.black45,
