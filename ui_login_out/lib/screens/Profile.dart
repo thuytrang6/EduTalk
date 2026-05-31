@@ -559,7 +559,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ValueListenableBuilder<UserModel?>(
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
-        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final theme = PremiumTheme.getTheme(user?.plan, user?.isPremium ?? false);
         final bool isPremium = user?.isPremium ?? false;
 
         return Container(

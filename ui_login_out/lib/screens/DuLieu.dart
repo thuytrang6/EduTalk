@@ -341,7 +341,7 @@ class DuLieuScreenState extends State<DuLieuScreen> {
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
         final theme = PremiumTheme.getTheme(
-          user?.currentPlan,
+          user?.plan,
           user?.isPremium ?? false,
         );
         final bool isPremium = user?.isPremiumActive ?? false;

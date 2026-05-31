@@ -29,6 +29,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return StreamBuilder<QuerySnapshot>(
             stream: _adminService.getSuccessfulTransactionsStream(),
             builder: (context, transSnapshot) {
+              if (userSnapshot.hasError) {
+                return Center(child: SelectableText("Lỗi tải user: ${userSnapshot.error}"));
+              }
+              if (transSnapshot.hasError) {
+                return Center(child: SelectableText("Lỗi tải doanh thu: ${transSnapshot.error}"));
+              }
               if (userSnapshot.connectionState == ConnectionState.waiting ||
                   transSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -79,17 +85,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     for (var doc in transactions) {
       final data = doc.data() as Map<String, dynamic>;
-      final amount = ((data['amount'] ?? 0) as num).toDouble();
-      final timestamp = data['timestamp'];
+      final status = data['status']?.toString().toLowerCase();
+      // Chỉ tính doanh thu cho giao dịch success
+      if (status != 'success') continue;
+
+      double amount = 0;
+      if (data['amount'] != null) {
+        if (data['amount'] is num) {
+          amount = (data['amount'] as num).toDouble();
+        } else if (data['amount'] is String) {
+          amount = double.tryParse(data['amount']) ?? 0;
+        }
+      }
+
+      final timestamp = data['timestamp'] ?? data['createdAt'];
 
       if (filter == 'total') {
         revenue += amount;
       } else if (timestamp != null) {
-        DateTime txDate;
+        DateTime txDate = now;
         if (timestamp is Timestamp) {
           txDate = timestamp.toDate();
-        } else {
-          continue;
+        } else if (timestamp is int) {
+          txDate = DateTime.fromMillisecondsSinceEpoch(timestamp);
+        } else if (timestamp is String) {
+          txDate = DateTime.tryParse(timestamp) ?? now;
         }
 
         switch (filter) {
@@ -392,6 +412,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: StreamBuilder<QuerySnapshot>(
         stream: _adminService.getRecentTransactionsStream(limit: 5),
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: SelectableText("Lỗi giao dịch: ${snapshot.error}", style: const TextStyle(color: Colors.red)));
+          }
           if (!snapshot.hasData)
             return const Center(child: CircularProgressIndicator());
           final docs = snapshot.data!.docs;
