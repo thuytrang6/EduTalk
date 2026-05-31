@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../Login.dart';
 import 'dashboard_screen.dart';
 import 'user_management_screen.dart';
 import 'forum_management_screen.dart';
 import 'premium_management_screen.dart';
+import '../../services/admin_service.dart';
 
 class AdminLayout extends StatefulWidget {
   const AdminLayout({super.key});
@@ -14,9 +17,10 @@ class AdminLayout extends StatefulWidget {
 
 class _AdminLayoutState extends State<AdminLayout> {
   int _selectedIndex = 0;
+  final AdminService _adminService = AdminService();
 
-  final List<Widget> _screens = [
-    const DashboardScreen(),
+  List<Widget> get _screens => [
+    DashboardScreen(onNavigate: (index) => setState(() => _selectedIndex = index)),
     const UserManagementScreen(),
     const ForumManagementScreen(),
     const PremiumManagementScreen(),
@@ -27,8 +31,226 @@ class _AdminLayoutState extends State<AdminLayout> {
     Icons.dashboard_rounded,
     Icons.person_rounded,
     Icons.forum_rounded,
-    Icons.workspace_premium_rounded,
+    Icons.diamond_rounded,
   ];
+
+  void _showNotificationsSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.notifications_active_rounded, color: Color(0xFF2563EB)),
+                      SizedBox(width: 8),
+                      Text('Thông báo Admin', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  TextButton.icon(
+                    onPressed: () => _adminService.resolveAllAdminNotifications(),
+                    icon: const Icon(Icons.done_all_rounded, size: 16),
+                    label: const Text('Đọc tất cả', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF2563EB),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _adminService.getAdminNotificationsStream(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final docs = snapshot.data?.docs ?? [];
+                    if (docs.isEmpty) {
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_outline_rounded, size: 64, color: Colors.green[200]),
+                          const SizedBox(height: 16),
+                          const Center(
+                            child: Text('Không có thông báo mới nào.',
+                                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+                          ),
+                        ],
+                      );
+                    }
+                    return ListView.builder(
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        final doc = docs[index];
+                        final data = doc.data() as Map<String, dynamic>;
+                        final String type = data['type'] ?? 'post_report';
+
+                        return InkWell(
+                          onTap: () => _adminService.resolveAdminNotification(doc.id),
+                          borderRadius: BorderRadius.circular(16),
+                          child: type == 'premium_payment'
+                              ? _buildPremiumPaymentNotification(doc, data)
+                              : _buildPostReportNotification(doc, data),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Thông báo báo cáo bài viết — Giao diện màu đỏ cảnh báo
+  Widget _buildPostReportNotification(DocumentSnapshot doc, Map<String, dynamic> data) {
+    final String targetTitle = data['targetTitle'] ?? '';
+    final String displayMessage = targetTitle.isNotEmpty
+        ? 'Bài viết "$targetTitle" vừa bị báo cáo!'
+        : (data['message'] ?? 'Một bài viết vừa bị báo cáo!');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF2F2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFCA5A5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFCA5A5).withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.flag_rounded, color: Color(0xFFDC2626), size: 16),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  displayMessage,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF991B1B)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Số lượt bị báo cáo: ${data['reportCount'] ?? 1}',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() => _selectedIndex = 2); // Chuyển sang tab Forum
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: const Text('Xem bài viết', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => _adminService.resolveAdminNotification(doc.id),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[700],
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: const Text('Đã xử lý', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Thông báo thanh toán Premium — Giao diện màu xanh lá / vàng gold
+  Widget _buildPremiumPaymentNotification(DocumentSnapshot doc, Map<String, dynamic> data) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFECFDF5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFA7F3D0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFA7F3D0).withOpacity(0.4),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.workspace_premium_rounded, color: Color(0xFF059669), size: 16),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  data['message'] ?? 'Có thanh toán Premium mới!',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF065F46)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              TextButton(
+                onPressed: () => _adminService.resolveAdminNotification(doc.id),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF059669),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: const Text('Đã xử lý', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +265,7 @@ class _AdminLayoutState extends State<AdminLayout> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFFEA580C),
+      backgroundColor: const Color(0xFF2563EB),
       elevation: 0,
       leading: Builder(
         builder: (context) => IconButton(
@@ -65,6 +287,46 @@ class _AdminLayoutState extends State<AdminLayout> {
       ),
       centerTitle: true,
       actions: [
+        StreamBuilder<QuerySnapshot>(
+          stream: _adminService.getAdminNotificationsStream(),
+          builder: (context, snapshot) {
+            final unreadCount = snapshot.data?.docs.length ?? 0;
+            return Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_active_rounded, color: Colors.white),
+                  onPressed: _showNotificationsSheet,
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '$unreadCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.logout_rounded, color: Colors.white),
           onPressed: () {
@@ -87,29 +349,27 @@ class _AdminLayoutState extends State<AdminLayout> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFEA580C), Color(0xFFDC2626)],
-              ),
-            ),
+            color: const Color(0xFF2563EB),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const CircleAvatar(
-                  radius: 35,
-                  backgroundColor: Colors.white24,
-                  child: Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 40),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 36),
                 ),
                 const SizedBox(height: 16),
                 const Text(
                   'Admin Panel',
                   style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                 ),
+                const SizedBox(height: 4),
                 Text(
                   'admin@edutalk.com',
-                  style: TextStyle(color: Colors.orange[100], fontSize: 14),
+                  style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
                 ),
               ],
             ),
@@ -118,13 +378,15 @@ class _AdminLayoutState extends State<AdminLayout> {
           _buildDrawerItem(0, Icons.dashboard_rounded, 'Dashboard'),
           _buildDrawerItem(1, Icons.people_rounded, 'Quản lý người dùng'),
           _buildDrawerItem(2, Icons.forum_rounded, 'Quản lý Forum'),
-          _buildDrawerItem(3, Icons.workspace_premium_rounded, 'Quản lý Premium'),
+          _buildDrawerItem(3, Icons.diamond_rounded, 'Quản lý Premium'),
           const Spacer(),
-          const Divider(),
+          const Divider(height: 1),
           ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             leading: const Icon(Icons.logout_rounded, color: Colors.red),
             title: const Text('Đăng xuất', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            onTap: () {
+            onTap: () async {
+              await FirebaseAuth.instance.signOut();
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -132,7 +394,6 @@ class _AdminLayoutState extends State<AdminLayout> {
               );
             },
           ),
-          const SizedBox(height: 20),
         ],
       ),
     );
@@ -140,21 +401,26 @@ class _AdminLayoutState extends State<AdminLayout> {
 
   Widget _buildDrawerItem(int index, IconData icon, String title) {
     final isSelected = _selectedIndex == index;
-    return ListTile(
-      leading: Icon(icon, color: isSelected ? Colors.orange[600] : Colors.grey[600]),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: isSelected ? Colors.orange[600] : Colors.grey[800],
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFEFF6FF) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
       ),
-      selected: isSelected,
-      selectedTileColor: Colors.orange[50],
-      onTap: () {
-        setState(() => _selectedIndex = index);
-        Navigator.pop(context);
-      },
+      child: ListTile(
+        leading: Icon(icon, color: isSelected ? const Color(0xFF2563EB) : Colors.grey[600]),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF2563EB) : Colors.grey[800],
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        onTap: () {
+          setState(() => _selectedIndex = index);
+          Navigator.pop(context);
+        },
+      ),
     );
   }
 
@@ -195,7 +461,7 @@ class _AdminLayoutState extends State<AdminLayout> {
           children: [
             Icon(
               _icons[index],
-              color: isSelected ? const Color(0xFFEA580C) : Colors.grey[400],
+              color: isSelected ? const Color(0xFF2563EB) : Colors.grey[400],
               size: 24,
             ),
             const SizedBox(height: 4),
@@ -204,7 +470,7 @@ class _AdminLayoutState extends State<AdminLayout> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? const Color(0xFFEA580C) : Colors.grey[400],
+                color: isSelected ? const Color(0xFF2563EB) : Colors.grey[400],
               ),
             ),
           ],
