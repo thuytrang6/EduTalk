@@ -29,7 +29,6 @@ class UserModel {
     this.usageCount = 0,
     this.freeLimit = 3,
     this.plan = SubscriptionPlan.none,
-    this.currentPlan,
     this.premiumStart,
     this.premiumExpiry,
     this.premiumAt,

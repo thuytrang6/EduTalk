@@ -85,11 +85,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  void _showPremiumLevelDialog(String docId, String username, SubscriptionPlan currentPlan) {
+  void _showPremiumLevelDialog(String docId, String username, SubscriptionPlan plan) {
     showDialog(
       context: context,
       builder: (context) {
-        SubscriptionPlan selectedPlan = currentPlan;
+        SubscriptionPlan selectedPlan = plan;
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(

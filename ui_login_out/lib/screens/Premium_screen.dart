@@ -168,7 +168,7 @@ class PremiumScreen extends StatelessWidget {
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
         final theme = PremiumTheme.getTheme(
-          user?.currentPlan,
+          user?.plan,
           user?.isPremium ?? false,
         );
         final bool isPremium = user?.isPremium ?? false;
