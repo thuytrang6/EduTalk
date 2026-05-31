@@ -5,29 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7df15832-86fe-40a5-8fd6-feca56b92c55" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Backend_AI/edutalk-a2f80-firebase-adminsdk-fbsvc-0320936907.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/admin/AdminLayout.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/provider/Themenotifier.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/ChangePass.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/services/OTP_service.dart" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ui_login_out/lib/services/admin_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/main.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/models/user_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/models/user_model.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/Login.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/Login.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/Setting.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/Setting.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/admin_layout.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/admin_layout.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/dashboard_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/dashboard_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/forum_management_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/forum_management_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/premium_management_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/premium_management_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/user_management_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/screens/admin/user_management_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/lib/services/auth_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/lib/services/auth_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/node_modules/.package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/pubspec.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui_login_out/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/ui_login_out/pubspec.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,7 +38,7 @@
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "Merging quan",
+    "git-widget-placeholder": "quan",
     "kotlin-language-version-configured": "true",
     "show.migrate.to.gradle.popup": "false"
   }
@@ -74,6 +52,15 @@
       <option name="presentableId" value="Default" />
       <updated>1780028069353</updated>
     </task>
+    <task id="LOCAL-00001">
+      <option name="closed" value="true" />
+      <created>1780227638666</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1780227638666</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
 </project>

@@ -24,8 +24,13 @@ class AdminService {
     String? premiumSince,
     bool updatePremiumSince = false,
   }) async {
+    final String? currentPlanName = plan == SubscriptionPlan.none 
+        ? null 
+        : (plan == SubscriptionPlan.monthly ? "Gói Tháng" : (plan == SubscriptionPlan.yearly ? "Gói Năm" : "Gói Trọn Đời"));
+
     final updates = <String, dynamic>{
       'plan': plan == SubscriptionPlan.none ? null : plan.name,
+      'currentPlan': currentPlanName,
       'isPremium': isPremium,
     };
     
