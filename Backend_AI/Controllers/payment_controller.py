@@ -42,28 +42,39 @@ PLAN_NAME_TO_CODE = {v["name"]: k for k, v in PLANS.items()}
 
 # ── HELPERS ────────────────────────────────────────────────────────────────────
 
+def to_utc_datetime(dt):
+    """Chuyển đổi các loại datetime/timestamp về UTC datetime chuẩn"""
+    if dt is None:
+        return None
+    # Xử lý Firestore Timestamp
+    if hasattr(dt, 'to_datetime'):
+        dt = dt.to_datetime()
+    # Đảm bảo có timezone info
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
 def get_plan_code(plan_input: str) -> str:
     """Map cả code và tên sang code chuẩn"""
     if plan_input in PLANS:
         return plan_input
     return PLAN_NAME_TO_CODE.get(plan_input, "monthly")
 
-def calculate_expiry(plan_code: str, current_expiry=None):
-    """Tính ngày hết hạn mới (Pro-rated)"""
+def calculate_expiry(plan_code: str, current_expiry=None, cumulative=True):
+    """
+    Tính ngày hết hạn mới.
+    - cumulative=True: Cộng dồn vào ngày hết hạn cũ (dùng cho RENEW).
+    - cumulative=False: Tính từ thời điểm hiện tại (dùng cho UPGRADE/NEW).
+    """
     if plan_code == "lifetime":
         return None
 
     now = datetime.now(timezone.utc)
     start = now
 
-    if current_expiry:
+    if cumulative and current_expiry:
         try:
-            # Firestore timestamp to UTC datetime
-            if hasattr(current_expiry, 'replace'):
-                exp_dt = current_expiry.replace(tzinfo=timezone.utc) if current_expiry.tzinfo is None else current_expiry
-            else:
-                exp_dt = current_expiry
-            
+            exp_dt = to_utc_datetime(current_expiry)
             if exp_dt > now:
                 start = exp_dt
         except Exception:
@@ -90,6 +101,11 @@ def get_transaction_type(user_data: dict, new_plan_code: str) -> str:
 def calculate_upgrade_price(user_data: dict, new_plan_code: str) -> dict:
     """
     Tính toán số tiền cần trả thêm khi nâng cấp gói (pro-rated).
+    Công thức: 
+    - remainingDays = premiumExpiry - today
+    - dailyRate = originalPrice_gói_cũ / totalDays_gói_cũ
+    - creditAmount = remainingDays * dailyRate
+    - finalPrice = price_gói_mới - creditAmount
     """
     new_plan_info = PLANS.get(new_plan_code)
     original_price = new_plan_info["amount"]
@@ -110,7 +126,7 @@ def calculate_upgrade_price(user_data: dict, new_plan_code: str) -> dict:
         
     # Tính số ngày còn lại
     now = datetime.now(timezone.utc)
-    exp_dt = expiry.replace(tzinfo=timezone.utc) if hasattr(expiry, 'replace') and expiry.tzinfo is None else expiry
+    exp_dt = to_utc_datetime(expiry)
     
     if exp_dt <= now:
         return {
@@ -121,18 +137,22 @@ def calculate_upgrade_price(user_data: dict, new_plan_code: str) -> dict:
             "previousPlan": current_plan
         }
         
+    # Tính toán chính xác theo yêu cầu
     days_left = (exp_dt - now).days
-    current_plan_info = PLANS.get(current_plan)
+    if days_left < 0: days_left = 0
     
-    # Tính giá trị còn lại: (ngày_còn_lại / tổng_ngày) * giá_gói_cũ
+    current_plan_info = PLANS.get(current_plan)
     total_days = current_plan_info["days"]
-    if total_days <= 0: # Trường hợp lifetime nâng cấp (vô lý nhưng vẫn check)
+    
+    if total_days <= 0: # Trường hợp lifetime
         credit_amount = 0
     else:
-        # Làm tròn tiền
-        credit_amount = int((days_left / total_days) * current_plan_info["amount"])
+        # dailyRate = price / total_days
+        # creditAmount = days_left * dailyRate
+        daily_rate = current_plan_info["amount"] / total_days
+        credit_amount = int(days_left * daily_rate)
         
-    final_price = max(1000, original_price - credit_amount) # Tối thiểu 1000đ cho giao dịch cổng thanh toán
+    final_price = max(1000, original_price - credit_amount) # Tối thiểu 1000đ
     
     return {
         "originalPrice": original_price,
@@ -144,7 +164,6 @@ def calculate_upgrade_price(user_data: dict, new_plan_code: str) -> dict:
 
 def upgrade_user_premium(db, user_id: str, plan_code: str) -> dict:
     """Cập nhật Firestore user"""
-    plan_info = PLANS.get(plan_code, PLANS["monthly"])
     user_ref  = db.collection("users").document(user_id)
     user_doc  = user_ref.get()
 
@@ -153,7 +172,19 @@ def upgrade_user_premium(db, user_id: str, plan_code: str) -> dict:
     prev_expiry  = user_data.get("premiumExpiry")
 
     transaction_type = get_transaction_type(user_data, plan_code)
-    new_expiry       = calculate_expiry(plan_code, prev_expiry)
+    
+    # UPGRADE -> KHÔNG cộng dồn, tính từ hôm nay.
+    # RENEW   -> CÓ cộng dồn.
+    is_cumulative = (transaction_type == "renew")
+    new_expiry = calculate_expiry(plan_code, prev_expiry, cumulative=is_cumulative)
+
+    # Xác định start_date cho transaction log
+    now = datetime.now(timezone.utc)
+    premium_from = now
+    if is_cumulative and prev_expiry:
+        exp_dt = to_utc_datetime(prev_expiry)
+        if exp_dt and exp_dt > now:
+            premium_from = exp_dt
 
     update_data = {
         "isPremium":          True,
@@ -168,7 +199,8 @@ def upgrade_user_premium(db, user_id: str, plan_code: str) -> dict:
     return {
         "transaction_type": transaction_type,
         "previous_plan":    current_plan,
-        "premium_expiry":   new_expiry,
+        "premium_from":     premium_from,
+        "premium_to":       new_expiry,
     }
 
 def build_transaction_doc(method: str, user_id: str, plan_code: str, amount: int, upgrade_info: dict, extra: dict = None, pricing_detail: dict = None) -> dict:
@@ -184,8 +216,8 @@ def build_transaction_doc(method: str, user_id: str, plan_code: str, amount: int
         "amount":          amount,
         "transactionType": upgrade_info.get("transaction_type"),
         "previousPlan":    upgrade_info.get("previous_plan"),
-        "premiumFrom":     firestore.SERVER_TIMESTAMP,
-        "premiumTo":       upgrade_info.get("premium_expiry"),
+        "premiumFrom":     upgrade_info.get("premium_from"), # Sử dụng giá trị từ upgrade_info
+        "premiumTo":       upgrade_info.get("premium_to"),   # Sử dụng giá trị từ upgrade_info
         "paymentDetail":   extra
     }
     if pricing_detail:
@@ -439,8 +471,8 @@ def sepay_webhook():
             "status":          "success",
             "transactionType": upgrade_info["transaction_type"],
             "previousPlan":    upgrade_info["previous_plan"],
-            "premiumFrom":     firestore.SERVER_TIMESTAMP,
-            "premiumTo":       upgrade_info["premium_expiry"],
+            "premiumFrom":     upgrade_info["premium_from"],
+            "premiumTo":       upgrade_info["premium_to"],
             "paymentDetail":   payment_detail
         })
         
@@ -448,9 +480,7 @@ def sepay_webhook():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# ══════════════════════════════════════════════════════════════════════════════
-# STATUS
-# ══════════════════════════════════════════════════════════════════════════════
+# ── STATUS ──────────────────────────────────────────────────────────────────
 
 @payment_bp.route('/check-status/<user_id>', methods=['GET'])
 def check_premium_status(user_id):
@@ -471,7 +501,7 @@ def check_premium_status(user_id):
         
         # Kiểm tra hết hạn
         if is_premium and plan_code != 'lifetime' and expiry:
-            exp_dt = expiry.replace(tzinfo=timezone.utc) if hasattr(expiry, 'replace') and expiry.tzinfo is None else expiry
+            exp_dt = to_utc_datetime(expiry)
             if exp_dt <= now:
                 user_ref.update({
                     "isPremium":          False,
@@ -490,7 +520,7 @@ def check_premium_status(user_id):
             if plan_code == 'lifetime':
                 days_left = -1
             elif expiry:
-                exp_dt = expiry.replace(tzinfo=timezone.utc) if hasattr(expiry, 'replace') and expiry.tzinfo is None else expiry
+                exp_dt = to_utc_datetime(expiry)
                 days_left = (exp_dt - now).days
 
         return jsonify({
