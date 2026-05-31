@@ -21,38 +21,43 @@ class _SettingScreenState extends State<SettingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Lắng nghe ThemeNotifier để cập nhật switch dark mode real-time
-    final themeNotifier = context.watch<ThemeNotifier>();
-    final isDark = themeNotifier.isDarkMode;
+    return Consumer<ThemeNotifier>(
+      builder: (context, themeNotifier, _) {
+        // Lắng nghe ThemeNotifier để cập nhật switch dark mode real-time
+        final isDark = themeNotifier.isDarkMode;
 
-    // Màu sắc thích nghi theo theme
-    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF6F7FB);
-    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF1e293b);
-    final subtitleColor = isDark ? Colors.white54 : Colors.grey;
-    final dividerColor = isDark
-        ? const Color(0xFF334155)
-        : const Color(0xFFF1F5F9);
+        // Màu sắc thích nghi theo theme
+        final bgColor = isDark
+            ? const Color(0xFF0F172A)
+            : const Color(0xFFF6F7FB);
+        final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+        final textColor = isDark ? Colors.white : const Color(0xFF1e293b);
+        final subtitleColor = isDark ? Colors.white54 : Colors.grey;
+        final dividerColor = isDark
+            ? const Color(0xFF334155)
+            : const Color(0xFFF1F5F9);
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: Stack(
-          children: [
-            _buildHeader(isDark),
-            _buildMainContent(
-              themeNotifier: themeNotifier,
-              isDark: isDark,
-              bgColor: bgColor,
-              cardColor: cardColor,
-              textColor: textColor,
-              subtitleColor: subtitleColor,
-              dividerColor: dividerColor,
+        return Scaffold(
+          backgroundColor: bgColor,
+          body: SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              children: [
+                _buildHeader(isDark),
+                _buildMainContent(
+                  themeNotifier: themeNotifier,
+                  isDark: isDark,
+                  bgColor: bgColor,
+                  cardColor: cardColor,
+                  textColor: textColor,
+                  subtitleColor: subtitleColor,
+                  dividerColor: dividerColor,
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -135,7 +140,7 @@ class _SettingScreenState extends State<SettingScreen> {
   }) {
     return Column(
       children: [
-        const SizedBox(height: 180),
+        const SizedBox(height: 20),
 
         // ── Cài đặt chung ──────────────────────────────────────
         _buildSection(
