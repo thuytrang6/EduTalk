@@ -778,7 +778,7 @@ class _CommentSheetState extends State<_CommentSheet> {
       );
 
       await PostService().addComment(widget.postId, newComment);
-      
+
       _commentController.clear();
       setState(() {
         _commentImage = null;
@@ -1106,15 +1106,14 @@ class _TopSectionState extends State<_TopSection> {
               
               if (!_isSearching) const SizedBox(width: 10),
               if (!_isSearching)
-                _CircleButton(
-                  icon: Icons.notifications_none_rounded,
+                _NotificationBellButton(
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => NotificationScreen(
                           onOpenPost: (postId) {
-                            Navigator.pop(context); 
+                            Navigator.pop(context);
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
@@ -1283,6 +1282,81 @@ class _CircleButton extends StatelessWidget {
         ),
         child: Icon(icon, size: 20, color: Colors.black54),
       ),
+    );
+  }
+}
+
+/// Icon Chuông có Badge đỏ số thông báo chưa đọc từ Firestore (real-time)
+class _NotificationBellButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _NotificationBellButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: uid == null
+          ? const Stream.empty()
+          : FirebaseFirestore.instance
+              .collection('notifications')
+              .where('receiverId', isEqualTo: uid)
+              .where('isRead', isEqualTo: false)
+              .snapshots(),
+      builder: (context, snapshot) {
+        final int unreadCount = snapshot.data?.docs.length ?? 0;
+
+        return GestureDetector(
+          onTap: onTap,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Icon(
+                  unreadCount > 0
+                      ? Icons.notifications_rounded
+                      : Icons.notifications_none_rounded,
+                  size: 22,
+                  color: unreadCount > 0
+                      ? const Color(0xFF2563EB)
+                      : Colors.black54,
+                ),
+              ),
+              // Badge đỏ số thông báo chưa đọc
+              if (unreadCount > 0)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                    child: Text(
+                      unreadCount > 99 ? '99+' : '$unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 } 

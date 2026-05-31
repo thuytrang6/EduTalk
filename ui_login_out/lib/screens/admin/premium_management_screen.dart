@@ -93,6 +93,12 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
           return StreamBuilder<QuerySnapshot>(
             stream: _adminService.getSuccessfulTransactionsStream(),
             builder: (context, transSnapshot) {
+              if (userSnapshot.hasError) {
+                return Center(child: SelectableText("Lỗi tải user: ${userSnapshot.error}", style: const TextStyle(color: Colors.red)));
+              }
+              if (transSnapshot.hasError) {
+                return Center(child: SelectableText("Lỗi tải doanh thu: ${transSnapshot.error}", style: const TextStyle(color: Colors.red)));
+              }
               if (userSnapshot.connectionState == ConnectionState.waiting ||
                   transSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -110,7 +116,15 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
               int totalRevenue = 0;
               for (var doc in transactions) {
                 final data = doc.data() as Map<String, dynamic>;
-                totalRevenue += ((data['amount'] ?? 0) as num).toInt();
+                if (data['status']?.toString().toLowerCase() != 'success') continue;
+                
+                num amt = 0;
+                if (data['amount'] is num) {
+                  amt = data['amount'];
+                } else if (data['amount'] is String) {
+                  amt = num.tryParse(data['amount']) ?? 0;
+                }
+                totalRevenue += amt.toInt();
               }
 
               // Đếm theo level

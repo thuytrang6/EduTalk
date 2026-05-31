@@ -29,7 +29,7 @@ class PremiumScreen extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+        physics: const ClampingScrollPhysics(),
         child: Column(
           children: [
             _buildHeader(),
@@ -124,12 +124,12 @@ class PremiumScreen extends StatelessWidget {
   }
 
   Widget _navItem(
-      BuildContext context,
-      IconData icon,
-      String label,
-      bool active,
-      int index,
-      ) {
+    BuildContext context,
+    IconData icon,
+    String label,
+    bool active,
+    int index,
+  ) {
     return InkWell(
       onTap: () {
         if (!active) {
@@ -167,7 +167,10 @@ class PremiumScreen extends StatelessWidget {
     return ValueListenableBuilder<UserModel?>(
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
-        final theme = PremiumTheme.getTheme(user?.plan, user?.isPremium ?? false);
+        final theme = PremiumTheme.getTheme(
+          user?.currentPlan,
+          user?.isPremium ?? false,
+        );
         final bool isPremium = user?.isPremium ?? false;
         final int remaining = (3 - (user?.usageCount ?? 0)).clamp(0, 3);
 
@@ -178,11 +181,17 @@ class PremiumScreen extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: isPremium 
-                ? theme.gradientColors 
-                : [const Color(0xFFFF8F00), const Color(0xFFFF5D00), const Color(0xFFE6007E)],
+              colors: isPremium
+                  ? theme.gradientColors
+                  : [
+                      const Color(0xFFFF8F00),
+                      const Color(0xFFFF5D00),
+                      const Color(0xFFE6007E),
+                    ],
             ),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
+            borderRadius: const BorderRadius.vertical(
+              bottom: Radius.circular(40),
+            ),
           ),
           child: Column(
             children: [
@@ -213,7 +222,9 @@ class PremiumScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                isPremium ? "Cảm ơn bạn đã đồng hành cùng EduTalk!" : "Trải nghiệm đầy đủ tính năng của EduTalk",
+                isPremium
+                    ? "Cảm ơn bạn đã đồng hành cùng EduTalk!"
+                    : "Trải nghiệm đầy đủ tính năng của EduTalk",
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white70,
@@ -224,7 +235,10 @@ class PremiumScreen extends StatelessWidget {
               const SizedBox(height: 30),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 16,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(24),
@@ -233,7 +247,9 @@ class PremiumScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      isPremium ? "Trạng thái tài khoản" : "Lượt dùng thử còn lại",
+                      isPremium
+                          ? "Trạng thái tài khoản"
+                          : "Lượt dùng thử còn lại",
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
@@ -242,7 +258,11 @@ class PremiumScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      isPremium ? (user?.plan == SubscriptionPlan.lifetime ? "KHÔNG GIỚI HẠN" : "CÒN ${user?.premiumExpiry?.difference(DateTime.now()).inDays ?? 0} NGÀY") : "$remaining / 3",
+                      isPremium
+                          ? (user?.plan == SubscriptionPlan.lifetime
+                                ? "KHÔNG GIỚI HẠN"
+                                : "CÒN ${user?.premiumExpiry?.difference(DateTime.now()).inDays ?? 0} NGÀY")
+                          : "$remaining / 3",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: isPremium ? 32 : 48,
@@ -251,9 +271,11 @@ class PremiumScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isPremium 
-                        ? (user?.plan == SubscriptionPlan.lifetime ? "Vĩnh viễn" : "Hết hạn: ${user?.premiumExpiry?.day}/${user?.premiumExpiry?.month}/${user?.premiumExpiry?.year}")
-                        : "...",
+                      isPremium
+                          ? (user?.plan == SubscriptionPlan.lifetime
+                                ? "Vĩnh viễn"
+                                : "Hết hạn: ${user?.premiumExpiry?.day}/${user?.premiumExpiry?.month}/${user?.premiumExpiry?.year}")
+                          : "...",
                       style: const TextStyle(
                         color: Color(0xFFFFD700),
                         fontSize: 14,
@@ -340,11 +362,16 @@ class PremiumScreen extends StatelessWidget {
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
         final bool isPremium = user?.isPremiumActive ?? false;
-        final SubscriptionPlan currentPlan = user?.plan ?? SubscriptionPlan.none;
-        
+        final SubscriptionPlan currentPlan =
+            user?.plan ?? SubscriptionPlan.none;
+
         int refundAmount = 0;
-        if (isPremium && user?.premiumExpiry != null && currentPlan != SubscriptionPlan.lifetime) {
-          final remainingDays = user!.premiumExpiry!.difference(DateTime.now()).inDays;
+        if (isPremium &&
+            user?.premiumExpiry != null &&
+            currentPlan != SubscriptionPlan.lifetime) {
+          final remainingDays = user!.premiumExpiry!
+              .difference(DateTime.now())
+              .inDays;
           if (remainingDays > 0) {
             if (currentPlan == SubscriptionPlan.monthly) {
               refundAmount = (remainingDays / 30 * 29000).round();
@@ -357,20 +384,24 @@ class PremiumScreen extends StatelessWidget {
         return Column(
           children: [
             if (current_plan_info(user)) _buildCurrentPlanStatus(user!),
-            
+
             _buildPlanCard(
               context: context,
               title: "Gói Tháng",
               subtitle: "Linh hoạt, chuyên nghiệp",
               price: "29.000",
               unit: "đ/tháng",
-              details: "Tự động gia hạn hàng tháng",
+              details: "",
               color: const Color(0xFF2563EB),
               icon: Icons.flash_on_rounded,
               buttonIcon: Icons.auto_awesome_rounded,
-              buttonText: currentPlan == SubscriptionPlan.monthly ? "Đang sử dụng" : "Mua gói Tháng",
+              buttonText: currentPlan == SubscriptionPlan.monthly
+                  ? "Đang sử dụng"
+                  : "Mua gói Tháng",
               isActive: currentPlan == SubscriptionPlan.monthly,
-              isLocked: currentPlan == SubscriptionPlan.yearly || currentPlan == SubscriptionPlan.lifetime,
+              isLocked:
+                  currentPlan == SubscriptionPlan.yearly ||
+                  currentPlan == SubscriptionPlan.lifetime,
             ),
             const SizedBox(height: 16),
             _buildPlanCard(
@@ -383,13 +414,19 @@ class PremiumScreen extends StatelessWidget {
               color: const Color(0xFFFF8000),
               icon: Icons.shield_rounded,
               buttonIcon: Icons.workspace_premium_rounded,
-              buttonText: currentPlan == SubscriptionPlan.yearly ? "Đang sử dụng" : (currentPlan == SubscriptionPlan.monthly ? "Nâng cấp gói Năm" : "Mua gói Năm"),
+              buttonText: currentPlan == SubscriptionPlan.yearly
+                  ? "Đang sử dụng"
+                  : (currentPlan == SubscriptionPlan.monthly
+                        ? "Nâng cấp gói Năm"
+                        : "Mua gói Năm"),
               isActive: currentPlan == SubscriptionPlan.yearly,
               isLocked: currentPlan == SubscriptionPlan.lifetime,
               isBestValue: true,
               oldPrice: "348.000đ",
               savings: "Tiết kiệm 132.000đ",
-              refundAmount: currentPlan == SubscriptionPlan.monthly ? refundAmount : 0,
+              refundAmount: currentPlan == SubscriptionPlan.monthly
+                  ? refundAmount
+                  : 0,
             ),
             const SizedBox(height: 16),
             _buildPlanCard(
@@ -402,9 +439,15 @@ class PremiumScreen extends StatelessWidget {
               color: const Color(0xFF8B5CF6),
               icon: Icons.workspace_premium_rounded,
               buttonIcon: Icons.workspace_premium_rounded,
-              buttonText: currentPlan == SubscriptionPlan.lifetime ? "Đang sử dụng" : "Mua gói Trọn đời",
+              buttonText: currentPlan == SubscriptionPlan.lifetime
+                  ? "Đang sử dụng"
+                  : "Mua gói Trọn đời",
               isActive: currentPlan == SubscriptionPlan.lifetime,
-              refundAmount: (currentPlan == SubscriptionPlan.monthly || currentPlan == SubscriptionPlan.yearly) ? refundAmount : 0,
+              refundAmount:
+                  (currentPlan == SubscriptionPlan.monthly ||
+                      currentPlan == SubscriptionPlan.yearly)
+                  ? refundAmount
+                  : 0,
             ),
           ],
         );
@@ -417,44 +460,21 @@ class PremiumScreen extends StatelessWidget {
   }
 
   Widget _buildCurrentPlanStatus(UserModel user) {
-    final expiryStr = user.plan == SubscriptionPlan.lifetime ? "Vĩnh viễn"
-        : (user.premiumExpiry != null ? "Hết hạn vào: ${user.premiumExpiry!.day}/${user.premiumExpiry!.month}/${user.premiumExpiry!.year}" : "");
-
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFDCFCE7),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF22C55E).withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF166534)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Bạn đang sở hữu ${user.planDisplayName}",
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF166534)),
-                ),
-                if (expiryStr.isNotEmpty)
-                  Text(
-                    expiryStr,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF166534)),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    final expiryStr = user.plan == SubscriptionPlan.lifetime
+        ? "Vĩnh viễn"
+        : (user.premiumExpiry != null
+              ? "Hết hạn vào: ${user.premiumExpiry!.day}/${user.premiumExpiry!.month}/${user.premiumExpiry!.year}"
+              : "");
+    return Container();
   }
 
-  void _onBuyPressed(BuildContext context, String planName, int price, bool isLocked, bool isActive) {
+  void _onBuyPressed(
+    BuildContext context,
+    String planName,
+    int price,
+    bool isLocked,
+    bool isActive,
+  ) {
     if (isLocked) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Bạn không thể hạ cấp gói dịch vụ")),
@@ -466,7 +486,9 @@ class PremiumScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vui lòng đăng nhập để thực hiện thanh toán")),
+        const SnackBar(
+          content: Text("Vui lòng đăng nhập để thực hiện thanh toán"),
+        ),
       );
       return;
     }
@@ -474,7 +496,9 @@ class PremiumScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (_) => PaymentSelectionScreen(
         planName: planName,
         userId: user.uid,
@@ -502,7 +526,10 @@ class PremiumScreen extends StatelessWidget {
     int refundAmount = 0,
   }) {
     int basePrice = int.parse(price.replaceAll('.', ''));
-    int finalPrice = (basePrice - refundAmount).clamp(1000, basePrice); // Tối thiểu 1000đ
+    int finalPrice = (basePrice - refundAmount).clamp(
+      1000,
+      basePrice,
+    ); // Tối thiểu 1000đ
 
     return Container(
       decoration: BoxDecoration(
@@ -588,7 +615,11 @@ class PremiumScreen extends StatelessWidget {
                         ),
                       )
                     else
-                      Icon(icon, color: Colors.white.withOpacity(0.5), size: 28),
+                      Icon(
+                        icon,
+                        color: Colors.white.withOpacity(0.5),
+                        size: 28,
+                      ),
                   ],
                 ),
               ),
@@ -598,9 +629,13 @@ class PremiumScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (refundAmount > 0) ...[
-                       Text(
+                      Text(
                         "Giá cũ: ${basePrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ",
-                        style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          decoration: TextDecoration.lineThrough,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 4),
                     ],
@@ -609,7 +644,10 @@ class PremiumScreen extends StatelessWidget {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          finalPrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.'),
+                          finalPrice.toString().replaceAllMapped(
+                            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                            (Match m) => '${m[1]}.',
+                          ),
                           style: const TextStyle(
                             fontSize: 36,
                             fontWeight: FontWeight.w900,
@@ -629,11 +667,21 @@ class PremiumScreen extends StatelessWidget {
                     if (refundAmount > 0) ...[
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEEF2FF),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                         child: Text(
                           "Đã trừ ${refundAmount.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ từ gói cũ",
-                          style: const TextStyle(color: Color(0xFF4338CA), fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            color: Color(0xFF4338CA),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
@@ -685,7 +733,9 @@ class PremiumScreen extends StatelessWidget {
                       height: 56,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: isActive ? [Colors.grey, Colors.grey] : [color, color.withOpacity(0.9)],
+                          colors: isActive
+                              ? [Colors.grey, Colors.grey]
+                              : [color, color.withOpacity(0.9)],
                         ),
                         borderRadius: BorderRadius.circular(18),
                         boxShadow: [
@@ -698,8 +748,18 @@ class PremiumScreen extends StatelessWidget {
                         ],
                       ),
                       child: ElevatedButton.icon(
-                        onPressed: () => _onBuyPressed(context, title, finalPrice, isLocked, isActive),
-                        icon: Icon(isActive ? Icons.check_circle_rounded : buttonIcon, color: Colors.white, size: 20),
+                        onPressed: () => _onBuyPressed(
+                          context,
+                          title,
+                          finalPrice,
+                          isLocked,
+                          isActive,
+                        ),
+                        icon: Icon(
+                          isActive ? Icons.check_circle_rounded : buttonIcon,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         label: Text(
                           buttonText,
                           style: const TextStyle(

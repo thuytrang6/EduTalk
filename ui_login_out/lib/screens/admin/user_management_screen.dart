@@ -330,9 +330,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   Container(
                     width: 48,
                     height: 48,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)]),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [levelColor.withOpacity(0.8), levelColor],
+                      ),
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: levelColor.withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: Text(
