@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../provider/Themenotifier.dart';
 import 'Login.dart';
+import 'ChangePass.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_screen.dart';
 
@@ -15,20 +18,45 @@ class SettingScreen extends StatefulWidget {
 
 class _SettingScreenState extends State<SettingScreen> {
   bool _isNotificationEnabled = true;
-  bool _isDarkMode = false;
 
   @override
   Widget build(BuildContext context) {
+    // Lắng nghe ThemeNotifier để cập nhật switch dark mode real-time
+    final themeNotifier = context.watch<ThemeNotifier>();
+    final isDark = themeNotifier.isDarkMode;
+
+    // Màu sắc thích nghi theo theme
+    final bgColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF6F7FB);
+    final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
+    final textColor = isDark ? Colors.white : const Color(0xFF1e293b);
+    final subtitleColor = isDark ? Colors.white54 : Colors.grey;
+    final dividerColor = isDark
+        ? const Color(0xFF334155)
+        : const Color(0xFFF1F5F9);
+
     return Scaffold(
-      backgroundColor: const Color(0xfff6f7fb),
+      backgroundColor: bgColor,
       body: SingleChildScrollView(
         physics: const ClampingScrollPhysics(),
-        child: Stack(children: [_buildHeader(), _buildMainContent()]),
+        child: Stack(
+          children: [
+            _buildHeader(isDark),
+            _buildMainContent(
+              themeNotifier: themeNotifier,
+              isDark: isDark,
+              bgColor: bgColor,
+              cardColor: cardColor,
+              textColor: textColor,
+              subtitleColor: subtitleColor,
+              dividerColor: dividerColor,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
     return Container(
       height: 220,
       width: double.infinity,
@@ -96,61 +124,111 @@ class _SettingScreenState extends State<SettingScreen> {
     );
   }
 
-  Widget _buildMainContent() {
+  Widget _buildMainContent({
+    required ThemeNotifier themeNotifier,
+    required bool isDark,
+    required Color bgColor,
+    required Color cardColor,
+    required Color textColor,
+    required Color subtitleColor,
+    required Color dividerColor,
+  }) {
     return Column(
       children: [
         const SizedBox(height: 180),
+
+        // ── Cài đặt chung ──────────────────────────────────────
         _buildSection(
           title: "Cài đặt chung",
+          cardColor: cardColor,
+          textColor: textColor,
+          dividerColor: dividerColor,
           items: [
             _buildToggleItem(
               icon: Icons.notifications_none_rounded,
               iconColor: const Color(0xff2563eb),
-              bgColor: const Color(0xffeff6ff),
+              bgColor: isDark
+                  ? const Color(0xFF1E3A5F)
+                  : const Color(0xffeff6ff),
               title: "Thông báo",
               subtitle: "Nhận thông báo từ ứng dụng",
               value: _isNotificationEnabled,
+              textColor: textColor,
+              subtitleColor: subtitleColor,
               onChanged: (val) => setState(() => _isNotificationEnabled = val),
             ),
+
+            // ── DARK MODE (kết nối ThemeNotifier) ─────────────
             _buildToggleItem(
-              icon: Icons.dark_mode_outlined,
+              icon: isDark
+                  ? Icons.dark_mode_rounded
+                  : Icons.light_mode_outlined,
               iconColor: const Color(0xff9333ea),
-              bgColor: const Color(0xfff5f3ff),
+              bgColor: isDark
+                  ? const Color(0xFF2D1B5E)
+                  : const Color(0xfff5f3ff),
               title: "Chế độ tối",
-              subtitle: "Đang phát triển",
-              value: _isDarkMode,
-              onChanged: (val) => setState(() => _isDarkMode = val),
+              subtitle: isDark ? "Đang bật" : "Đang tắt",
+              value: isDark,
+              textColor: textColor,
+              subtitleColor: subtitleColor,
+              onChanged: (val) => themeNotifier.toggleTheme(val),
             ),
+
             _buildNavigationItem(
               icon: Icons.language_rounded,
               iconColor: const Color(0xff059669),
-              bgColor: const Color(0xffecfeff),
+              bgColor: isDark
+                  ? const Color(0xFF0F3A2A)
+                  : const Color(0xffecfeff),
               title: "Ngôn ngữ",
               subtitle: "Tiếng Việt",
+              textColor: textColor,
+              subtitleColor: subtitleColor,
               onTap: () {},
             ),
           ],
         ),
         const SizedBox(height: 20),
+
+        // ── Bảo mật & Quyền riêng tư ───────────────────────────
         _buildSection(
           title: "Bảo mật & Quyền riêng tư",
+          cardColor: cardColor,
+          textColor: textColor,
+          dividerColor: dividerColor,
           items: [
+            // ── ĐỔI MẬT KHẨU → mở ChangePasswordScreen ────────
             _buildNavigationItem(
               icon: Icons.lock_outline_rounded,
               iconColor: const Color(0xfff59e0b),
-              bgColor: const Color(0xfffff7ed),
+              bgColor: isDark
+                  ? const Color(0xFF3D2A00)
+                  : const Color(0xfffff7ed),
               title: "Đổi mật khẩu",
               subtitle: "Cập nhật mật khẩu của bạn",
-              onTap: () {},
+              textColor: textColor,
+              subtitleColor: subtitleColor,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ChangePasswordScreen(),
+                  ),
+                );
+              },
             ),
 
             _buildNavigationItem(
               icon: Icons.security_outlined,
               iconColor: const Color(0xff6366f1),
-              bgColor: const Color(0xffeef2ff),
+              bgColor: isDark
+                  ? const Color(0xFF1E1B4B)
+                  : const Color(0xffeef2ff),
               title: "Chính sách bảo mật",
               subtitle: "Xem cách chúng tôi bảo vệ dữ liệu",
-
+              textColor: textColor,
+              subtitleColor: subtitleColor,
               onTap: () {
                 Navigator.push(
                   context,
@@ -164,10 +242,13 @@ class _SettingScreenState extends State<SettingScreen> {
             _buildNavigationItem(
               icon: Icons.description_outlined,
               iconColor: const Color(0xff06b6d4),
-              bgColor: const Color(0xffecfeff),
+              bgColor: isDark
+                  ? const Color(0xFF0C2D38)
+                  : const Color(0xffecfeff),
               title: "Điều khoản sử dụng",
               subtitle: "Xem điều khoản & điều kiện",
-
+              textColor: textColor,
+              subtitleColor: subtitleColor,
               onTap: () {
                 Navigator.push(
                   context,
@@ -177,221 +258,224 @@ class _SettingScreenState extends State<SettingScreen> {
             ),
           ],
         ),
-
         const SizedBox(height: 20),
+
+        // ── Tài khoản ──────────────────────────────────────────
         _buildSection(
+          cardColor: cardColor,
+          textColor: textColor,
+          dividerColor: dividerColor,
           items: [
+            // Đăng xuất
             _buildNavigationItem(
               icon: Icons.logout_rounded,
               iconColor: const Color(0xffef4444),
-              bgColor: const Color(0xfffef2f2),
+              bgColor: isDark
+                  ? const Color(0xFF3D0F0F)
+                  : const Color(0xfffef2f2),
               title: "Đăng xuất",
               subtitle: "Thoát khỏi tài khoản hiện tại",
               titleColor: const Color(0xffef4444),
+              textColor: textColor,
+              subtitleColor: subtitleColor,
               onTap: () async {
-                // Hiển thị dialog xác nhận trước khi đăng xuất
                 final shouldLogout = await showDialog<bool>(
                   context: context,
-                  builder: (BuildContext ctx) {
-                    return AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      title: const Row(
-                        children: [
-                          Icon(Icons.logout_rounded, color: Color(0xffef4444)),
-                          SizedBox(width: 10),
-                          Text("Đăng xuất"),
-                        ],
-                      ),
-                      content: const Text(
-                        "Bạn có chắc chắn muốn đăng xuất không?",
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text(
-                            "Hủy",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text(
-                            "Đăng xuất",
-                            style: TextStyle(
-                              color: Color(0xffef4444),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                );
-
-                if (shouldLogout == true) {
-                  // Hiển thị loading
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) => const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xffef4444),
-                      ),
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: cardColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  );
-
-                  final AuthService authService = AuthService();
-                  await authService.signOut();
-
+                    title: Row(
+                      children: [
+                        const Icon(
+                          Icons.logout_rounded,
+                          color: Color(0xffef4444),
+                        ),
+                        const SizedBox(width: 10),
+                        Text("Đăng xuất", style: TextStyle(color: textColor)),
+                      ],
+                    ),
+                    content: Text(
+                      "Bạn có chắc chắn muốn đăng xuất không?",
+                      style: TextStyle(color: subtitleColor),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text(
+                          "Hủy",
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text(
+                          "Đăng xuất",
+                          style: TextStyle(
+                            color: Color(0xffef4444),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+                if (shouldLogout == true && mounted) {
+                  // Reset theme về light khi logout
+                  context.read<ThemeNotifier>().reset();
+                  await AuthService().signOut();
                   if (!mounted) return;
-
-                  // Đóng dialog loading
-                  Navigator.pop(context);
-
-                  // QUAN TRỌNG: Không tự điều hướng về LoginScreen
-                  // AuthGate sẽ tự động xử lý và hiển thị LoginScreen
-                  // Chỉ cần pop về màn hình trước đó (home) và để AuthGate làm việc
-                  Navigator.popUntil(context, (route) => route.isFirst);
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
                 }
               },
             ),
+
+            // Xóa tài khoản
             _buildNavigationItem(
               icon: Icons.delete_outline_rounded,
               iconColor: const Color(0xffef4444),
-              bgColor: const Color(0xfffef2f2),
+              bgColor: isDark
+                  ? const Color(0xFF3D0F0F)
+                  : const Color(0xfffef2f2),
               title: "Xóa tài khoản",
-              subtitle: "Xóa vĩnh viễn tài khoản và dữ liệu",
+              subtitle: "Xóa vĩnh viễn tài khoản của bạn",
               titleColor: const Color(0xffef4444),
-              onTap: () {
-                showDialog(
+              textColor: textColor,
+              subtitleColor: subtitleColor,
+              onTap: () async {
+                final shouldDelete = await showDialog<bool>(
                   context: context,
-                  builder: (BuildContext ctx) {
-                    return AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      title: const Row(
-                        children: [
-                          Icon(Icons.warning_amber_rounded, color: Colors.red),
-                          SizedBox(width: 10),
-                          Text("Xóa tài khoản?"),
-                        ],
-                      ),
-                      content: const Text(
-                        "Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản này không? Dữ liệu sẽ không thể khôi phục.",
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text(
-                            "Hủy",
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: cardColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    title: Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.red,
                         ),
-                        TextButton(
-                          onPressed: () async {
-                            Navigator.pop(ctx);
-
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (context) => const Center(
-                                child: CircularProgressIndicator(
-                                  color: Colors.red,
-                                ),
-                              ),
-                            );
-
-                            try {
-                              final AuthService authService = AuthService();
-                              final result = await authService.deleteAccount();
-
-                              if (!mounted) return;
-                              Navigator.pop(context); // Đóng loading
-
-                              if (result['status'] == 'success') {
-                                // Quay về màn hình login
-                                Navigator.popUntil(
-                                  context,
-                                  (route) => route.isFirst,
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "Đã xóa tài khoản vĩnh viễn!",
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      result['message'] ??
-                                          "Xóa tài khoản thất bại",
-                                    ),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (!mounted) return;
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("Lỗi: $e"),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
-                            }
-                          },
-                          child: const Text(
-                            "Xóa vĩnh viễn",
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        const SizedBox(width: 10),
+                        Text(
+                          "Xóa tài khoản",
+                          style: TextStyle(color: textColor),
                         ),
                       ],
-                    );
-                  },
+                    ),
+                    content: Text(
+                      "Hành động này không thể hoàn tác. Toàn bộ dữ liệu sẽ bị xóa vĩnh viễn.",
+                      style: TextStyle(color: subtitleColor),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: Text(
+                          "Hủy",
+                          style: TextStyle(
+                            color: subtitleColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text(
+                          "Xóa vĩnh viễn",
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 );
+                if (shouldDelete == true && mounted) {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(
+                      child: CircularProgressIndicator(color: Colors.red),
+                    ),
+                  );
+                  try {
+                    final result = await AuthService().deleteAccount();
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                    if (result['status'] == 'success') {
+                      context.read<ThemeNotifier>().reset();
+                      Navigator.popUntil(context, (route) => route.isFirst);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Đã xóa tài khoản vĩnh viễn!"),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            result['message'] ?? "Xóa tài khoản thất bại",
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Lỗi: $e"),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
             ),
           ],
         ),
+
         const SizedBox(height: 30),
-        const Text(
+        Text(
           "AI Tư vấn tuyển sinh",
-          style: TextStyle(color: Colors.grey, fontSize: 13),
+          style: TextStyle(color: subtitleColor, fontSize: 13),
         ),
-        const Text(
+        Text(
           "Phiên bản 1.0.0",
-          style: TextStyle(color: Colors.grey, fontSize: 12),
+          style: TextStyle(color: subtitleColor, fontSize: 12),
         ),
         const SizedBox(height: 100),
       ],
     );
   }
 
-  Widget _buildSection({String? title, required List<Widget> items}) {
+  // ── Section wrapper ────────────────────────────────────────────────────────
+  Widget _buildSection({
+    String? title,
+    required Color cardColor,
+    required Color textColor,
+    required Color dividerColor,
+    required List<Widget> items,
+  }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -405,14 +489,14 @@ class _SettingScreenState extends State<SettingScreen> {
               padding: const EdgeInsets.only(left: 20, top: 20, bottom: 10),
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xff1e293b),
+                  color: textColor,
                 ),
               ),
             ),
-          if (title != null) const Divider(height: 1, color: Color(0xfff1f5f9)),
+          if (title != null) Divider(height: 1, color: dividerColor),
           ...items.asMap().entries.map((entry) {
             int idx = entry.key;
             Widget item = entry.value;
@@ -420,9 +504,9 @@ class _SettingScreenState extends State<SettingScreen> {
               children: [
                 item,
                 if (idx < items.length - 1)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 70),
-                    child: Divider(height: 1, color: Color(0xfff1f5f9)),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 70),
+                    child: Divider(height: 1, color: dividerColor),
                   ),
               ],
             );
@@ -432,6 +516,7 @@ class _SettingScreenState extends State<SettingScreen> {
     );
   }
 
+  // ── Toggle item ────────────────────────────────────────────────────────────
   Widget _buildToggleItem({
     required IconData icon,
     required Color iconColor,
@@ -439,6 +524,8 @@ class _SettingScreenState extends State<SettingScreen> {
     required String title,
     required String subtitle,
     required bool value,
+    required Color textColor,
+    required Color subtitleColor,
     required ValueChanged<bool> onChanged,
   }) {
     return Padding(
@@ -453,14 +540,15 @@ class _SettingScreenState extends State<SettingScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 15,
+                    color: textColor,
                   ),
                 ),
                 Text(
                   subtitle,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: TextStyle(color: subtitleColor, fontSize: 12),
                 ),
               ],
             ),
@@ -475,12 +563,15 @@ class _SettingScreenState extends State<SettingScreen> {
     );
   }
 
+  // ── Navigation item ────────────────────────────────────────────────────────
   Widget _buildNavigationItem({
     required IconData icon,
     required Color iconColor,
     required Color bgColor,
     required String title,
     required String subtitle,
+    required Color textColor,
+    required Color subtitleColor,
     Color? titleColor,
     required VoidCallback onTap,
   }) {
@@ -502,17 +593,17 @@ class _SettingScreenState extends State<SettingScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
-                      color: titleColor ?? const Color(0xff1e293b),
+                      color: titleColor ?? textColor,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    style: TextStyle(color: subtitleColor, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+            Icon(Icons.arrow_forward_ios, size: 14, color: subtitleColor),
           ],
         ),
       ),

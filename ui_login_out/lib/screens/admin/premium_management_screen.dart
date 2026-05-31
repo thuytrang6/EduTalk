@@ -7,7 +7,8 @@ class PremiumManagementScreen extends StatefulWidget {
   const PremiumManagementScreen({super.key});
 
   @override
-  State<PremiumManagementScreen> createState() => _PremiumManagementScreenState();
+  State<PremiumManagementScreen> createState() =>
+      _PremiumManagementScreenState();
 }
 
 class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
@@ -113,23 +114,37 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
               }
 
               // Đếm theo level
-              final monthlyCount = premiumUsers.where((u) => u.plan == SubscriptionPlan.monthly).length;
-              final yearlyCount = premiumUsers.where((u) => u.plan == SubscriptionPlan.yearly).length;
-              final lifetimeCount = premiumUsers.where((u) => u.plan == SubscriptionPlan.lifetime).length;
+              final monthlyCount = premiumUsers
+                  .where((u) => u.plan == SubscriptionPlan.monthly)
+                  .length;
+              final yearlyCount = premiumUsers
+                  .where((u) => u.plan == SubscriptionPlan.yearly)
+                  .length;
+              final lifetimeCount = premiumUsers
+                  .where((u) => u.plan == SubscriptionPlan.lifetime)
+                  .length;
 
               // Filter theo search
               final filteredUsers = premiumUsers
-                  .where((user) => user.name.toLowerCase().contains(searchQuery.toLowerCase()))
+                  .where(
+                    (user) => user.name.toLowerCase().contains(
+                      searchQuery.toLowerCase(),
+                    ),
+                  )
                   .toList();
 
               return SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+                physics: const ClampingScrollPhysics(),
                 child: Column(
                   children: [
                     _buildHeader(premiumUsers.length, totalRevenue),
                     _buildSearchBox(),
                     const SizedBox(height: 8),
-                    _buildLevelBreakdown(monthlyCount, yearlyCount, lifetimeCount),
+                    _buildLevelBreakdown(
+                      monthlyCount,
+                      yearlyCount,
+                      lifetimeCount,
+                    ),
                     const SizedBox(height: 16),
                     _buildRevenueStats(totalRevenue),
                     const SizedBox(height: 16),
@@ -160,12 +175,25 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Quản lý Premium',
-              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)),
+          const Text(
+            'Quản lý Premium',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(child: _buildHeaderCard(Icons.diamond_rounded, Colors.amber, 'Thành viên', '$count')),
+              Expanded(
+                child: _buildHeaderCard(
+                  Icons.diamond_rounded,
+                  Colors.amber,
+                  'Thành viên',
+                  '$count',
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildHeaderCard(
@@ -182,7 +210,12 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
     );
   }
 
-  Widget _buildHeaderCard(IconData icon, Color iconColor, String label, String value) {
+  Widget _buildHeaderCard(
+    IconData icon,
+    Color iconColor,
+    String label,
+    String value,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -197,11 +230,21 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
             children: [
               Icon(icon, color: iconColor, size: 16),
               const SizedBox(width: 6),
-              Text(label, style: TextStyle(color: Colors.orange[100], fontSize: 11)),
+              Text(
+                label,
+                style: TextStyle(color: Colors.orange[100], fontSize: 11),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
@@ -215,17 +258,30 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: TextField(
         onChanged: (val) => setState(() => searchQuery = val),
         decoration: InputDecoration(
           hintText: 'Tìm kiếm thành viên Premium...',
           hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-          prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey, size: 20),
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Colors.grey,
+            size: 20,
+          ),
           filled: true,
           fillColor: const Color(0xFFF3F4F6),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide.none,
+          ),
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
@@ -239,7 +295,13 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,17 +310,41 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
             children: [
               Icon(Icons.bar_chart_rounded, color: Color(0xFF2563EB), size: 18),
               SizedBox(width: 8),
-              Text('Phân bổ theo gói', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(
+                'Phân bổ theo gói',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _buildLevelCard('Tháng', monthly, _getLevelColor(SubscriptionPlan.monthly), _getLevelIcon(SubscriptionPlan.monthly))),
+              Expanded(
+                child: _buildLevelCard(
+                  'Tháng',
+                  monthly,
+                  _getLevelColor(SubscriptionPlan.monthly),
+                  _getLevelIcon(SubscriptionPlan.monthly),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _buildLevelCard('Năm', yearly, _getLevelColor(SubscriptionPlan.yearly), _getLevelIcon(SubscriptionPlan.yearly))),
+              Expanded(
+                child: _buildLevelCard(
+                  'Năm',
+                  yearly,
+                  _getLevelColor(SubscriptionPlan.yearly),
+                  _getLevelIcon(SubscriptionPlan.yearly),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _buildLevelCard('Trọn Đời', lifetime, _getLevelColor(SubscriptionPlan.lifetime), _getLevelIcon(SubscriptionPlan.lifetime))),
+              Expanded(
+                child: _buildLevelCard(
+                  'Trọn Đời',
+                  lifetime,
+                  _getLevelColor(SubscriptionPlan.lifetime),
+                  _getLevelIcon(SubscriptionPlan.lifetime),
+                ),
+              ),
             ],
           ),
         ],
@@ -280,10 +366,21 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
           const SizedBox(height: 6),
           Text(
             '$count',
-            style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 20),
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontSize: 20,
+            ),
           ),
           const SizedBox(height: 2),
-          Text(label, style: TextStyle(color: color.withOpacity(0.8), fontSize: 11, fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color.withOpacity(0.8),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -296,7 +393,13 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,31 +408,57 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
             children: [
               Icon(Icons.trending_up_rounded, color: Colors.green, size: 18),
               SizedBox(width: 8),
-              Text('Thống kê doanh thu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              Text(
+                'Thống kê doanh thu',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [Colors.blue[50]!, Colors.blue[100]!]),
+              gradient: LinearGradient(
+                colors: [Colors.blue[50]!, Colors.blue[100]!],
+              ),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: Colors.blue[200]!),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Tổng doanh thu',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
-                Text(formatCurrency(total),
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF1E3A8A))),
+                const Text(
+                  'Tổng doanh thu',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  formatCurrency(total),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: Color(0xFF1E3A8A),
+                  ),
+                ),
               ],
             ),
           ),
           const SizedBox(height: 12),
-          _buildDetailRow('Gói Tháng', formatCurrency(_getLevelPrice(SubscriptionPlan.monthly))),
-          _buildDetailRow('Gói Năm', formatCurrency(_getLevelPrice(SubscriptionPlan.yearly))),
-          _buildDetailRow('Gói Trọn Đời', formatCurrency(_getLevelPrice(SubscriptionPlan.lifetime))),
+          _buildDetailRow(
+            'Gói Tháng',
+            formatCurrency(_getLevelPrice(SubscriptionPlan.monthly)),
+          ),
+          _buildDetailRow(
+            'Gói Năm',
+            formatCurrency(_getLevelPrice(SubscriptionPlan.yearly)),
+          ),
+          _buildDetailRow(
+            'Gói Trọn Đời',
+            formatCurrency(_getLevelPrice(SubscriptionPlan.lifetime)),
+          ),
         ],
       ),
     );
@@ -342,7 +471,10 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -355,7 +487,10 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
           const SizedBox(height: 40),
           Icon(Icons.diamond_outlined, size: 64, color: Colors.grey[300]),
           const SizedBox(height: 16),
-          Text('Chưa có thành viên Premium', style: TextStyle(color: Colors.grey[500])),
+          Text(
+            'Chưa có thành viên Premium',
+            style: TextStyle(color: Colors.grey[500]),
+          ),
         ],
       );
     }
@@ -377,7 +512,13 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 3))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -385,14 +526,26 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [levelColor.withOpacity(0.8), levelColor]),
+                  gradient: LinearGradient(
+                    colors: [levelColor.withOpacity(0.8), levelColor],
+                  ),
                   borderRadius: BorderRadius.circular(25),
-                  boxShadow: [BoxShadow(color: levelColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: levelColor.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Center(
                   child: Text(
                     user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                    ),
                   ),
                 ),
               ),
@@ -404,13 +557,21 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                     Row(
                       children: [
                         Flexible(
-                          child: Text(user.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                              overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            user.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: levelColor.withOpacity(0.12),
                             borderRadius: BorderRadius.circular(8),
@@ -418,7 +579,11 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(_getLevelIcon(plan), color: levelColor, size: 11),
+                              Icon(
+                                _getLevelIcon(plan),
+                                color: levelColor,
+                                size: 11,
+                              ),
                               const SizedBox(width: 3),
                               Text(
                                 _getLevelLabel(plan),
@@ -433,20 +598,34 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                         ),
                       ],
                     ),
-                    Text(user.email, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                    Text(
+                      user.email,
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
+                    ),
                     const SizedBox(height: 3),
-                    Text('Premium từ: ${user.premiumSince ?? "N/A"}',
-                        style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                    Text(
+                      'Premium từ: ${user.premiumSince ?? "N/A"}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 10),
+                    ),
                   ],
                 ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Text('Đóng góp', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                  const Text(
+                    'Đóng góp',
+                    style: TextStyle(color: Colors.grey, fontSize: 10),
+                  ),
                   const SizedBox(height: 2),
-                  Text(formatCurrency(userContribution),
-                      style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(
+                    formatCurrency(userContribution),
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
                 ],
               ),
             ],
