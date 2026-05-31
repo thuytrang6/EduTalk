@@ -162,7 +162,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Future.delayed(const Duration(milliseconds: 800), () {
                     if (mounted) {
                       _showUpgradeSuccessDialog(
-                        userData.currentPlan ?? "Premium",
+                        userData.planDisplayName,
                       );
                     }
                   });

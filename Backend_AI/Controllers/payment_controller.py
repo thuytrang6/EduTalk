@@ -159,7 +159,6 @@ def upgrade_user_premium(db, user_id: str, plan_code: str) -> dict:
         "isPremium":          True,
         "subscriptionStatus": "active",
         "plan":               plan_code,
-        "currentPlan":        plan_info["name"],
         "premiumAt":          firestore.SERVER_TIMESTAMP,
         "premiumStart":       firestore.SERVER_TIMESTAMP,
         "premiumExpiry":      new_expiry,
@@ -477,7 +476,6 @@ def check_premium_status(user_id):
                 user_ref.update({
                     "isPremium":          False,
                     "plan":               None,
-                    "currentPlan":        None,
                     "subscriptionStatus": "expired"
                 })
                 return jsonify({

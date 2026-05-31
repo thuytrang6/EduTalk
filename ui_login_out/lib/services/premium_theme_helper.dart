@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/user_model.dart';
 
 class PremiumTheme {
   final String title;
@@ -17,9 +18,9 @@ class PremiumTheme {
     required this.bgColor,
   });
 
-  static PremiumTheme getTheme(String? plan, bool isPremium) {
+  static PremiumTheme getTheme(SubscriptionPlan? plan, bool isPremium) {
     // 1. TÀI KHOẢN MIỄN PHÍ - Màu Xám đen huyền bí
-    if (!isPremium) {
+    if (!isPremium || plan == null || plan == SubscriptionPlan.none) {
       return PremiumTheme(
         title: "Tài khoản Miễn phí",
         gradientColors: [const Color(0xFFFEBB36), const Color(0xFFFF9B30), const Color(0xFFF48200)],
@@ -30,10 +31,8 @@ class PremiumTheme {
       );
     }
 
-    final String p = (plan ?? "").toLowerCase();
-
     // 2. GÓI THÁNG - Màu Xanh Dương (Màu cũ ban đầu)
-    if (p.contains('tháng') || p == 'monthly') {
+    if (plan == SubscriptionPlan.monthly) {
       return PremiumTheme(
         title: "Premium Tháng",
         gradientColors: [const Color(0xFF3B82F6), const Color(0xFF2563EB)],
@@ -45,7 +44,7 @@ class PremiumTheme {
     }
 
     // 3. GÓI NĂM - Màu Cam/Vàng (Màu cũ ban đầu)
-    if (p.contains('năm') || p == 'yearly') {
+    if (plan == SubscriptionPlan.yearly) {
       return PremiumTheme(
         title: "Premium Năm",
         gradientColors: [const Color(0xFFF59E0B), const Color(0xFFD97706)],
@@ -57,7 +56,7 @@ class PremiumTheme {
     }
 
     // 4. GÓI TRỌN ĐỜI - Màu Tím (Màu cũ ban đầu)
-    if (p.contains('đời') || p == 'lifetime') {
+    if (plan == SubscriptionPlan.lifetime) {
       return PremiumTheme(
         title: "Premium Trọn Đời",
         gradientColors: [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)],

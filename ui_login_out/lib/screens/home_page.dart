@@ -304,7 +304,7 @@ class _HomePageState extends State<HomePage> {
     return ValueListenableBuilder<UserModel?>(
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
-        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final theme = PremiumTheme.getTheme(user?.plan, user?.isPremium ?? false);
         final bool isPremium = user?.isPremium ?? false;
 
         return Container(
@@ -389,7 +389,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Text(
                     isPremium 
-                      ? "Gói hiện tại: ${user?.currentPlan ?? 'Premium'}"
+                      ? "Gói hiện tại: ${user?.planDisplayName ?? 'Premium'}"
                       : "Dùng thử: ${3 - (user?.usageCount ?? 0)}/3 lượt còn lại",
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),

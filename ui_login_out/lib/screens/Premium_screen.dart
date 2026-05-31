@@ -167,7 +167,7 @@ class PremiumScreen extends StatelessWidget {
     return ValueListenableBuilder<UserModel?>(
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
-        final theme = PremiumTheme.getTheme(user?.currentPlan, user?.isPremium ?? false);
+        final theme = PremiumTheme.getTheme(user?.plan, user?.isPremium ?? false);
         final bool isPremium = user?.isPremium ?? false;
         final int remaining = (3 - (user?.usageCount ?? 0)).clamp(0, 3);
 
@@ -438,7 +438,7 @@ class PremiumScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Bạn đang sở hữu ${user.currentPlan ?? 'Premium'}",
+                  "Bạn đang sở hữu ${user.planDisplayName}",
                   style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF166534)),
                 ),
                 if (expiryStr.isNotEmpty)

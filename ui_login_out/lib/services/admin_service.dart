@@ -21,40 +21,33 @@ class AdminService {
     String docId, {
     required SubscriptionPlan plan,
     required bool isPremium,
-    String? premiumSince,
-    bool updatePremiumSince = false,
   }) async {
-    final String? currentPlanName = plan == SubscriptionPlan.none 
-        ? null 
-        : (plan == SubscriptionPlan.monthly ? "Gói Tháng" : (plan == SubscriptionPlan.yearly ? "Gói Năm" : "Gói Trọn Đời"));
-
     final updates = <String, dynamic>{
       'plan': plan == SubscriptionPlan.none ? null : plan.name,
-      'currentPlan': currentPlanName,
       'isPremium': isPremium,
+      'subscriptionStatus': isPremium ? 'active' : 'none',
     };
     
     // Nếu cấp quyền premium, cập nhật thời gian hết hạn tương ứng
     if (isPremium) {
       final now = DateTime.now();
       updates['premiumStart'] = Timestamp.fromDate(now);
+      updates['premiumAt'] = Timestamp.fromDate(now);
       
       if (plan == SubscriptionPlan.monthly) {
         updates['premiumExpiry'] = Timestamp.fromDate(now.add(const Duration(days: 30)));
       } else if (plan == SubscriptionPlan.yearly) {
         updates['premiumExpiry'] = Timestamp.fromDate(now.add(const Duration(days: 365)));
       } else if (plan == SubscriptionPlan.lifetime) {
-        // lifetime không cần ngày hết hạn hoặc set rất xa
+        // lifetime không cần ngày hết hạn
         updates['premiumExpiry'] = null;
       }
     } else {
       updates['premiumStart'] = null;
       updates['premiumExpiry'] = null;
+      updates['premiumAt'] = null;
     }
 
-    if (updatePremiumSince) {
-      updates['premiumSince'] = premiumSince;
-    }
     await _db.collection('users').doc(docId).update(updates);
   }
 
