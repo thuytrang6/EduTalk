@@ -66,7 +66,7 @@ class AdminService {
   Stream<QuerySnapshot> getSuccessfulTransactionsStream() {
     return _db
         .collection('transactions')
-        .where('status', isEqualTo: 'success')
+        // .where('status', isEqualTo: 'success') // Bỏ filter tạm thời để debug
         .snapshots();
   }
 

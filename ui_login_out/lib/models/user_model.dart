@@ -13,12 +13,10 @@ class UserModel {
   final int usageCount;
   final int freeLimit;
   final SubscriptionPlan plan; // Enum
-  final String? currentPlan;   // Tên hiển thị (ví dụ: 'Gói Tháng')
   final DateTime? premiumStart;
   final DateTime? premiumExpiry;
   final DateTime? premiumAt; // Thời điểm thanh toán thành công gần nhất
   final String subscriptionStatus; // active, expired, cancelled, none
-  final String premiumLevel;
   final String? premiumSince;
 
   UserModel({
@@ -31,12 +29,10 @@ class UserModel {
     this.usageCount = 0,
     this.freeLimit = 3,
     this.plan = SubscriptionPlan.none,
-    this.currentPlan,
     this.premiumStart,
     this.premiumExpiry,
     this.premiumAt,
     this.subscriptionStatus = 'none',
-    this.premiumLevel = 'none',
     this.premiumSince,
   });
 
@@ -45,6 +41,19 @@ class UserModel {
     if (plan == SubscriptionPlan.lifetime) return true;
     if (premiumExpiry == null) return false;
     return premiumExpiry!.isAfter(DateTime.now());
+  }
+
+  String get currentPlanName {
+    switch (plan) {
+      case SubscriptionPlan.monthly:
+        return 'Gói Tháng';
+      case SubscriptionPlan.yearly:
+        return 'Gói Năm';
+      case SubscriptionPlan.lifetime:
+        return 'Gói Trọn Đời';
+      default:
+        return 'Free';
+    }
   }
 
   factory UserModel.fromDocument(DocumentSnapshot doc) {
@@ -59,12 +68,10 @@ class UserModel {
       usageCount: data['usageCount'] ?? 0,
       freeLimit: data['freeLimit'] ?? 3,
       plan: _parsePlan(data['plan']),
-      currentPlan: data['currentPlan'],
       premiumStart: (data['premiumStart'] as Timestamp?)?.toDate(),
       premiumExpiry: (data['premiumExpiry'] as Timestamp?)?.toDate(),
       premiumAt: (data['premiumAt'] as Timestamp?)?.toDate(),
       subscriptionStatus: data['subscriptionStatus'] ?? 'none',
-      premiumLevel: data['premiumLevel'] ?? 'none',
       premiumSince: data['premiumSince'],
     );
   }
@@ -89,11 +96,9 @@ class UserModel {
       'usageCount': usageCount,
       'freeLimit': freeLimit,
       'plan': plan == SubscriptionPlan.none ? null : plan.name,
-      'currentPlan': currentPlan,
       'premiumStart': premiumStart != null ? Timestamp.fromDate(premiumStart!) : null,
       'premiumExpiry': premiumExpiry != null ? Timestamp.fromDate(premiumExpiry!) : null,
       'subscriptionStatus': subscriptionStatus,
-      'premiumLevel': premiumLevel,
       'premiumSince': premiumSince,
     };
   }

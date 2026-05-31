@@ -103,6 +103,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 : StreamBuilder<List<NotificationModel>>(
                     stream: PostService().getNotificationsStream(currentUser.uid),
                     builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: SelectableText(
+                              "Lỗi tải thông báo: ${snapshot.error}",
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        );
+                      }
+
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }

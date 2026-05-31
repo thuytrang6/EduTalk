@@ -51,11 +51,13 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _listenToUsageCount();
     _checkInitialPremiumStatus();
+    _listenToNotifications();
   }
 
   @override
   void dispose() {
     _usageSubscription?.cancel();
+    _notificationSubscription?.cancel();
     super.dispose();
   }
 
@@ -133,6 +135,113 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime? _lastPremiumAt;
   bool _initialStateCaptured = false;
   StreamSubscription? _usageSubscription;
+  StreamSubscription? _notificationSubscription;
+
+  /// Lắng nghe thông báo mới (real-time) và hiện popup trượt xuống khi đang mở app
+  void _listenToNotifications() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    _notificationSubscription = FirebaseFirestore.instance
+        .collection('notifications')
+        .where('receiverId', isEqualTo: user.uid)
+        .where('isRead', isEqualTo: false)
+        .orderBy('createdAt', descending: true)
+        .limit(1)
+        .snapshots()
+        .listen((snapshot) {
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added && mounted) {
+          final data = change.doc.data();
+          if (data == null) continue;
+          
+          // Tránh hiện popup cho chính mình (dù backend đã chặn, filter lại cho chắc)
+          if (data['senderId'] == user.uid) continue;
+
+          final type = data['type'] ?? 'comment';
+          final senderName = data['senderName'] ?? 'Ai đó';
+          
+          String title = 'Thông báo mới';
+          String content = '';
+          
+          if (type == 'like') {
+            title = 'Lượt thích mới';
+            content = '$senderName đã thích bài viết của bạn.';
+          } else if (type == 'reply') {
+            title = 'Phản hồi mới';
+            content = '$senderName đã trả lời bình luận của bạn.';
+          } else {
+            title = 'Bình luận mới';
+            content = '$senderName đã bình luận vào bài viết của bạn.';
+          }
+
+          // Hiện SnackBar thông báo trượt từ trên xuống
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.notifications_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          content,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.85),
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: const Color(0xFF2563EB),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Xem',
+                textColor: Colors.white,
+                onPressed: () {
+                  // Nhảy đến tab Thảo luận
+                  _changeTab(1);
+                },
+              ),
+            ),
+          );
+        }
+      }
+    });
+  }
 
   void _listenToUsageCount() {
     final user = FirebaseAuth.instance.currentUser;
@@ -162,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Future.delayed(const Duration(milliseconds: 800), () {
                     if (mounted) {
                       _showUpgradeSuccessDialog(
-                        userData.currentPlan ?? "Premium",
+                        userData.currentPlanName ?? "Premium",
                       );
                     }
                   });

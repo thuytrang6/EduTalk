@@ -217,26 +217,31 @@ class PostService {
         });
       });
 
-      final postDoc = await postRef.get();
-      
-      if (postDoc.exists) {
-        // Lấy authorId (có ép kiểu cho an toàn)
-        final data = postDoc.data() as Map<String, dynamic>?;
-        final postOwnerId = data?['authorId'];
-        if (postOwnerId != null && postOwnerId != currentUserId) {
-          
-          // Tạo 1 document mới trong bảng notifications
-          await FirebaseFirestore.instance
-              .collection('notifications') 
-              .add({
-            'receiverId': postOwnerId,          // Người nhận là chủ bài viết
-            'senderId': currentUserId,          // Người gửi là đứa vừa comment
-            'senderName': comment.authorName,   // Tên đứa comment
-            'type': 'comment',                  // Loại thông báo 
-            'postId': postId,                   // ID bài viết để bấm vào nó mở lên
-            'isRead': false,                    // Trạng thái chưa đọc
-            'createdAt': FieldValue.serverTimestamp(),
-          });
+      if (comment.parentId != null) {
+        // TRƯỜNG HỢP 1: BÌNH LUẬN NÀY LÀ TRẢ LỜI MỘT BÌNH LUẬN KHÁC (REPLY)
+        final parentCommentDoc = await postRef.collection('comments').doc(comment.parentId).get();
+        if (parentCommentDoc.exists) {
+          final parentAuthorId = parentCommentDoc.data()?['authorId'];
+          if (parentAuthorId != null) {
+            await sendNotification(
+              receiverId: parentAuthorId,
+              type: 'reply',
+              postId: postId,
+            );
+          }
+        }
+      } else {
+        // TRƯỜNG HỢP 2: BÌNH LUẬN TRỰC TIẾP VÀO BÀI VIẾT (COMMENT)
+        final postDoc = await postRef.get();
+        if (postDoc.exists) {
+          final postOwnerId = (postDoc.data() as Map<String, dynamic>?)?['authorId'];
+          if (postOwnerId != null) {
+            await sendNotification(
+              receiverId: postOwnerId,
+              type: 'comment',
+              postId: postId,
+            );
+          }
         }
       }
 
