@@ -154,16 +154,16 @@ class _HomeScreenState extends State<HomeScreen> {
         if (change.type == DocumentChangeType.added && mounted) {
           final data = change.doc.data();
           if (data == null) continue;
-          
+
           // Tránh hiện popup cho chính mình (dù backend đã chặn, filter lại cho chắc)
           if (data['senderId'] == user.uid) continue;
 
           final type = data['type'] ?? 'comment';
           final senderName = data['senderName'] ?? 'Ai đó';
-          
+
           String title = 'Thông báo mới';
           String content = '';
-          
+
           if (type == 'like') {
             title = 'Lượt thích mới';
             content = '$senderName đã thích bài viết của bạn.';
@@ -271,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Future.delayed(const Duration(milliseconds: 800), () {
                     if (mounted) {
                       _showUpgradeSuccessDialog(
-                        userData.currentPlanName ?? "Premium",
+                        userData.planDisplayName,
                       );
                     }
                   });

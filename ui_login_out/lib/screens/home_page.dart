@@ -389,7 +389,7 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   Text(
                     isPremium 
-                      ? "Gói hiện tại: ${user?.currentPlanName ?? 'Premium'}"
+                      ? "Gói hiện tại: ${user?.planDisplayName ?? 'Premium'}"
                       : "Dùng thử: ${3 - (user?.usageCount ?? 0)}/3 lượt còn lại",
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),

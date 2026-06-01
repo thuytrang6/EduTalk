@@ -618,7 +618,7 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      'Premium từ: ${user.premiumSince ?? "N/A"}',
+                      'Premium từ: ${user.premiumStart != null ? user.premiumStart!.toIso8601String().substring(0, 10) : "N/A"}',
                       style: const TextStyle(color: Colors.grey, fontSize: 10),
                     ),
                   ],

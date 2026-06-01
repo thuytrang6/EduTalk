@@ -18,9 +18,8 @@ class PremiumTheme {
     required this.bgColor,
   });
 
-  /// Nhận SubscriptionPlan enum để đảm bảo luôn khớp với giá trị admin gán.
   static PremiumTheme getTheme(SubscriptionPlan? plan, bool isPremium) {
-    // 1. TÀI KHOẢN MIỄN PHÍ
+    // 1. TÀI KHOẢN MIỄN PHÍ - Màu Xám đen huyền bí
     if (!isPremium || plan == null || plan == SubscriptionPlan.none) {
       return PremiumTheme(
         title: "Tài khoản Miễn phí",
@@ -32,36 +31,36 @@ class PremiumTheme {
       );
     }
 
-    // 2. GÓI THÁNG - Màu Xanh Dương
+    // 2. GÓI THÁNG - Màu Xanh Dương (Màu cũ ban đầu)
     if (plan == SubscriptionPlan.monthly) {
       return PremiumTheme(
         title: "Premium Tháng",
         gradientColors: [const Color(0xFF3B82F6), const Color(0xFF2563EB)],
-        icon: Icons.flash_on_rounded,
+        icon: Icons.workspace_premium_rounded,
         accentColor: const Color(0xFF93C5FD),
         textColor: Colors.white,
         bgColor: const Color(0xFF1E40AF).withOpacity(0.8),
       );
     }
 
-    // 3. GÓI NĂM - Màu Cam/Vàng
+    // 3. GÓI NĂM - Màu Cam/Vàng (Màu cũ ban đầu)
     if (plan == SubscriptionPlan.yearly) {
       return PremiumTheme(
         title: "Premium Năm",
         gradientColors: [const Color(0xFFF59E0B), const Color(0xFFD97706)],
-        icon: Icons.shield_rounded,
+        icon: Icons.stars_rounded,
         accentColor: const Color(0xFFFDE68A),
         textColor: Colors.white,
         bgColor: const Color(0xFF92400E).withOpacity(0.8),
       );
     }
 
-    // 4. GÓI TRỌN ĐỜI - Màu Tím
+    // 4. GÓI TRỌN ĐỜI - Màu Tím (Màu cũ ban đầu)
     if (plan == SubscriptionPlan.lifetime) {
       return PremiumTheme(
         title: "Premium Trọn Đời",
         gradientColors: [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)],
-        icon: Icons.workspace_premium_rounded,
+        icon: Icons.diamond_rounded,
         accentColor: const Color(0xFFDDD6FE),
         textColor: Colors.white,
         bgColor: const Color(0xFF5B21B6).withOpacity(0.8),

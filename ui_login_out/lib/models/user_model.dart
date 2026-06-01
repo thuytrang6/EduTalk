@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'payment_model.dart';
 
 enum UserRole { user, admin }
 enum SubscriptionPlan { monthly, yearly, lifetime, none }
@@ -17,7 +18,6 @@ class UserModel {
   final DateTime? premiumExpiry;
   final DateTime? premiumAt; // Thời điểm thanh toán thành công gần nhất
   final String subscriptionStatus; // active, expired, cancelled, none
-  final String? premiumSince;
 
   UserModel({
     required this.uid,
@@ -33,7 +33,6 @@ class UserModel {
     this.premiumExpiry,
     this.premiumAt,
     this.subscriptionStatus = 'none',
-    this.premiumSince,
   });
 
   bool get isPremiumActive {
@@ -43,17 +42,10 @@ class UserModel {
     return premiumExpiry!.isAfter(DateTime.now());
   }
 
-  String get currentPlanName {
-    switch (plan) {
-      case SubscriptionPlan.monthly:
-        return 'Gói Tháng';
-      case SubscriptionPlan.yearly:
-        return 'Gói Năm';
-      case SubscriptionPlan.lifetime:
-        return 'Gói Trọn Đời';
-      default:
-        return 'Free';
-    }
+  /// Lấy tên hiển thị của gói từ PlanInfo
+  String get planDisplayName {
+    if (plan == SubscriptionPlan.none) return "Gói Miễn phí";
+    return PlanInfo.plans[plan.name]?.name ?? "Gói Premium";
   }
 
   factory UserModel.fromDocument(DocumentSnapshot doc) {
@@ -67,12 +59,11 @@ class UserModel {
       isPremium: data['isPremium'] ?? false,
       usageCount: data['usageCount'] ?? 0,
       freeLimit: data['freeLimit'] ?? 3,
-      plan: _parsePlan(data['plan']),
+      plan: _parsePlan(data['plan'] ?? data['planCode']), // Hỗ trợ cả plan và planCode
       premiumStart: (data['premiumStart'] as Timestamp?)?.toDate(),
       premiumExpiry: (data['premiumExpiry'] as Timestamp?)?.toDate(),
       premiumAt: (data['premiumAt'] as Timestamp?)?.toDate(),
       subscriptionStatus: data['subscriptionStatus'] ?? 'none',
-      premiumSince: data['premiumSince'],
     );
   }
 
@@ -98,8 +89,8 @@ class UserModel {
       'plan': plan == SubscriptionPlan.none ? null : plan.name,
       'premiumStart': premiumStart != null ? Timestamp.fromDate(premiumStart!) : null,
       'premiumExpiry': premiumExpiry != null ? Timestamp.fromDate(premiumExpiry!) : null,
+      'premiumAt': premiumAt != null ? Timestamp.fromDate(premiumAt!) : null,
       'subscriptionStatus': subscriptionStatus,
-      'premiumSince': premiumSince,
     };
   }
 }

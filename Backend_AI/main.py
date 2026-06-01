@@ -25,6 +25,7 @@ if not firebase_admin._apps:
 
 # ── ĐĂNG KÝ BLUEPRINTS ────────────────────────────────────────────────────────
 app.register_blueprint(payment_bp, url_prefix='/payment')
+payment_bp.strict_slashes = False
 app.register_blueprint(prediction_bp, url_prefix='/api/prediction')
 
 

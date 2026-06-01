@@ -85,11 +85,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
-  void _showPremiumLevelDialog(String docId, String username, SubscriptionPlan currentPlan) {
+  void _showPremiumLevelDialog(String docId, String username, SubscriptionPlan plan) {
     showDialog(
       context: context,
       builder: (context) {
-        SubscriptionPlan selectedPlan = currentPlan;
+        SubscriptionPlan selectedPlan = plan;
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
@@ -150,19 +150,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ElevatedButton(
                   onPressed: () {
                     final isPremium = selectedPlan != SubscriptionPlan.none;
-                    final updatePremiumSince = selectedPlan == SubscriptionPlan.none || (selectedPlan != SubscriptionPlan.none && currentPlan == SubscriptionPlan.none);
-                    final premiumSince = selectedPlan == SubscriptionPlan.none
-                        ? null
-                        : (selectedPlan != SubscriptionPlan.none && currentPlan == SubscriptionPlan.none
-                            ? DateTime.now().toIso8601String().substring(0, 10)
-                            : null);
 
                     _adminService.updatePremiumStatus(
                       docId,
                       plan: selectedPlan,
                       isPremium: isPremium,
-                      premiumSince: premiumSince,
-                      updatePremiumSince: updatePremiumSince,
                     );
                     Navigator.pop(context);
                   },
