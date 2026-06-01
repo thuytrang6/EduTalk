@@ -8,6 +8,7 @@ import 'Login.dart';
 import 'ChangePass.dart';
 import 'privacy_policy_screen.dart';
 import 'terms_screen.dart';
+import '../services/notification_service.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -20,22 +21,51 @@ class _SettingScreenState extends State<SettingScreen> {
   bool _isNotificationEnabled = true;
 
   @override
+  void initState() {
+    super.initState();
+    _loadNotificationSetting();
+  }
+
+  Future<void> _loadNotificationSetting() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists && mounted) {
+        setState(() {
+          _isNotificationEnabled = doc.data()?['isNotificationEnabled'] ?? true;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleNotification(bool val) async {
+    setState(() {
+      _isNotificationEnabled = val;
+    });
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // 1. Lưu tùy chọn vào Firestore
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'isNotificationEnabled': val,
+      });
+
+      // 2. Cập nhật FCM token tương ứng (nếu bật thì lưu token, nếu tắt thì xóa token)
+      await NotificationService.getAndSaveToken();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<ThemeNotifier>(
       builder: (context, themeNotifier, _) {
-        // Lắng nghe ThemeNotifier để cập nhật switch dark mode real-time
-        final isDark = themeNotifier.isDarkMode;
+        const isDark = false;
 
         // Màu sắc thích nghi theo theme
-        final bgColor = isDark
-            ? const Color(0xFF0F172A)
-            : const Color(0xFFF6F7FB);
-        final cardColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-        final textColor = isDark ? Colors.white : const Color(0xFF1e293b);
-        final subtitleColor = isDark ? Colors.white54 : Colors.grey;
-        final dividerColor = isDark
-            ? const Color(0xFF334155)
-            : const Color(0xFFF1F5F9);
+        final bgColor = const Color(0xFFF6F7FB);
+        final cardColor = Colors.white;
+        final textColor = const Color(0xFF1e293b);
+        final subtitleColor = Colors.grey;
+        final dividerColor = const Color(0xFFF1F5F9);
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -160,9 +190,21 @@ class _SettingScreenState extends State<SettingScreen> {
               value: _isNotificationEnabled,
               textColor: textColor,
               subtitleColor: subtitleColor,
-              onChanged: (val) => setState(() => _isNotificationEnabled = val),
+              onChanged: _toggleNotification,
             ),
-            // ── DARK MODE (kết nối ThemeNotifier) ────────────
+
+            _buildNavigationItem(
+              icon: Icons.language_rounded,
+              iconColor: const Color(0xff059669),
+              bgColor: isDark
+                  ? const Color(0xFF0F3A2A)
+                  : const Color(0xffecfeff),
+              title: "Ngôn ngữ",
+              subtitle: "Tiếng Việt",
+              textColor: textColor,
+              subtitleColor: subtitleColor,
+              onTap: () {},
+            ),
           ],
         ),
         const SizedBox(height: 20),

@@ -33,6 +33,119 @@ class PostDraft {
   static File? image;
 }
 
+// ===========================================================================
+// CACHE VÀ WIDGET LOAD ẢNH ĐẠI DIỆN DÙNG CHUNG
+// ===========================================================================
+class UserAvatarCache {
+  static final Map<String, String?> _cache = {};
+  static final Map<String, Future<DocumentSnapshot>> _pending = {};
+
+  static Future<String?> getPhotoUrl(String userId) async {
+    if (_cache.containsKey(userId)) {
+      return _cache[userId];
+    }
+    if (_pending.containsKey(userId)) {
+      try {
+        final doc = await _pending[userId]!;
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>?;
+          _cache[userId] = data?['photoUrl'];
+        } else {
+          _cache[userId] = null;
+        }
+      } catch (_) {
+        _cache[userId] = null;
+      }
+      return _cache[userId];
+    }
+
+    final future = FirebaseFirestore.instance.collection('users').doc(userId).get();
+    _pending[userId] = future;
+    try {
+      final doc = await future;
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>?;
+        _cache[userId] = data?['photoUrl'];
+      } else {
+        _cache[userId] = null;
+      }
+    } catch (_) {
+      _cache[userId] = null;
+    } finally {
+      _pending.remove(userId);
+    }
+    return _cache[userId];
+  }
+
+  static void clear(String userId) {
+    _cache.remove(userId);
+  }
+}
+
+class UserAvatar extends StatefulWidget {
+  final String userId;
+  final double radius;
+  final String defaultLetter;
+
+  const UserAvatar({
+    super.key,
+    required this.userId,
+    required this.radius,
+    required this.defaultLetter,
+  });
+
+  @override
+  State<UserAvatar> createState() => _UserAvatarState();
+}
+
+class _UserAvatarState extends State<UserAvatar> {
+  String? _photoUrl;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvatar();
+  }
+
+  @override
+  void didUpdateWidget(UserAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId) {
+      _loadAvatar();
+    }
+  }
+
+  void _loadAvatar() {
+    UserAvatarCache.getPhotoUrl(widget.userId).then((url) {
+      if (mounted) {
+        setState(() {
+          _photoUrl = url;
+          _loading = false;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_photoUrl != null && _photoUrl!.isNotEmpty) {
+      return CircleAvatar(
+        radius: widget.radius,
+        backgroundImage: NetworkImage(_photoUrl!),
+      );
+    }
+    return CircleAvatar(
+      radius: widget.radius,
+      backgroundColor: const Color(0xFFE7EAEE),
+      child: Text(
+        widget.defaultLetter.isNotEmpty ? widget.defaultLetter[0].toUpperCase() : "U",
+        style: TextStyle(fontSize: widget.radius * 0.8, color: Colors.black87),
+      ),
+    );
+  }
+}
+
 class ThaoLuanScreen extends StatefulWidget {
   const ThaoLuanScreen({super.key});
 
@@ -546,6 +659,7 @@ class _PostCard extends StatelessWidget {
     final currentUser = FirebaseAuth.instance.currentUser;
     final currentUserId = currentUser?.uid ?? '';
     final bool isUpvoted = post.upvotedBy.contains(currentUserId);
+    final bool isReported = post.reportedBy.contains(currentUserId);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -561,10 +675,11 @@ class _PostCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: const Color(0xFFE7EAEE), 
-                  child: Text(post.authorName.isNotEmpty ? post.authorName[0] : "U")
-                ), 
+                UserAvatar(
+                  userId: post.authorId,
+                  radius: 20,
+                  defaultLetter: post.authorName,
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -622,8 +737,14 @@ class _PostCard extends StatelessWidget {
                   )
                 else
                   IconButton(
-                    onPressed: () => _confirmReport(context, currentUserId), 
-                    icon: const Icon(Icons.outlined_flag, color: Colors.grey, size: 20)
+                    onPressed: isReported 
+                        ? () => _showCenterAlert(context, "Bạn đã báo cáo bài này rồi!", isError: true)
+                        : () => _confirmReport(context, currentUserId), 
+                    icon: Icon(
+                      isReported ? Icons.flag : Icons.outlined_flag, 
+                      color: isReported ? Colors.red : Colors.grey, 
+                      size: 20
+                    )
                   )
               ]
             ),
@@ -725,6 +846,91 @@ class _PostCard extends StatelessWidget {
 // ===========================================================================
 // SHEET BÌNH LUẬN (CÓ THỤT LÙI DÒNG)
 // ===========================================================================
+// ===========================================================================
+// TIÊU ĐỀ BÀI VIẾT HIỂN THỊ Ở SHEET BÌNH LUẬN
+// ===========================================================================
+class _CommentSheetPostHeader extends StatelessWidget {
+  final String postId;
+  const _CommentSheetPostHeader({required this.postId});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('posts').doc(postId).get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const SizedBox.shrink();
+        }
+        final post = PostModel.fromMap(snapshot.data!.data() as Map<String, dynamic>, snapshot.data!.id);
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  UserAvatar(userId: post.authorId, radius: 16, defaultLetter: post.authorName),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          post.authorName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B)),
+                        ),
+                        Text(
+                          getTimeAgo(post.createdAt),
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                post.content,
+                style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
+              ),
+              if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    post.imageUrl!,
+                    width: double.infinity,
+                    height: 120,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _CommentSheet extends StatefulWidget {
   final String postId;
   const _CommentSheet({required this.postId});
@@ -801,10 +1007,10 @@ class _CommentSheetState extends State<_CommentSheet> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: isReply ? 14 : 18, 
-            backgroundColor: const Color(0xFFE7EAEE),
-            child: Text(cmt.authorName.isNotEmpty ? cmt.authorName[0] : "U", style: TextStyle(fontSize: isReply ? 12 : 14)),
+          UserAvatar(
+            userId: cmt.authorId,
+            radius: isReply ? 14.0 : 18.0,
+            defaultLetter: cmt.authorName,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -912,32 +1118,64 @@ class _CommentSheetState extends State<_CommentSheet> {
             child: StreamBuilder<List<CommentModel>>(
               stream: PostService().getCommentsStream(widget.postId),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-                if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("Chưa có bình luận nào.", style: TextStyle(color: Colors.grey)));
-
-                final allComments = snapshot.data!;
+                final isLoading = snapshot.connectionState == ConnectionState.waiting;
+                final allComments = snapshot.data ?? [];
                 final topLevelComments = allComments.where((c) => c.parentId == null).toList();
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: topLevelComments.length,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: 1 + (isLoading ? 1 : (topLevelComments.isEmpty ? 1 : topLevelComments.length)),
                   itemBuilder: (context, index) {
-                    final parentCmt = topLevelComments[index];
+                    if (index == 0) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _CommentSheetPostHeader(postId: widget.postId),
+                          const Divider(),
+                        ],
+                      );
+                    }
+                    
+                    if (isLoading) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    if (topLevelComments.isEmpty) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: Text(
+                            "Chưa có bình luận nào.",
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final parentCmt = topLevelComments[index - 1];
                     final childComments = allComments.where((c) => c.parentId == parentCmt.id).toList();
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildCommentItem(parentCmt, false, currentUserId),
-                        
-                        if (childComments.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 46, top: 4),
-                            child: Column(
-                              children: childComments.map((childCmt) => _buildCommentItem(childCmt, true, currentUserId)).toList(),
-                            ),
-                          )
-                      ],
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildCommentItem(parentCmt, false, currentUserId),
+                          
+                          if (childComments.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 46, top: 4),
+                              child: Column(
+                                children: childComments.map((childCmt) => _buildCommentItem(childCmt, true, currentUserId)).toList(),
+                              ),
+                            )
+                        ],
+                      ),
                     );
                   },
                 );

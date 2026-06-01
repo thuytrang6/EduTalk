@@ -152,8 +152,7 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
                 child: Column(
                   children: [
                     _buildHeader(premiumUsers.length, totalRevenue),
-                    _buildSearchBox(),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     _buildLevelBreakdown(
                       monthlyCount,
                       yearlyCount,
@@ -264,43 +263,7 @@ class _PremiumManagementScreenState extends State<PremiumManagementScreen> {
     );
   }
 
-  Widget _buildSearchBox() {
-    return Container(
-      transform: Matrix4.translationValues(0, -20, 0),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: TextField(
-        onChanged: (val) => setState(() => searchQuery = val),
-        decoration: InputDecoration(
-          hintText: 'Tìm kiếm thành viên Premium...',
-          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-          prefixIcon: const Icon(
-            Icons.search_rounded,
-            color: Colors.grey,
-            size: 20,
-          ),
-          filled: true,
-          fillColor: const Color(0xFFF3F4F6),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(15),
-            borderSide: BorderSide.none,
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildLevelBreakdown(int monthly, int yearly, int lifetime) {
     return Container(

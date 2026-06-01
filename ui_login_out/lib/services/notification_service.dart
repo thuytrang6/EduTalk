@@ -55,6 +55,20 @@ class NotificationService {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
+    // Kiểm tra cấu hình nhận thông báo của user
+    final doc = await _db.collection('users').doc(uid).get();
+    if (doc.exists) {
+      final isEnabled = doc.data()?['isNotificationEnabled'] ?? true;
+      if (!isEnabled) {
+        // Nếu người dùng tắt thông báo, xóa FCM Token khỏi Firestore
+        await _db.collection('users').doc(uid).update({
+          'fcmToken': FieldValue.delete(),
+        }).catchError((_) {});
+        debugPrint('🗑️ FCM Token cleared because notifications are disabled');
+        return;
+      }
+    }
+
     final token = await _messaging.getToken();
     if (token != null) {
       await _saveTokenToFirestore(token);

@@ -138,34 +138,17 @@ class _ForumManagementScreenState extends State<ForumManagementScreen> {
     return Container(
       transform: Matrix4.translationValues(0, -20, 0),
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 5))],
       ),
-      child: Column(
+      child: Row(
         children: [
-          TextField(
-            onChanged: (val) => setState(() => searchQuery = val),
-            decoration: InputDecoration(
-              hintText: 'Tìm kiếm bài viết...',
-              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey, size: 20),
-              filled: true,
-              fillColor: const Color(0xFFF3F4F6),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _buildFilterChip('all', 'Tất cả bài viết'),
-              const SizedBox(width: 8),
-              _buildFilterChip('reported', 'Bị báo cáo'),
-            ],
-          ),
+          Expanded(child: _buildFilterChip('all', 'Tất cả bài viết')),
+          const SizedBox(width: 8),
+          Expanded(child: _buildFilterChip('reported', 'Bị báo cáo')),
         ],
       ),
     );
@@ -184,6 +167,7 @@ class _ForumManagementScreenState extends State<ForumManagementScreen> {
         ),
         child: Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: isSelected ? Colors.white : Colors.grey[700],
             fontSize: 12,

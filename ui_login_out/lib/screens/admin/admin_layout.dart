@@ -6,6 +6,7 @@ import 'dashboard_screen.dart';
 import 'user_management_screen.dart';
 import 'forum_management_screen.dart';
 import 'premium_management_screen.dart';
+import 'support_management_screen.dart';
 import '../../services/admin_service.dart';
 
 class AdminLayout extends StatefulWidget {
@@ -24,14 +25,16 @@ class _AdminLayoutState extends State<AdminLayout> {
     const UserManagementScreen(),
     const ForumManagementScreen(),
     const PremiumManagementScreen(),
+    const SupportManagementScreen(),
   ];
 
-  final List<String> _labels = ['Dashboard', 'User', 'Forum', 'Premium'];
+  final List<String> _labels = ['Dashboard', 'User', 'Forum', 'Premium', 'Hỗ trợ'];
   final List<IconData> _icons = [
     Icons.dashboard_rounded,
     Icons.person_rounded,
     Icons.forum_rounded,
     Icons.diamond_rounded,
+    Icons.support_agent_rounded,
   ];
 
   void _showNotificationsSheet() {
@@ -287,46 +290,6 @@ class _AdminLayoutState extends State<AdminLayout> {
       ),
       centerTitle: true,
       actions: [
-        StreamBuilder<QuerySnapshot>(
-          stream: _adminService.getAdminNotificationsStream(),
-          builder: (context, snapshot) {
-            final unreadCount = snapshot.data?.docs.length ?? 0;
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_active_rounded, color: Colors.white),
-                  onPressed: _showNotificationsSheet,
-                ),
-                if (unreadCount > 0)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      constraints: const BoxConstraints(
-                        minWidth: 16,
-                        minHeight: 16,
-                      ),
-                      child: Text(
-                        '$unreadCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
         IconButton(
           icon: const Icon(Icons.logout_rounded, color: Colors.white),
           onPressed: () {
@@ -379,6 +342,7 @@ class _AdminLayoutState extends State<AdminLayout> {
           _buildDrawerItem(1, Icons.people_rounded, 'Quản lý người dùng'),
           _buildDrawerItem(2, Icons.forum_rounded, 'Quản lý Forum'),
           _buildDrawerItem(3, Icons.diamond_rounded, 'Quản lý Premium'),
+          _buildDrawerItem(4, Icons.support_agent_rounded, 'Quản lý Hỗ trợ'),
           const Spacer(),
           const Divider(height: 1),
           ListTile(
@@ -441,7 +405,7 @@ class _AdminLayoutState extends State<AdminLayout> {
           height: 64,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(4, (index) => _buildBottomNavItem(index)),
+            children: List.generate(5, (index) => _buildBottomNavItem(index)),
           ),
         ),
       ),

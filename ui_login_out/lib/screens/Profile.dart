@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'Setting.dart';
 import 'Premium_screen.dart';
+import 'ThaoLuan.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'free_usage_store.dart';
@@ -278,6 +279,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }, SetOptions(merge: true));
         
         await FirebaseAuth.instance.currentUser?.updatePhotoURL(downloadUrl);
+        UserAvatarCache.clear(uid);
 
         // 4. CẬP NHẬT GIAO DIỆN
         if (mounted) {
