@@ -12,6 +12,9 @@
       ]
     }
   ],
+  "firestore": {
+    "indexes": "firestore.indexes.json"
+  },
   "flutter": {
     "platforms": {
       "android": {

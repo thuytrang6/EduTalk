@@ -4,8 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
-import 'package:crypto/crypto.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/post_model.dart';
 
 class PostService {
@@ -152,21 +150,11 @@ class PostService {
       // ==========================================
       // Chỉ gửi thông báo khi: Đang LIKE (không phải Hủy) + Có chủ bài + Khác người Like
       if (isUpvoting && postOwnerId != null && postOwnerId != uid) {
-        
-        // Truy vấn lấy tên của người vừa thả Like (trong bảng users)
-        final userDoc = await _db.collection('users').doc(uid).get();
-        String senderName = userDoc.data()?['name'] ?? "Thành viên EduTalk";
-
-        // Ghi vào bảng notifications
-        await FirebaseFirestore.instance.collection('notifications').add({
-          'receiverId': postOwnerId,
-          'senderId': uid,
-          'senderName': senderName,
-          'type': 'like',          // <-- Đổi type thành 'like' để hiện icon trái tim đỏ
-          'postId': postId,
-          'isRead': false,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
+        await sendNotification(
+          receiverId: postOwnerId!,
+          type: 'like',
+          postId: postId,
+        );
       }
       
     } catch (e) {
@@ -327,6 +315,13 @@ class PostService {
     final currentUser = FirebaseAuth.instance.currentUser;
     // Bỏ qua nếu chưa đăng nhập hoặc tự like/comment bài của chính mình
     if (currentUser == null || currentUser.uid == receiverId) return;
+
+    // Kiểm tra xem người nhận có bật thông báo không
+    final receiverDoc = await _db.collection('users').doc(receiverId).get();
+    if (receiverDoc.exists) {
+      final bool isEnabled = receiverDoc.data()?['isNotificationEnabled'] ?? true;
+      if (!isEnabled) return;
+    }
 
     final userDoc = await _db.collection('users').doc(currentUser.uid).get();
     String senderName = userDoc.data()?['name'] ?? "Thành viên EduTalk";

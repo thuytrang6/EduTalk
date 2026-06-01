@@ -6,15 +6,103 @@ const { getMessaging } = require("firebase-admin/messaging");
 initializeApp();
 
 /**
+ * Trigger lắng nghe trên collection 'notifications' toàn cục.
+ * Gửi Push Notification (Heads-up) đến điện thoại của người nhận khi có thông báo mới.
+ */
+exports.onNotificationCreated = onDocumentCreated(
+  "notifications/{notificationId}",
+  async (event) => {
+    const db = getFirestore();
+    const messaging = getMessaging();
+    const notificationData = event.data?.data();
+
+    if (!notificationData) {
+      console.log("Không có dữ liệu thông báo.");
+      return null;
+    }
+
+    const { receiverId, senderName, type, postId } = notificationData;
+
+    if (!receiverId) {
+      console.log("Không tìm thấy receiverId.");
+      return null;
+    }
+
+    try {
+      // 1. Lấy FCM Token của người nhận
+      const receiverDoc = await db.collection("users").doc(receiverId).get();
+      if (!receiverDoc.exists) {
+        console.log(`User ${receiverId} không tồn tại.`);
+        return null;
+      }
+
+      const fcmToken = receiverDoc.data()?.fcmToken;
+      if (!fcmToken) {
+        console.log(`User ${receiverId} không có FCM Token (thông báo hệ thống đang tắt).`);
+        return null;
+      }
+
+      // 2. Xác định tiêu đề và nội dung hiển thị trên điện thoại
+      let title = "Thông báo mới 🔔";
+      let body = `${senderName} đã tương tác với bạn.`;
+
+      if (type === "like") {
+        title = "Thích bài viết ❤️";
+        body = `${senderName} đã thích bài viết của bạn.`;
+      } else if (type === "comment") {
+        title = "Bình luận mới 💬";
+        body = `${senderName} đã bình luận về bài viết của bạn.`;
+      } else if (type === "reply") {
+        title = "Phản hồi mới 💬";
+        body = `${senderName} đã phản hồi bình luận của bạn.`;
+      }
+
+      // 3. Gửi thông báo đến thiết bị qua FCM
+      const message = {
+        token: fcmToken,
+        notification: {
+          title: title,
+          body: body,
+        },
+        data: {
+          postId: postId || "",
+          type: type || "",
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "edutalk_notifications",
+            clickAction: "FLUTTER_NOTIFICATION_CLICK",
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1,
+            },
+          },
+        },
+      };
+
+      await messaging.send(message);
+      console.log(`✅ Đã gửi FCM Push Notification thành công tới user: ${receiverId}`);
+      return null;
+    } catch (error) {
+      console.error("❌ Lỗi khi gửi FCM Push Notification:", error);
+      return null;
+    }
+  }
+);
+
+/**
  * Hàm tự động chạy khi có comment mới được tạo trong một bài viết.
- * Sẽ gửi Push Notification đến chủ bài viết và lưu vào lịch sử thông báo.
+ * Lưu bản sao lịch sử thông báo vào subcollection của user (giữ lại để tương thích ngược).
  */
 exports.onCommentCreated = onDocumentCreated(
   "posts/{postId}/comments/{commentId}",
   async (event) => {
     const db = getFirestore();
-    const messaging = getMessaging();
-
     const postId = event.params.postId;
     const commentData = event.data?.data();
 
@@ -28,7 +116,6 @@ exports.onCommentCreated = onDocumentCreated(
     const commenterId = commentData.authorId;
 
     try {
-      // 1. Lấy thông tin bài viết để tìm authorId
       const postDoc = await db.collection("posts").doc(postId).get();
       if (!postDoc.exists) {
         console.log(`Bài viết ${postId} không tồn tại.`);
@@ -37,54 +124,12 @@ exports.onCommentCreated = onDocumentCreated(
 
       const authorId = postDoc.data()?.authorId;
 
-      // Không gửi thông báo nếu người comment là chính tác giả
       if (!authorId || authorId === commenterId) {
         console.log("Người comment là chính tác giả hoặc không có authorId.");
         return null;
       }
 
-      // 2. Lấy FCM Token của tác giả bài viết
-      const authorDoc = await db.collection("users").doc(authorId).get();
-      if (!authorDoc.exists) {
-        console.log(`User ${authorId} không tồn tại.`);
-        return null;
-      }
-
-      const fcmToken = authorDoc.data()?.fcmToken;
-
-      // 3. Gửi Push Notification (nếu có FCM Token)
-      if (fcmToken) {
-        const message = {
-          token: fcmToken,
-          notification: {
-            title: "Có bình luận mới 💬",
-            body: `${commenterName}: ${commentContent.substring(0, 80)}`,
-          },
-          data: {
-            postId: postId,
-            type: "new_comment",
-          },
-          android: {
-            priority: "high",
-            notification: {
-              channelId: "edutalk_notifications",
-              clickAction: "FLUTTER_NOTIFICATION_CLICK",
-            },
-          },
-        };
-
-        try {
-          await messaging.send(message);
-          console.log(`✅ Push Notification đã gửi đến ${authorId}`);
-        } catch (fcmError) {
-          // Token hết hạn hoặc thiết bị không hoạt động — không crash hàm
-          console.warn(`⚠️ Gửi FCM thất bại: ${fcmError.message}`);
-        }
-      } else {
-        console.log(`User ${authorId} chưa có FCM Token.`);
-      }
-
-      // 4. Lưu thông báo vào Firestore (users/{authorId}/notifications)
+      // Lưu thông báo vào subcollection Firestore (users/{authorId}/notifications) để tương thích ngược
       await db
         .collection("users")
         .doc(authorId)
@@ -100,7 +145,7 @@ exports.onCommentCreated = onDocumentCreated(
           type: "new_comment",
         });
 
-      console.log(`✅ Đã lưu thông báo vào Firestore cho user ${authorId}`);
+      console.log(`✅ Đã lưu thông báo dự phòng vào Firestore cho user ${authorId}`);
       return null;
     } catch (error) {
       console.error("❌ Lỗi trong onCommentCreated:", error);

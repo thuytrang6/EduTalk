@@ -175,70 +175,45 @@ class _HomeScreenState extends State<HomeScreen> {
             content = '$senderName đã bình luận vào bài viết của bạn.';
           }
 
-          // Hiện SnackBar thông báo trượt từ trên xuống
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.notifications_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          content,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.85),
-                            fontSize: 12,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: const Color(0xFF2563EB),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              duration: const Duration(seconds: 4),
-              action: SnackBarAction(
-                label: 'Xem',
-                textColor: Colors.white,
-                onPressed: () {
-                  // Nhảy đến tab Thảo luận
-                  _changeTab(1);
-                },
-              ),
-            ),
-          );
+          // Hiện thông báo trượt từ trên xuống (Custom Top Banner)
+          _showTopNotificationBanner(title, content);
         }
+      }
+    });
+  }
+
+  void _showTopNotificationBanner(String title, String content) {
+    bool isRemoved = false;
+    late OverlayEntry overlayEntry;
+    
+    overlayEntry = OverlayEntry(
+      builder: (context) {
+        return _TopNotificationBannerWidget(
+          title: title,
+          content: content,
+          onTap: () {
+            if (!isRemoved) {
+              isRemoved = true;
+              overlayEntry.remove();
+              _changeTab(1);
+            }
+          },
+          onDismiss: () {
+            if (!isRemoved) {
+              isRemoved = true;
+              overlayEntry.remove();
+            }
+          },
+        );
+      },
+    );
+
+    Overlay.of(context).insert(overlayEntry);
+
+    Future.delayed(const Duration(seconds: 4), () {
+      if (!isRemoved) {
+        isRemoved = true;
+        overlayEntry.remove();
       }
     });
   }
@@ -713,6 +688,146 @@ class _HomeScreenState extends State<HomeScreen> {
             overflow: TextOverflow.ellipsis,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TopNotificationBannerWidget extends StatefulWidget {
+  final String title;
+  final String content;
+  final VoidCallback onTap;
+  final VoidCallback onDismiss;
+
+  const _TopNotificationBannerWidget({
+    required this.title,
+    required this.content,
+    required this.onTap,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_TopNotificationBannerWidget> createState() =>
+      __TopNotificationBannerWidgetState();
+}
+
+class __TopNotificationBannerWidgetState
+    extends State<_TopNotificationBannerWidget> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _offsetAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0, -1.5),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    ));
+
+    _controller.forward();
+  }
+
+  void _dismiss() {
+    _controller.reverse().then((_) {
+      widget.onDismiss();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+
+    return Positioned(
+      top: statusBarHeight + 12,
+      left: 16,
+      right: 16,
+      child: SlideTransition(
+        position: _offsetAnimation,
+        child: Material(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () {
+              _controller.reverse().then((_) {
+                widget.onTap();
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF2563EB).withOpacity(0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.notifications_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          widget.content,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _dismiss,
+                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
