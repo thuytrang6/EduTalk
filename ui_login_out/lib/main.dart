@@ -55,53 +55,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'EduTalk',
 
-      // ── Theme mode: light / dark điều khiển bởi ThemeNotifier ──
-      themeMode: themeNotifier.themeMode,
-
-      // ── Light Theme ─────────────────────────────────────────────
-      theme: ThemeData(
-        brightness: Brightness.light,
-        fontFamily: '.AppleSystemUIFont',
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2563EB),
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF6F7FB),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Color(0xFF1E293B),
-          elevation: 0,
-        ),
-        cardColor: Colors.white,
-        textTheme: const TextTheme().apply(
-          fontFamily: '.AppleSystemUIFont',
-          bodyColor: Color(0xFF1E293B),
-          displayColor: Color(0xFF1E293B),
-        ),
-      ),
-
-      // ── Dark Theme ──────────────────────────────────────────────
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        fontFamily: '.AppleSystemUIFont',
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2563EB),
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1E293B),
-          foregroundColor: Colors.white,
-          elevation: 0,
-        ),
-        cardColor: const Color(0xFF1E293B),
-        textTheme: const TextTheme().apply(
-          fontFamily: '.AppleSystemUIFont',
-          bodyColor: Colors.white,
-          displayColor: Colors.white,
-        ),
-      ),
-
+      // ── Theme mode: light / dark điều khiển bởi ThemeNotifier ─
       home: const AuthGate(),
     );
   }

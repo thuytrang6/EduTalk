@@ -162,36 +162,7 @@ class _SettingScreenState extends State<SettingScreen> {
               subtitleColor: subtitleColor,
               onChanged: (val) => setState(() => _isNotificationEnabled = val),
             ),
-
-            // ── DARK MODE (kết nối ThemeNotifier) ─────────────
-            _buildToggleItem(
-              icon: isDark
-                  ? Icons.dark_mode_rounded
-                  : Icons.light_mode_outlined,
-              iconColor: const Color(0xff9333ea),
-              bgColor: isDark
-                  ? const Color(0xFF2D1B5E)
-                  : const Color(0xfff5f3ff),
-              title: "Chế độ tối",
-              subtitle: isDark ? "Đang bật" : "Đang tắt",
-              value: isDark,
-              textColor: textColor,
-              subtitleColor: subtitleColor,
-              onChanged: (val) => themeNotifier.toggleTheme(val),
-            ),
-
-            _buildNavigationItem(
-              icon: Icons.language_rounded,
-              iconColor: const Color(0xff059669),
-              bgColor: isDark
-                  ? const Color(0xFF0F3A2A)
-                  : const Color(0xffecfeff),
-              title: "Ngôn ngữ",
-              subtitle: "Tiếng Việt",
-              textColor: textColor,
-              subtitleColor: subtitleColor,
-              onTap: () {},
-            ),
+            // ── DARK MODE (kết nối ThemeNotifier) ────────────
           ],
         ),
         const SizedBox(height: 20),

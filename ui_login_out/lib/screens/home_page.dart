@@ -136,8 +136,7 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    // 👉 SỬ DỤNG AI ĐỂ TẠO LIST NGÀNH HOT
-                    const TrendingMajorsCard(), 
+                    const TrendingMajorsCard(),
                     const SizedBox(height: 16),
                     KhamPhaThem(context),
                     const SizedBox(height: 20),
@@ -197,9 +196,8 @@ class _HomePageState extends State<HomePage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ThongKeTs(
-                    onTabChange: widget.onChangeTab,
-                  ),
+                  builder: (context) =>
+                      ThongKeTs(onTabChange: widget.onChangeTab),
                 ),
               );
             },
@@ -304,7 +302,10 @@ class _HomePageState extends State<HomePage> {
     return ValueListenableBuilder<UserModel?>(
       valueListenable: currentUserNotifier,
       builder: (context, user, _) {
-        final theme = PremiumTheme.getTheme(user?.plan, user?.isPremium ?? false);
+        final theme = PremiumTheme.getTheme(
+          user?.plan,
+          user?.isPremium ?? false,
+        );
         final bool isPremium = user?.isPremium ?? false;
 
         return Container(
@@ -355,16 +356,25 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         // Badge Pill
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: theme.accentColor.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: theme.accentColor.withOpacity(0.3)),
+                            border: Border.all(
+                              color: theme.accentColor.withOpacity(0.3),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(theme.icon, color: theme.accentColor, size: 14),
+                              Icon(
+                                theme.icon,
+                                color: theme.accentColor,
+                                size: 14,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 theme.title,
@@ -388,9 +398,9 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    isPremium 
-                      ? "Gói hiện tại: ${user?.planDisplayName ?? 'Premium'}"
-                      : "Dùng thử: ${3 - (user?.usageCount ?? 0)}/3 lượt còn lại",
+                    isPremium
+                        ? "Gói hiện tại: ${user?.planDisplayName ?? 'Premium'}"
+                        : "Dùng thử: ${3 - (user?.usageCount ?? 0)}/3 lượt còn lại",
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.9),
                       fontSize: 14,
@@ -407,7 +417,10 @@ class _HomePageState extends State<HomePage> {
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(colors: theme.gradientColors),
                         borderRadius: BorderRadius.circular(12),
@@ -547,7 +560,10 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 4),
             Text(
               subtitle,
-              style: const TextStyle(fontSize: 13, color: Colors.grey),
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color.fromARGB(255, 66, 66, 66),
+              ),
               textAlign: TextAlign.center,
             ),
           ],

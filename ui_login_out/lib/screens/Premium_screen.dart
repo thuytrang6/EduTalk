@@ -431,7 +431,7 @@ class PremiumScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _buildPlanCard(
               context: context,
-              title: "Gói Trọn Đời",
+              title: "Gói Vĩnh Viễn",
               subtitle: "Một lần thanh toán, sử dụng mãi mãi",
               price: "499.000",
               unit: "đ",
@@ -441,7 +441,7 @@ class PremiumScreen extends StatelessWidget {
               buttonIcon: Icons.workspace_premium_rounded,
               buttonText: currentPlan == SubscriptionPlan.lifetime
                   ? "Đang sử dụng"
-                  : "Mua gói Trọn đời",
+                  : "Mua gói Vĩnh Viễn",
               isActive: currentPlan == SubscriptionPlan.lifetime,
               refundAmount:
                   (currentPlan == SubscriptionPlan.monthly ||

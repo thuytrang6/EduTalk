@@ -260,7 +260,10 @@ class SupportScreen extends StatelessWidget {
 
                 Text(
                   subtitle,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  style: const TextStyle(
+                    color: Color.fromARGB(255, 22, 22, 22),
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),

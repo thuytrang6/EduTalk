@@ -107,7 +107,7 @@ class AboutScreen extends StatelessWidget {
                           "Nền tảng AI hỗ trợ tư vấn tuyển sinh",
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: Colors.grey,
+                            color: Color.fromARGB(255, 23, 23, 23),
                             fontSize: 14,
                             height: 1.7,
                           ),
@@ -243,7 +243,7 @@ class AboutScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     height: 1.8,
-                    color: Colors.grey,
+                    color: Color.fromARGB(255, 24, 24, 24),
                   ),
                 ),
               ],

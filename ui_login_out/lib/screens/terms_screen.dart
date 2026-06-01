@@ -110,7 +110,7 @@ class TermsScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 14,
                             height: 1.8,
-                            color: Colors.grey,
+                            color: Color.fromARGB(255, 24, 24, 24),
                           ),
                         ),
                       ],
@@ -156,13 +156,16 @@ class TermsScreen extends StatelessWidget {
                         Icon(
                           Icons.info_outline_rounded,
                           size: 18,
-                          color: Colors.grey,
+                          color: Color.fromARGB(255, 23, 23, 23),
                         ),
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             "Cập nhật lần cuối: 20/05/2025",
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                            style: TextStyle(
+                              color: Color.fromARGB(255, 23, 23, 23),
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
@@ -245,7 +248,7 @@ class TermsScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     height: 1.8,
-                    color: Colors.grey,
+                    color: Color.fromARGB(255, 23, 23, 23),
                   ),
                 ),
               ],

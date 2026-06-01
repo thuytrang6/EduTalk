@@ -1,16 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-/// Đặt file này tại: lib/screens/change_password_screen.dart
-///
-/// Trong Setting.dart, thay onTap của "Đổi mật khẩu" thành:
-///   onTap: () {
-///     Navigator.push(
-///       context,
-///       MaterialPageRoute(builder: (_) => const ChangePasswordScreen()),
-///     );
-///   },
-
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
 
@@ -268,14 +258,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 10),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+
                     Row(
                       children: [
                         Container(
