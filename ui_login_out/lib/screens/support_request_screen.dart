@@ -42,7 +42,7 @@ class _SupportRequestScreenState
 
       final user = FirebaseAuth.instance.currentUser;
 
-      await FirebaseFirestore.instance
+      final docRef = await FirebaseFirestore.instance
           .collection("support_requests")
           .add({
         "uid": user?.uid,
@@ -53,6 +53,18 @@ class _SupportRequestScreenState
         "status": "pending",
         "createdAt": Timestamp.now(),
       });
+
+      if (user?.uid != null) {
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'receiverId': user!.uid,
+          'senderId': 'system',
+          'senderName': 'Edutalk',
+          'type': 'support_pending',
+          'postId': docRef.id,
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

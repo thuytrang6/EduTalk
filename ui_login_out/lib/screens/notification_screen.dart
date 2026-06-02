@@ -57,7 +57,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Future<void> _openPost(BuildContext context, NotificationModel notif) async {
     await _markAsRead(notif);
     if (context.mounted) {
-      if (notif.type == 'support') {
+      if (notif.type == 'support' || notif.type == 'support_pending') {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const SupportScreen()),
@@ -228,13 +228,13 @@ class _NotifItem extends StatelessWidget {
   IconData _subIcon(String type) {
     if (type == 'like') return Icons.favorite;
     if (type == 'reply') return Icons.reply_rounded;
-    if (type == 'support') return Icons.support_agent_rounded;
+    if (type == 'support' || type == 'support_pending') return Icons.support_agent_rounded;
     return Icons.mode_comment;
   }
 
   Color _subIconColor(String type) {
     if (type == 'like') return Colors.redAccent;
-    if (type == 'support') return Colors.green;
+    if (type == 'support' || type == 'support_pending') return Colors.green;
     return Colors.blueAccent;
   }
 
@@ -243,6 +243,7 @@ class _NotifItem extends StatelessWidget {
     if (type == 'comment') return "đã bình luận vào bài viết của bạn.";
     if (type == 'reply') return "đã trả lời bình luận của bạn.";
     if (type == 'support') return "đã phản hồi yêu cầu hỗ trợ của bạn.";
+    if (type == 'support_pending') return "đã tiếp nhận yêu cầu hỗ trợ của bạn. Yêu cầu của bạn sẽ được gửi đến admin để xử lý và phản hồi lại sau.";
     return "đã tương tác với bài viết của bạn.";
   }
 
