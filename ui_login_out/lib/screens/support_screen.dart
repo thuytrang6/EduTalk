@@ -490,6 +490,51 @@ class SupportScreen extends StatelessWidget {
                 ],
               ),
             ),
+          ] else if (status == 'pending') ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1, color: Color(0xffe2e8f0)),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xfff8fafc),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xffe2e8f0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: Color(0xff475569),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        "Hệ thống Edutalk",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xff475569),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Cảm ơn bạn đã sử dụng dịch vụ Edutalk\nYêu cầu của bạn sẽ được gửi đến admin để xử lý và phản hồi lại sau.\nEdutalk xin cảm ơn!",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xff475569),
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ],
       ),
