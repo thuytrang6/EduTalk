@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ui_login_out/services/post_service.dart';
 import 'package:ui_login_out/models/post_model.dart';
+import 'support_screen.dart';
 
 // Hàm tính thời gian nội bộ (Chỉ dùng riêng trong file này để khỏi báo lỗi)
 String _getTimeAgo(DateTime dateTime) {
@@ -56,8 +57,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Future<void> _openPost(BuildContext context, NotificationModel notif) async {
     await _markAsRead(notif);
     if (context.mounted) {
-      // 1. Kích hoạt Callback để truyền ID về trang Thảo Luận
-      widget.onOpenPost(notif.postId); 
+      if (notif.type == 'support') {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SupportScreen()),
+        );
+      } else {
+        // 1. Kích hoạt Callback để truyền ID về trang Thảo Luận
+        widget.onOpenPost(notif.postId); 
+      }
     }
   }
 
@@ -220,11 +228,13 @@ class _NotifItem extends StatelessWidget {
   IconData _subIcon(String type) {
     if (type == 'like') return Icons.favorite;
     if (type == 'reply') return Icons.reply_rounded;
+    if (type == 'support') return Icons.support_agent_rounded;
     return Icons.mode_comment;
   }
 
   Color _subIconColor(String type) {
     if (type == 'like') return Colors.redAccent;
+    if (type == 'support') return Colors.green;
     return Colors.blueAccent;
   }
 
@@ -232,6 +242,7 @@ class _NotifItem extends StatelessWidget {
     if (type == 'like') return "đã thích bài viết của bạn.";
     if (type == 'comment') return "đã bình luận vào bài viết của bạn.";
     if (type == 'reply') return "đã trả lời bình luận của bạn.";
+    if (type == 'support') return "đã phản hồi yêu cầu hỗ trợ của bạn.";
     return "đã tương tác với bài viết của bạn.";
   }
 
