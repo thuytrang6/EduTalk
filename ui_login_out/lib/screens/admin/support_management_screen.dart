@@ -13,7 +13,7 @@ class _SupportManagementScreenState extends State<SupportManagementScreen> {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   int _activeTab = 0; // 0: Chưa xử lý, 1: Đã xử lý
 
-  void _showAnswerSheet(BuildContext context, String docId, String title, String message, String userEmail) {
+  void _showAnswerSheet(BuildContext context, String docId, String title, String message, String userEmail, String? userUid) {
     final replyController = TextEditingController();
     bool isSaving = false;
 
@@ -107,6 +107,18 @@ class _SupportManagementScreenState extends State<SupportManagementScreen> {
                               'answeredAt': FieldValue.serverTimestamp(),
                               'status': 'resolved',
                             });
+
+                            if (userUid != null && userUid.isNotEmpty) {
+                              await _db.collection('notifications').add({
+                                'receiverId': userUid,
+                                'senderId': 'admin',
+                                'senderName': 'Quản trị viên',
+                                'type': 'support',
+                                'postId': docId,
+                                'isRead': false,
+                                'createdAt': FieldValue.serverTimestamp(),
+                              });
+                            }
                             if (context.mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -307,7 +319,10 @@ class _SupportManagementScreenState extends State<SupportManagementScreen> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: () => _showAnswerSheet(context, doc.id, title, message, email),
+                                onPressed: () {
+                                  final userUid = data['uid'] as String?;
+                                  _showAnswerSheet(context, doc.id, title, message, email, userUid);
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF1E293B),
                                   foregroundColor: Colors.white,

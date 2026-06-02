@@ -188,6 +188,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           final allUsers = snapshot.data ?? [];
 
           final filteredUsers = allUsers.where((user) {
+            if (user.email.trim().isEmpty) return false;
             final matchesSearch = user.name.toLowerCase().contains(searchQuery.toLowerCase());
             bool matchesFilter = true;
             if (filterType == 'premium') matchesFilter = user.isPremium == true;

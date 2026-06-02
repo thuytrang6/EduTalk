@@ -51,7 +51,7 @@ class UserModel {
   factory UserModel.fromDocument(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return UserModel(
-      uid: data['uid'] ?? '',
+      uid: doc.id,
       email: data['email'] ?? '',
       name: data['name'] ?? '',
       role: data['role'] == 'admin' ? UserRole.admin : UserRole.user,
