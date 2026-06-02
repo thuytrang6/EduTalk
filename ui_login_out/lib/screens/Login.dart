@@ -334,8 +334,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: List.generate(6, (index) {
                     return SizedBox(
-                      width: 42,
-                      height: 52,
+                      width: 46,
+                      height: 58,
                       child: TextField(
                         controller: otpControllers[index],
                         focusNode: focusNodes[index],
@@ -344,8 +344,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         maxLength: 1,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
+                          height: 1.0,
                         ),
                         decoration: InputDecoration(
                           counterText: '',
@@ -690,21 +691,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                   setDialogState(() => isSaving = true);
                                   try {
-                                    // Dùng Firebase confirmPasswordReset
-                                    // Vì đã verify OTP rồi, ta dùng
-                                    // signInWithEmailAndPassword tạm thời
-                                    // rồi updatePassword → KHÔNG an toàn.
-                                    //
-                                    // Cách đúng: dùng Admin SDK hoặc
-                                    // sendPasswordResetEmail sau khi verify.
-                                    //
-                                    // ✅ Cách tốt nhất với Firebase thuần:
-                                    // Gọi sendPasswordResetEmail → user
-                                    // nhấn link trong mail → Firebase tự xử lý.
-                                    //
-                                    // Ở đây sau khi verify OTP xong, ta gọi
-                                    // sendPasswordResetEmail để user đặt mật
-                                    // khẩu mới qua Firebase UI chính thức:
                                     await FirebaseAuth.instance
                                         .sendPasswordResetEmail(email: email);
                                     await OtpService().clearOtp(email);

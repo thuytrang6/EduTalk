@@ -3,25 +3,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Đặt file này tại: lib/services/otp_service.dart
-///
-/// Cần thêm vào pubspec.yaml:
-///   dependencies:
-///     http: ^1.2.0
-///
-/// ====== SETUP EMAILJS (5 phút) ======
-/// 1. Đăng ký tại https://www.emailjs.com (miễn phí)
-/// 2. Add Email Service: Connect Gmail/Outlook của bạn
-/// 3. Create Email Template với nội dung:
-///      Subject: Mã OTP đặt lại mật khẩu EduTalk
-///      Body: Mã OTP của bạn là: {{otp_code}}
-///            Mã có hiệu lực trong 10 phút.
-///    Lưu ý: Template phải có biến {{otp_code}} và {{to_email}}
-/// 4. Điền 3 giá trị bên dưới vào file .env hoặc thay trực tiếp:
-///      EMAILJS_SERVICE_ID  → "Service ID" trong tab Email Services
-///      EMAILJS_TEMPLATE_ID → "Template ID" trong tab Email Templates
-///      EMAILJS_PUBLIC_KEY  → "Public Key" trong Account > API Keys
-
 class OtpService {
   // ⚠️ Thay 3 giá trị này bằng thông tin EmailJS của bạn
   // Hoặc dùng dotenv: dotenv.env['EMAILJS_SERVICE_ID'] ?? ''

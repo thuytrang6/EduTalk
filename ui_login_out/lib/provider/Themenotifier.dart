@@ -2,36 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Đặt file này tại: lib/providers/theme_notifier.dart
-///
-/// Cách dùng trong main.dart:
-///   1. Bọc MyApp bằng ChangeNotifierProvider<ThemeNotifier>
-///   2. Đọc theme bằng context.watch<ThemeNotifier>().themeMode
-///
-/// Ví dụ main.dart:
-///   void main() async {
-///     ...
-///     runApp(
-///       ChangeNotifierProvider(
-///         create: (_) => ThemeNotifier(),
-///         child: const MyApp(),
-///       ),
-///     );
-///   }
-///
-///   class MyApp extends StatelessWidget {
-///     @override
-///     Widget build(BuildContext context) {
-///       final themeNotifier = context.watch<ThemeNotifier>();
-///       return MaterialApp(
-///         themeMode: themeNotifier.themeMode,
-///         theme: ThemeData.light(),
-///         darkTheme: ThemeData.dark(),
-///         ...
-///       );
-///     }
-///   }
-
 class ThemeNotifier extends ChangeNotifier {
   bool _isDarkMode = false;
   bool _isLoading = false;

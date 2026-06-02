@@ -12,10 +12,8 @@ class SupportScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xfff6f7fb),
 
-      extendBodyBehindAppBar: true,
-
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xff1e3a8a),
         elevation: 0,
 
         centerTitle: true,
@@ -34,7 +32,7 @@ class SupportScreen extends StatelessWidget {
           // TOP BACKGROUND
           // ==================================================
           Container(
-            height: 230,
+            height: 180,
 
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -56,9 +54,9 @@ class SupportScreen extends StatelessWidget {
           // CONTENT
           // ==================================================
           SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+            physics: const ClampingScrollPhysics(),
 
-            padding: const EdgeInsets.fromLTRB(20, 120, 20, 30),
+            padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
 
             child: Column(
               children: [
@@ -233,15 +231,16 @@ class SupportScreen extends StatelessWidget {
                 StreamBuilder<QuerySnapshot>(
                   stream: FirebaseFirestore.instance
                       .collection('support_requests')
-                      .where('uid', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+                      .where(
+                        'uid',
+                        isEqualTo: FirebaseAuth.instance.currentUser?.uid,
+                      )
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                        child: Center(child: CircularProgressIndicator()),
                       );
                     }
                     if (snapshot.hasError) {
@@ -262,7 +261,10 @@ class SupportScreen extends StatelessWidget {
                     if (docs.isEmpty) {
                       return Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 30,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(24),
@@ -308,8 +310,12 @@ class SupportScreen extends StatelessWidget {
                     // Sắp xếp in-memory theo thời gian giảm dần
                     final sortedDocs = List<QueryDocumentSnapshot>.from(docs);
                     sortedDocs.sort((a, b) {
-                      final aTime = (a.data() as Map<String, dynamic>?)?['createdAt'] as Timestamp?;
-                      final bTime = (b.data() as Map<String, dynamic>?)?['createdAt'] as Timestamp?;
+                      final aTime =
+                          (a.data() as Map<String, dynamic>?)?['createdAt']
+                              as Timestamp?;
+                      final bTime =
+                          (b.data() as Map<String, dynamic>?)?['createdAt']
+                              as Timestamp?;
                       if (aTime == null && bTime == null) return 0;
                       if (aTime == null) return 1;
                       if (bTime == null) return -1;
@@ -317,7 +323,9 @@ class SupportScreen extends StatelessWidget {
                     });
 
                     return Column(
-                      children: sortedDocs.map((doc) => _buildRequestCard(doc)).toList(),
+                      children: sortedDocs
+                          .map((doc) => _buildRequestCard(doc))
+                          .toList(),
                     );
                   },
                 ),
@@ -346,7 +354,9 @@ class SupportScreen extends StatelessWidget {
 
     String answeredDateStr = '';
     if (answeredAtVal is Timestamp) {
-      answeredDateStr = DateFormat('dd/MM/yyyy HH:mm').format(answeredAtVal.toDate());
+      answeredDateStr = DateFormat(
+        'dd/MM/yyyy HH:mm',
+      ).format(answeredAtVal.toDate());
     }
 
     final isResolved = status == 'resolved';
@@ -373,7 +383,10 @@ class SupportScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xfff1f5f9),
                   borderRadius: BorderRadius.circular(8),
@@ -388,9 +401,14 @@ class SupportScreen extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
-                  color: isResolved ? const Color(0xffdcfce7) : const Color(0xfffef3c7),
+                  color: isResolved
+                      ? const Color(0xffdcfce7)
+                      : const Color(0xfffef3c7),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -398,7 +416,9 @@ class SupportScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: isResolved ? const Color(0xff15803d) : const Color(0xffb45309),
+                    color: isResolved
+                        ? const Color(0xff15803d)
+                        : const Color(0xffb45309),
                   ),
                 ),
               ),
@@ -425,14 +445,15 @@ class SupportScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.access_time_rounded, size: 14, color: Colors.grey),
+              const Icon(
+                Icons.access_time_rounded,
+                size: 14,
+                color: Colors.grey,
+              ),
               const SizedBox(width: 4),
               Text(
                 dateStr,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
@@ -484,51 +505,6 @@ class SupportScreen extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14,
                       color: Color(0xff166534),
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ] else if (status == 'pending') ...[
-            const SizedBox(height: 16),
-            const Divider(height: 1, color: Color(0xffe2e8f0)),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xfff8fafc),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xffe2e8f0)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline_rounded,
-                        color: Color(0xff475569),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "Hệ thống Edutalk",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xff475569),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    "Cảm ơn bạn đã sử dụng dịch vụ Edutalk\nYêu cầu của bạn sẽ được gửi đến admin để xử lý và phản hồi lại sau.\nEdutalk xin cảm ơn!",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xff475569),
                       height: 1.5,
                     ),
                   ),

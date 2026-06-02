@@ -150,42 +150,42 @@ class _HomeScreenState extends State<HomeScreen> {
         .limit(1)
         .snapshots()
         .listen((snapshot) {
-      for (final change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.added && mounted) {
-          final data = change.doc.data();
-          if (data == null) continue;
+          for (final change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.added && mounted) {
+              final data = change.doc.data();
+              if (data == null) continue;
 
-          // Tránh hiện popup cho chính mình (dù backend đã chặn, filter lại cho chắc)
-          if (data['senderId'] == user.uid) continue;
+              // Tránh hiện popup cho chính mình (dù backend đã chặn, filter lại cho chắc)
+              if (data['senderId'] == user.uid) continue;
 
-          final type = data['type'] ?? 'comment';
-          final senderName = data['senderName'] ?? 'Ai đó';
+              final type = data['type'] ?? 'comment';
+              final senderName = data['senderName'] ?? 'Ai đó';
 
-          String title = 'Thông báo mới';
-          String content = '';
+              String title = 'Thông báo mới';
+              String content = '';
 
-          if (type == 'like') {
-            title = 'Lượt thích mới';
-            content = '$senderName đã thích bài viết của bạn.';
-          } else if (type == 'reply') {
-            title = 'Phản hồi mới';
-            content = '$senderName đã trả lời bình luận của bạn.';
-          } else {
-            title = 'Bình luận mới';
-            content = '$senderName đã bình luận vào bài viết của bạn.';
+              if (type == 'like') {
+                title = 'Lượt thích mới';
+                content = '$senderName đã thích bài viết của bạn.';
+              } else if (type == 'reply') {
+                title = 'Phản hồi mới';
+                content = '$senderName đã trả lời bình luận của bạn.';
+              } else {
+                title = 'Bình luận mới';
+                content = '$senderName đã bình luận vào bài viết của bạn.';
+              }
+
+              // Hiện thông báo trượt từ trên xuống (Custom Top Banner)
+              _showTopNotificationBanner(title, content);
+            }
           }
-
-          // Hiện thông báo trượt từ trên xuống (Custom Top Banner)
-          _showTopNotificationBanner(title, content);
-        }
-      }
-    });
+        });
   }
 
   void _showTopNotificationBanner(String title, String content) {
     bool isRemoved = false;
     late OverlayEntry overlayEntry;
-    
+
     overlayEntry = OverlayEntry(
       builder: (context) {
         return _TopNotificationBannerWidget(
@@ -245,9 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Đợi 800ms để các sheet (MoMo/Bank) đóng lời hẳn rồi mới hiện Dialog
                   Future.delayed(const Duration(milliseconds: 800), () {
                     if (mounted) {
-                      _showUpgradeSuccessDialog(
-                        userData.planDisplayName,
-                      );
+                      _showUpgradeSuccessDialog(userData.planDisplayName);
                     }
                   });
                 }
@@ -712,7 +710,8 @@ class _TopNotificationBannerWidget extends StatefulWidget {
 }
 
 class __TopNotificationBannerWidgetState
-    extends State<_TopNotificationBannerWidget> with SingleTickerProviderStateMixin {
+    extends State<_TopNotificationBannerWidget>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
 
@@ -726,10 +725,7 @@ class __TopNotificationBannerWidgetState
     _offsetAnimation = Tween<Offset>(
       begin: const Offset(0, -1.5),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
   }
@@ -821,7 +817,11 @@ class __TopNotificationBannerWidgetState
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _dismiss,
-                    child: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -832,5 +832,3 @@ class __TopNotificationBannerWidgetState
     );
   }
 }
-
-
